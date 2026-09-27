@@ -1,6 +1,6 @@
 # 旅忆 · 旅行规划 Agent
 
-网页端与原生 iOS 客户端共享同一个规划 API。服务端使用 Step 5 Preview 的函数调用 Agent loop：解析需求、查询位置和供应商、提出地点组合、校验行程。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。根据出发城市、位置、交通和酒店偏好、已到访记录生成深圳 1–7 天行程。iOS 相册、私有图片处理和 DGX Spark 本地 MiniMax H3 回忆短片的架构见[媒体说明](MEDIA_ARCHITECTURE.md)。
+网页端与原生 iOS 客户端共享同一个规划 API。服务端使用 Step 5 Preview 的函数调用 Agent loop：解析需求、查询位置和供应商、提出地点组合、校验行程。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。根据出发城市、位置、交通和酒店偏好、已到访记录生成深圳 1–7 天行程。iOS 相册、私有图片处理、DGX Spark 本地 Qwen-Image-2.1 创意重绘和 MiniMax H3 回忆短片的架构见[媒体说明](MEDIA_ARCHITECTURE.md)，模型选型与下一步模块化设计见[媒体模型调研](MEDIA_MODEL_RESEARCH.md)。
 
 ## 本地启动
 
@@ -64,7 +64,7 @@ open TravelMemory.xcodeproj
 | `STEPFUN_API_KEY` | Step Plan 的 Step 5 Preview Agent loop | 明确标记 `unconfigured`，使用确定性流程 |
 | `STEPFUN_BASE_URL` | Step Plan API 地址；可按账户区域或兼容网关调整 | 使用 `https://api.stepfun.com/step_plan/v1` |
 
-Spark 上的 OTA CLI 独立封装在 Docker MCP 中。服务端只发送结构化 `tools/call`，Agent 只能使用明确注册的六个只读查询工具，不能输入任意 CLI 命令。容器使用固定版本的途牛 `tuniu-cli@1.1.1` 和飞猪 `@fly-ai/flyai-cli@1.0.16`，仅绑定服务器 `127.0.0.1:4176`。部署或本地启用时运行：
+Spark 上的 OTA CLI 独立封装在 Docker MCP 中。服务端只发送结构化 `tools/call`，Agent 只能使用明确注册的六个只读查询工具，不能输入任意 CLI 命令。容器使用固定版本的途牛 `tuniu-cli@1.1.1` 和飞猪 `@fly-ai/flyai-cli@1.0.16`，Node 基础镜像从 1Panel 的 `docker.1panel.live` 拉取，仅绑定服务器 `127.0.0.1:4176`。部署或本地启用时运行：
 
 ```sh
 docker compose -f deploy/ota-mcp/compose.yml up -d --build

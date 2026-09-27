@@ -1,4 +1,4 @@
-FROM node:22-bookworm-slim
+FROM docker.1panel.live/library/node:22-bookworm-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
