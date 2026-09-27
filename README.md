@@ -58,23 +58,24 @@ open TravelMemory.xcodeproj
 | 变量 | 用途 | 没有密钥时 |
 | --- | --- | --- |
 | `AMAP_WEB_KEY` | 位置反查、其他城市 POI、附近餐饮、步行与公交路线 | 无地点候选，规划明确失败；餐饮为空 |
-| `DIDA_API_KEY` | 道旅酒店 MCP 搜索 | 酒店区域建议，无房价 |
+| `DIDA_API_KEY` | 道旅 RollingGo 酒店搜索；凭据随单次请求传给道旅 MCP 容器 | 无酒店报价 |
 | `DUFFEL_API_KEY` | Duffel 航班 offer 搜索 | 保留交通偏好，无机票报价 |
 | `TRAVEL_OTA_MCP_URL` | Docker OTA MCP 的内部地址 | 飞猪和途牛不接入 |
+| `TRAVEL_DIDA_MCP_URL` | Docker 道旅 MCP（`deploy/dida-mcp`，回环 4178） | 不经容器直连上游官方 MCP |
 | `TRAVEL_12306_MCP_URL` | Docker 中社区 12306 MCP 的内部地址 | 不查询 12306 直达与中转车次 |
 | `FLYAI_API_KEY` | 飞猪 FlyAI；机票、火车、景区 | MCP 可查询受限体验模式；遮蔽价格不入报价 |
 | `TUNIU_API_KEY` | 途牛；机票、火车、门票 | 未认证时跳过途牛查询 |
 | `STEPFUN_API_KEY` | Step Plan 的 Step 5 Preview Agent loop | 明确标记 `unconfigured`，使用确定性流程 |
 | `STEPFUN_BASE_URL` | Step Plan API 地址；可按账户区域或兼容网关调整 | 使用 `https://api.stepfun.com/step_plan/v1` |
 
-Spark 上的 OTA CLI 独立封装在 Docker MCP 中。服务端只发送结构化 `tools/call`，Agent 只能使用明确注册的只读查询工具，不能输入任意 CLI 命令。另一个容器固定安装 [`12306-mcp@0.3.10`](https://github.com/Joooook/12306-mcp)，它是社区实现而非铁路官方 MCP。两个容器的 Node 基础镜像均从 1Panel 的 `docker.1panel.live` 拉取，仅绑定服务器回环端口 `4176` 和 `4177`。部署或本地启用时运行：
+Spark 上的 OTA CLI 独立封装在 Docker MCP 中。服务端只发送结构化 `tools/call`，Agent 只能使用明确注册的只读查询工具，不能输入任意 CLI 命令。另一个容器固定安装 [`12306-mcp@0.3.10`](https://github.com/Joooook/12306-mcp)，它是社区实现而非铁路官方 MCP。第三个容器 `deploy/dida-mcp` 封装道旅 RollingGo 酒店搜索，凭据随每次请求经 `X-Dida-Key` 头传入，容器本身不保存密钥。三个容器的 Node 基础镜像均从 1Panel 的 `docker.1panel.live` 拉取，仅绑定服务器回环端口 `4176`、`4177` 和 `4178`。部署或本地启用时运行：
 
 ```sh
 docker compose -f deploy/ota-mcp/compose.yml up -d --build
 curl http://127.0.0.1:4176/health
 ```
 
-`POST /api/capabilities` 会连接 MCP 的 `tools/list`，返回当前工具名、说明和参数 Schema；网页「能力与数据来源」用表格展示这些实时元数据。途牛无 Key 时仍能发现本项目包装的工具，但查询需要认证。道旅有 Key 后才直接向上游 MCP 请求 `tools/list`。工具被发现不代表查询成功，表格另列本次实际结果数。飞猪无 Key 的景区和机票体验查询此前已返回数据；正式额度、完整价格与库存需配置 Key 后复核。途牛当前无 Key，真实查询待认证。道旅数据结构与报价含义需要在账号开通后核验。预订前必须在供应商页面验价。高德配置后逐段查步行或公交时间，并查询每天末站附近的餐饮 POI；失败时保留并标注估算，餐饮保持空白。地图上的连线只表示地点顺序，不是导航路径。
+`POST /api/capabilities` 会连接 MCP 的 `tools/list`，返回当前工具名、说明和参数 Schema；网页「能力与数据来源」用表格展示这些实时元数据。途牛已配置正式 Key，机票、火车与门票的真实返回于 2026-09-28 核验：火车报价只保留有余票的席别，预售期外的车次可能全部显示无余票。道旅已配置正式 token，`searchHotels` 的响应结构（`hotelInformationList`、`price.lowestPrice`）于同日实测核验；其上游官方另有免 Key 的 `rgh` CLI skill（OAuth 登录），本项目走 MCP token 路线。预订前必须在供应商页面验价。高德配置后逐段查步行或公交时间，并查询每天末站附近的餐饮 POI；失败时保留并标注估算，餐饮保持空白。地图上的连线只表示地点顺序，不是导航路径。
 
 社区 12306 MCP 的车次、席别和中转结果仅作规划参考；余票与票价在预订前须到铁路官方核对。航班表格展示供应商实际返回的航司、航班号、机型、餐食、行李、税费与退改字段；供应商未提供的字段明确显示未知，不推断或编造。
 

@@ -9,18 +9,24 @@ function toolRows(payload) {
 }
 
 async function discoverDida(key, fetchImpl = fetch) {
-  if (!key) return { kind: 'MCP', discovery: 'authentication_required', tools: [], metadataSource: 'tools/list' };
+  const endpoint = process.env.TRAVEL_DIDA_MCP_URL;
+  if (!key && !endpoint) return { kind: 'MCP', discovery: 'authentication_required', tools: [], metadataSource: 'tools/list' };
   try {
-    const response = await fetchImpl('https://mcp.rollinggo.cn/mcp', {
-      method: 'POST', signal: AbortSignal.timeout(8000),
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', Authorization: `Bearer ${key}` },
+    const headers = {
+      'Content-Type': 'application/json',
+      Accept: 'application/json, text/event-stream',
+      ...(key ? { Authorization: `Bearer ${key}`, 'X-Dida-Key': key } : {}),
+    };
+    const response = await fetchImpl(endpoint || 'https://mcp.rollinggo.cn/mcp', {
+      method: 'POST', signal: AbortSignal.timeout(8000), headers,
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} }),
     });
     if (!response.ok) return { kind: 'MCP', discovery: 'failed', error: `http_${response.status}`, tools: [], metadataSource: 'tools/list' };
     const body = await response.text();
     const records = body.trim().startsWith('data:') ? body.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).trim()).filter(line => line !== '[DONE]') : [body];
     const tools = toolRows(JSON.parse(records.at(-1)));
-    return { kind: 'MCP', discovery: tools.length ? 'runtime' : 'empty', tools, metadataSource: 'tools/list（已认证连接）' };
+    return { kind: 'MCP', discovery: tools.length ? 'runtime' : 'empty', tools,
+      metadataSource: endpoint ? 'tools/list（Docker 道旅 MCP）' : 'tools/list（已认证连接）' };
   } catch { return { kind: 'MCP', discovery: 'failed', error: 'discovery_failed', tools: [], metadataSource: 'tools/list' }; }
 }
 

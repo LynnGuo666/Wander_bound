@@ -67,3 +67,31 @@ test('Dida hotels use the real searchHotels schema captured on 2026-09-28', asyn
   assert.equal(unpriced.displayPrice, null);
   assert.equal(unpriced.priceBasis, '未取得价格');
 });
+
+test('Dida searches go through the local Docker MCP with a per-request key header', async t => {
+  const previous = { url: process.env.TRAVEL_DIDA_MCP_URL, key: process.env.DIDA_API_KEY };
+  process.env.TRAVEL_DIDA_MCP_URL = 'http://127.0.0.1:4178/mcp';
+  process.env.DIDA_API_KEY = 'test-dida-token';
+  t.after(() => {
+    if (previous.url === undefined) delete process.env.TRAVEL_DIDA_MCP_URL; else process.env.TRAVEL_DIDA_MCP_URL = previous.url;
+    if (previous.key === undefined) delete process.env.DIDA_API_KEY; else process.env.DIDA_API_KEY = previous.key;
+  });
+  const realRecord = { hotelId: 2307050, name: '深圳南山万象青华酒店(万象天地店)', latitude: 22.535646, longitude: 113.953154,
+    starRating: 4.0, price: { hasPrice: true, currency: 'CNY', lowestPrice: 566.0 }, bookingUrl: 'https://rollinggo.cn/pages/hotel/detail/index?id=2307050' };
+  let observed = {};
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    observed = { url: String(url), headers: options.headers, body: JSON.parse(options.body) };
+    return { ok: true, text: async () => JSON.stringify({ jsonrpc: '2.0', id: 1, result: { isError: false,
+      content: [{ type: 'text', text: JSON.stringify({ success: true, code: 2000, hotelInformationList: [realRecord] }) }] } }) };
+  });
+  const { searchDidaHotels } = await import('../server/providers/dida.mjs');
+  const hotels = await searchDidaHotels('深圳', '南山', '2026-10-15', 2, 800, 'test-dida-token');
+  assert.equal(observed.url, 'http://127.0.0.1:4178/mcp');
+  assert.equal(observed.headers['X-Dida-Key'], 'test-dida-token');
+  assert.ok(!JSON.stringify(observed.body).includes('test-dida-token'), '凭据不能进入 MCP 请求体');
+  assert.equal(observed.body.params.name, 'dida_search_hotels');
+  assert.deepEqual(observed.body.params.arguments, { city: '深圳', area: '南山', checkInDate: '2026-10-15', stayNights: 2, budget: 800, size: 12 });
+  assert.equal(hotels.length, 1);
+  assert.equal(hotels[0].totalPrice, 566);
+  assert.equal(hotels[0].priceBasis, '查询时2晚总价，预订前验价');
+});

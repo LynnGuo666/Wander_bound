@@ -15,7 +15,7 @@
 
 | 来源 | 比价所需数据 | 个人开发者 / 准入 | 公开成本 | 首版决定 |
 | --- | --- | --- | --- | --- |
-| [道旅 Dida 酒店 MCP](https://github.com/DIDA-AI/Dida-hotel-MCP-CN) | 酒店、房型、实时报价、退改 | 官方仓库称个人可申请 Key | 官方仓库称调用免费且不限量；实际商业条款需在申请时复核 | 酒店报价 A |
+| [道旅 Dida 酒店 MCP](https://github.com/DIDA-AI/Dida-hotel-MCP-CN)（上游 [mcp.rollinggo.cn/mcp](https://mcp.rollinggo.cn/mcp)，另有免 Key 的 [rgh CLI skill](https://github.com/RollingGo-AI/rollinggo-hotel-skill-CN)，OAuth 登录） | 酒店、房型、实时报价、退改 | MCP token 已申请（2026-09-28 配置并实测） | 实测 `searchHotels` 返回 `hotelInformationList` 与 `price.lowestPrice`（如深圳南山酒店 1 晚 566 CNY）；商业条款仍需复核 | 酒店报价 A |
 | [途牛 Agent 平台](https://open.tuniu.com/mcp/docs/) | 酒店、机票、火车、门票、度假 | 文档提供注册、申请 Key 和 CLI；个人资格需实测注册 | 未查到公开调用单价或免费额度 | 酒店报价 B，交通候选 |
 | [飞猪 FlyAI](https://flyai.open.fliggy.com/docs) | 酒店、机票、门票、度假搜索 | [推广者入驻](https://flyai.open.fliggy.com/docs/partner)要求淘宝账号、年满 18 岁、实名及签署协议；可申请正式 Key | 未查到公开调用单价或免费额度；体验模式调用次数较少 | 酒店报价 C，仅对返回价格的结果参与排序 |
 | [携程 / Trip.com 联盟](https://www.trip.com/partners/help/faq/account) | 目的地、酒店和机票跳转链接 | 官方明确接受个人站点、无需拥有网站 | 加入免费；[联盟链接](https://www.trip.com/partners/help/faq/tools)不返回结构化实时价格 | 作为第四个预订入口，不伪装成报价 |
