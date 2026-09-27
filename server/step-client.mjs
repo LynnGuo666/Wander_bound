@@ -1,5 +1,14 @@
 export const STEP_MODEL = 'step-5-preview';
-export const STEP_BASE_URL = 'https://api.stepfun.com/v1';
+export const STEP_BASE_URL = 'https://api.stepfun.com/step_plan/v1';
+
+export function stepChannel(baseUrl = process.env.STEPFUN_BASE_URL || STEP_BASE_URL) {
+  try {
+    const pathname = new URL(baseUrl).pathname.replace(/\/$/, '');
+    if (pathname.endsWith('/step_plan/v1')) return 'step-plan';
+    if (pathname.endsWith('/v1')) return 'standard';
+  } catch { /* The client reports an invalid endpoint when called. */ }
+  return 'custom';
+}
 
 export class ModelCallError extends Error {
   constructor(code, message, retryable = false) {
@@ -28,6 +37,7 @@ export function createStepClient({
   return {
     model: STEP_MODEL,
     backend: 'external-stepfun',
+    channel: stepChannel(baseUrl),
     async complete(messages, tools, { deadline = Date.now() + 60000 } = {}) {
       if (Date.now() < circuitOpenUntil) throw new ModelCallError('circuit_open', 'StepFun 暂时不可用，等待冷却后重试');
       try {

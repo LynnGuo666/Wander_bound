@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { runTravelAgent } from './agent.mjs';
 import { createRequestProviders, providerAvailability } from './providers.mjs';
-import { createStepClient, STEP_MODEL } from './step-client.mjs';
+import { createStepClient, STEP_MODEL, stepChannel } from './step-client.mjs';
 
 const MAX_BODY_BYTES = 256 * 1024;
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -97,7 +97,7 @@ export function createRequestHandler({
     const origin = allowedOrigin && req.headers.origin === allowedOrigin ? allowedOrigin : null;
     if (req.method === 'OPTIONS') return respond(res, 204, null, origin);
     if (req.method === 'GET' && req.url === '/api/health') {
-      return respond(res, 200, { ok: true, model: { id: STEP_MODEL, configured: Boolean(model) }, providers: availability() }, origin);
+      return respond(res, 200, { ok: true, model: { id: STEP_MODEL, configured: Boolean(model), channel: model?.channel || stepChannel() }, providers: availability() }, origin);
     }
     if (req.method === 'POST' && (req.url === '/api/plan' || req.url === '/api/plan/stream')) {
       const stream = req.url.endsWith('/stream');

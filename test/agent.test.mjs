@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runTravelAgent } from '../server/agent.mjs';
-import { createStepClient, STEP_MODEL } from '../server/step-client.mjs';
+import { createStepClient, STEP_BASE_URL, STEP_MODEL, stepChannel } from '../server/step-client.mjs';
 import { CITY_CATALOG } from '../shared/catalog.mjs';
 
 const request = { query: '从上海去深圳玩三天，便宜白天航班，别重复去过的地方', originCity: '上海', startDate: '2026-10-09', memory: {
@@ -277,17 +277,22 @@ test('one through seven days keep unique verified stops and valid clock times', 
 
 test('Step client retries a rate limit and uses the exact Step 5 model ID', async () => {
   const bodies = [];
+  const endpoints = [];
   let attempts = 0;
-  const fetchImpl = async (_url, requestOptions) => {
+  const fetchImpl = async (url, requestOptions) => {
+    endpoints.push(url);
     bodies.push(JSON.parse(requestOptions.body));
     attempts += 1;
     if (attempts === 1) return { ok: false, status: 429, headers: { get: () => '0' } };
     return { ok: true, json: async () => ({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: '完成' } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }) };
   };
-  const client = createStepClient({ apiKey: 'test-only', fetchImpl, sleep: async () => {} });
+  const client = createStepClient({ apiKey: 'test-only', baseUrl: STEP_BASE_URL, fetchImpl, sleep: async () => {} });
   const response = await client.complete([{ role: 'user', content: 'hi' }], [], { deadline: Date.now() + 3000 });
   assert.equal(attempts, 2);
   assert.ok(bodies.every(body => body.model === 'step-5-preview'));
+  assert.ok(endpoints.every(url => url === 'https://api.stepfun.com/step_plan/v1/chat/completions'));
+  assert.equal(client.channel, 'step-plan');
+  assert.equal(stepChannel(STEP_BASE_URL), 'step-plan');
   assert.equal(response.message.content, '完成');
 });
 
