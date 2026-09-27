@@ -25,10 +25,9 @@ def router_for(config: ConfigStore) -> APIRouter:
     @router.post("/api/capabilities")
     async def capabilities(payload: dict):
         keys = config.credentials(payload.get("credentials"))
-        import asyncio
-        ota, rail = await asyncio.gather(list_mcp_tools(os.getenv("TRAVEL_OTA_MCP_URL")),
-                                         list_mcp_tools(os.getenv("TRAVEL_12306_MCP_URL")))
-        dida = {"kind": "MCP", "discovery": "authentication_required" if not keys["dida"] else "unavailable", "tools": [], "metadataSource": "tools/list"}
+        ota, rail, dida = await asyncio.gather(list_mcp_tools(os.getenv("TRAVEL_OTA_MCP_URL")),
+                                               list_mcp_tools(os.getenv("TRAVEL_12306_MCP_URL")),
+                                               list_mcp_tools(os.getenv("TRAVEL_DIDA_MCP_URL")))
         current = await health()
         return {"checkedAt": now(), "providers": current["providers"], "connections": {"ota": ota, "rail": rail, "dida": dida}}
 
