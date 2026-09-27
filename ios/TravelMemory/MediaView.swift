@@ -79,7 +79,7 @@ struct MediaView: View {
                             .textContentType(.password).textFieldStyle(.roundedBorder)
                         Button("保存到本机钥匙串") { MediaTokenStore.save(token); status = "令牌已保存到钥匙串。" }
                             .font(.caption)
-                        Text("请在“来源”页设置服务器地址。外网和真机访问需使用 HTTPS。")
+                        Text("请在“来源”页设置服务器地址。Spark 的 Tailscale 私网入口可用 HTTP；其他远程地址需使用 HTTPS。")
                             .font(.caption2).foregroundStyle(Palette.muted)
                     }
                 }

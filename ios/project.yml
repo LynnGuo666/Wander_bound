@@ -21,6 +21,9 @@ targets:
         NSPhotoLibraryUsageDescription: 按你选择的旅程日期读取照片；仅在你确认后将所选照片上传到私有旅行服务器。
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+          NSExceptionDomains:
+            spark-82.tailb7a50b.ts.net:
+              NSExceptionAllowsInsecureHTTPLoads: true
         UILaunchScreen: {}
     settings:
       base:

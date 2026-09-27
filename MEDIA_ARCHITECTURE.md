@@ -36,19 +36,20 @@ flowchart LR
 
 ## DGX Spark 上的 MiniMax H3
 
-推荐先按 [MiniMax 官方本地部署指南](https://platform.minimax.io/docs/guides/local-deploy-h3)在 Spark 上验证 ComfyUI 的 H3 I2V 模板及量化模型。官方给出了 ComfyUI `0.30.0` 及以上的模板、模型文件位置与 1344×768 参考画布；官方 SGLang 服务示例以多张 B200 为基线，不能当成单台 DGX Spark 的性能保证。量化模板在本节点上的显存、速度和画质仍需实测。
+Spark 节点已安装 ComfyUI `0.34.0`、MiniMax H3 FL2VA INT8 模型、NVFP4 文本编码器及视频/音频 VAE。项目的 [I2V API 工作流](workflows/minimax-h3-i2v-api.json)参考 [MiniMax 官方本地部署指南](https://platform.minimax.io/docs/guides/local-deploy-h3)中的 ComfyUI 模板构建：864×480、124 帧、20 步。在本节点用合成风景图实际生成了约 5.17 秒的 H.264/AAC MP4；随后通过旅游 Agent 媒体 API 完成上传、排队、生成、合成、下载，得到约 5.22 秒的 MP4；双镜头本地合成验证得到约 10.42 秒的 MP4。单镜头生成约 7 分钟；更多并发、画质和分辨率仍需实测。之前两次 `audio_scale` 错误来自通用 AuraFlow 采样器的错误连接；此工作流使用 H3 原生条件节点与采样链。
 
 配置步骤：
 
-1. 在 Spark 上启动 ComfyUI，加载官方 MiniMax H3 I2V 模板及对应的本地权重，先在 ComfyUI 界面完成一次图片生成视频验证。不要使用调用 MiniMax 云端的 Partner/API 节点。
-2. 把该工作流导出为 **API 格式 JSON**，将图片输入节点的文件名改为字符串 `__TRAVEL_IMAGE__`，将提示词输入改为 `__TRAVEL_PROMPT__`。输出节点需保存 MP4，并在 `/history/{prompt_id}` 的输出里提供视频文件名。
-3. 将 `.env` 的 `SPARK_COMFY_URL` 设为服务端可访问的本机地址（同机时可用 `http://127.0.0.1:8188`）或 Tailscale 私网地址，将 `SPARK_H3_WORKFLOW_FILE` 设为上述 JSON 的绝对路径；配置 `MEDIA_API_TOKEN` 和私有 `MEDIA_STORAGE_DIR`。
-4. 确保本地有 `ffmpeg`，在 iOS“相册”页配置同一个令牌，选中照片上传并生成短片。MiniMax H3 工作流会在实际创建短片时才加载。
+1. 在 Spark 上启动 ComfyUI，加载官方 MiniMax H3 I2V 对应的本地权重。不要使用调用 MiniMax 云端的 Partner/API 节点。
+2. 将 `.env` 的 `SPARK_COMFY_URL` 设为 `http://127.0.0.1:8188`，`SPARK_H3_WORKFLOW_FILE` 设为 `/home/Developer/travel-agent/workflows/minimax-h3-i2v-api.json`；配置独立的 `MEDIA_API_TOKEN`。工作流中的 `__TRAVEL_IMAGE__` 和 `__TRAVEL_PROMPT__` 在创建任务时才填充。
+3. 确保本地有 `ffmpeg`；复制 [`deploy/spark/minimax-h3-comfy.service`](deploy/spark/minimax-h3-comfy.service) 和 [`deploy/spark/travel-agent.service`](deploy/spark/travel-agent.service) 到 `~/.config/systemd/user/`，运行 `systemctl --user daemon-reload`，再分别 `systemctl --user enable --now minimax-h3-comfy.service travel-agent.service`。ComfyUI 与旅行 API 分别只监听回环 `8188` 和 `4174`。本节点已启用这两个用户服务。
+4. 加入本队 Tailscale 后，iOS“来源”页填写 `http://spark-82.tailb7a50b.ts.net:7000`，在“相册”页输入 Spark 上 `.env` 的媒体令牌，选择照片上传并生成短片。Tailscale Serve 将私网端口 7000 转到回环 API；已有的 Laya 私网端口 9000 保持独立。
 
-当前无法用现有 SSH 凭据登录 Spark；仓库尚未在该节点安装或验证 MiniMax H3 权重与工作流。没有这两项配置时，照片上传、本地分析和修图仍可用，短片接口会明确返回“尚未配置”。Spark 上已有的 BTC/Laya 服务与相册服务隔离，不复用其模型或数据。
+本队的 Tailscale 管理配置尚未启用 HTTPS Serve；当前 7000 使用 Tailscale WireGuard 私网内的 HTTP，iOS 仅对此节点域名设置了 ATS 例外，不应把该入口转发到公网。未加入同一 tailnet 的设备无法访问。Spark 上已有的 BTC/Laya 服务与相册服务隔离，不复用其模型或数据。
 
 ## 运行前待补
 
 - 媒体 API 的共享令牌适合单人演示；多人使用需独立身份、存储隔离、配额、删除和保留期策略。
-- 本地 H3 单张短片的显存、耗时及多镜头队列需要在实际 Spark 节点压测。任务记录持久化，照片与视频目前存储在本机文件系统；正式运行需备份和磁盘配额。
+- H3 单张短片在 Spark 上约需数分钟；多镜头按顺序排队，正式展示前应预先生成。任务记录持久化，照片与视频目前存储在本机文件系统；正式运行需备份和磁盘配额。
 - 日期筛选并不等于语义识别“旅游照片”。后续可在设备端用 Apple Vision 或在 Spark 上部署独立视觉模型做场景分类；当前由用户核对和选择照片。
+- 已验证服务端链路使用的是合成测试图片；真实 iPhone 的相册权限、上传体验及生成画质仍需在设备上联调。视频模型可能生成非预期文字或画面，发布或分享前应由用户预览。

@@ -1,0 +1,14 @@
+[Unit]
+Description=MiniMax H3 ComfyUI on DGX Spark
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/Developer/minimax-h3-dgx-spark/ComfyUI
+ExecStart=/home/Developer/miniconda3/envs/h3-comfy/bin/python main.py --listen 127.0.0.1 --port 8188 --highvram --preview-method auto --enable-manager
+Restart=on-failure
+RestartSec=10
+UMask=0077
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Travel Agent private API
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/Developer/travel-agent
+ExecStart=/home/Developer/.local/opt/node-v22.16.0/bin/node --env-file=/home/Developer/travel-agent/.env /home/Developer/travel-agent/server/index.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target

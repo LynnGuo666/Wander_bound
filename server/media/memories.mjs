@@ -24,7 +24,7 @@ export function createMemoryService({ store, comfy = createComfyClient(), ffmpeg
       const clips = [];
       for (const [index, photo] of photos.entries()) {
         const bytes = await store.photoBytes(photo.id);
-        const prompt = `旅行回忆短片第 ${index + 1} 个镜头。${safeTitle}。保留原图主体与真实场景，缓慢电影感运镜，自然光影，不添加文字或虚构人物。`;
+        const prompt = `旅行回忆短片第 ${index + 1} 个镜头。保留输入照片的主体与真实场景，缓慢平稳的电影感运镜，自然光影。画面里不要出现文字、字幕或标志，不要虚构人物。`;
         clips.push({ photoId: photo.id, promptId: await comfy.queueClip(bytes, prompt) });
       }
       return store.saveJob({ id: randomUUID(), tripId, photoIds, title: safeTitle, backend: comfy.backend,

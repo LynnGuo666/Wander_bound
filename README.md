@@ -35,7 +35,7 @@ xcodegen generate
 open TravelMemory.xcodeproj
 ```
 
-选择 `TravelMemory` scheme 和 iPhone 模拟器运行。模拟器默认访问 Mac 的 `http://127.0.0.1:4174`；真机请在“来源”页填写你自己部署的 HTTPS API 地址。“相册”页按日期读取已授权照片，选中后才上传到私有媒体 API；媒体令牌保存在 iOS Keychain。当前没有发布签名和 App Store 包。SwiftUIX 在 `project.yml` 中固定了已验证的提交，生成的 Xcode 工程也纳入仓库。
+选择 `TravelMemory` scheme 和 iPhone 模拟器运行。模拟器默认访问 Mac 的 `http://127.0.0.1:4174`；已加入本队 Tailscale 的真机在“来源”页填写 `http://spark-82.tailb7a50b.ts.net:7000`。其他部署使用 HTTPS。“相册”页按日期读取已授权照片，选中后才上传到私有媒体 API；媒体令牌保存在 iOS Keychain。Spark 部署和本地 MiniMax H3 工作流见[媒体说明](MEDIA_ARCHITECTURE.md)。当前没有发布签名和 App Store 包。SwiftUIX 在 `project.yml` 中固定了已验证的提交，生成的 Xcode 工程也纳入仓库。
 
 ## 供应商接入
 

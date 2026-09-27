@@ -79,3 +79,14 @@ test('MiniMax H3 ComfyUI adapter sends sanitized image to private endpoint and u
   assert.throws(() => createComfyClient({ baseUrl: 'http://public.example:8188', workflowPath }), /私网/);
   assert.throws(() => createComfyClient({ baseUrl: 'https://public.example:8188', workflowPath }), /私网/);
 });
+
+test('bundled Spark workflow uses native local H3 image-to-video nodes', async () => {
+  const workflow = JSON.parse(await readFile(new URL('../workflows/minimax-h3-i2v-api.json', import.meta.url)));
+  const classes = Object.values(workflow).map(node => node.class_type);
+  assert.ok(classes.includes('MiniMaxH3ImageToVideo'));
+  assert.ok(classes.includes('UNETLoader'));
+  assert.ok(classes.includes('SaveVideo'));
+  assert.equal(workflow['5'].inputs.image, '__TRAVEL_IMAGE__');
+  assert.equal(workflow['6'].inputs.prompt, '__TRAVEL_PROMPT__');
+  assert.ok(classes.every(name => !/Partner|API/i.test(name)));
+});

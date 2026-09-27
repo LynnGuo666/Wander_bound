@@ -61,9 +61,10 @@ struct MediaClient {
     private func send(_ path: String, method: String = "GET", body: Data? = nil,
                       contentType: String? = nil, headers: [String: String] = [:]) async throws -> Data {
         guard let base = URL(string: serverURL.trimmingCharacters(in: .whitespacesAndNewlines)),
-              base.scheme == "https" || (base.scheme == "http" && (base.host == "127.0.0.1" || base.host == "localhost")),
+              base.scheme == "https" || (base.scheme == "http" &&
+                  (base.host == "127.0.0.1" || base.host == "localhost" || base.host == "spark-82.tailb7a50b.ts.net")),
               let url = URL(string: path, relativeTo: base)?.absoluteURL else {
-            throw NSError(domain: "Media", code: 1, userInfo: [NSLocalizedDescriptionKey: "媒体服务需要 HTTPS 或本机地址"])
+            throw NSError(domain: "Media", code: 1, userInfo: [NSLocalizedDescriptionKey: "媒体服务需要 HTTPS、本机地址或本队 Spark 的 Tailscale 私网地址"])
         }
         var request = URLRequest(url: url)
         request.httpMethod = method
