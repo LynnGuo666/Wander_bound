@@ -63,35 +63,10 @@ async function callDidaMcp(name, args, key) {
   return unpackMcp(await response.text());
 }
 
-async function callUpstreamSearch(args, key) {
-  const response = await fetch('https://mcp.rollinggo.cn/mcp', {
-    method: 'POST',
-    signal: controllerFor(14000),
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json, text/event-stream',
-      ...(key ? { Authorization: `Bearer ${key}` } : {}),
-    },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name: 'searchHotels', arguments: args } }),
-  });
-  if (!response.ok) throw new Error(`道旅 HTTP ${response.status}`);
-  return unpackMcp(await response.text());
-}
-
 export async function searchDidaHotels(city, area, startDate, stayNights, budget, key = process.env.DIDA_API_KEY) {
-  if (didaMcpEndpoint()) {
-    const payload = await callDidaMcp('dida_search_hotels',
-      { city, area: area || '', checkInDate: startDate, stayNights, budget, size: 12 }, key);
-    if (payload?.success === false) throw new Error(`道旅查询失败：${String(payload.message || '未知错误').slice(0, 120)}`);
-    return normalizeDidaHotels(payload?.hotelInformationList, stayNights);
-  }
-  if (!key) return [];
-  const payload = await callUpstreamSearch({
-    originQuery: `${city}${area || ''}附近酒店，每晚不高于${budget}元`,
-    place: `${city}${area || ''}`, placeType: area ? '区/县' : '城市',
-    checkInParam: { checkInDate: startDate, stayNights },
-    size: 12,
-  }, key);
+  if (!didaMcpEndpoint()) throw new Error('道旅 Docker MCP 未配置');
+  const payload = await callDidaMcp('dida_search_hotels',
+    { city, area: area || '', checkInDate: startDate, stayNights, budget, size: 12 }, key);
   if (payload?.success === false) throw new Error(`道旅查询失败：${String(payload.message || '未知错误').slice(0, 120)}`);
   return normalizeDidaHotels(payload?.hotelInformationList, stayNights);
 }

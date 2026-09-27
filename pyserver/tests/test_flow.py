@@ -143,12 +143,18 @@ def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, mon
         assert key == "amap-test-key"
         return [{"id": "verified-meal", "name": "柳州螺蛳粉", "day": 1, "rating": 4.6, "averageCost": 28, "source": "高德餐饮 POI"}]
 
+    async def fake_stays(city, area, check_in, nights, budget, credentials):
+        assert city == "柳州" and check_in == "2026-10-02" and nights == 2
+        return {"ok": True, "hotels": [{"id": "verified-hotel", "name": "柳州酒店", "totalPrice": 450}],
+                "source": "道旅 Docker MCP", "configured": True}
+
     async def fake_routes(plan, key):
         return {**plan, "groundJourneys": [{"day": 1, "from": "车站", "to": "柳州博物馆", "minutes": 15, "mode": "walk", "source": "高德步行路线"}]}
 
     monkeypatch.setattr(agent.step, "complete", fake_complete)
     monkeypatch.setattr(providers, "search_places", fake_places)
     monkeypatch.setattr(providers, "search_transport", fake_transport)
+    monkeypatch.setattr(providers, "search_stays", fake_stays)
     monkeypatch.setattr(amap, "search_dining", fake_dining)
     monkeypatch.setattr(amap, "enrich_routes", fake_routes)
 
@@ -163,6 +169,7 @@ def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, mon
             assert result["agentRun"]["status"] == "degraded"
             assert result["dining"][0]["id"] == "verified-meal"
             assert result["groundJourneys"][0]["minutes"] == 15
+            assert result["hotels"][0]["id"] == "verified-hotel"
             fallback_events = [item for item in result["agentRun"]["events"] if item.get("source") == "server_fallback"]
             assert [item["type"] for item in fallback_events[:2]] == ["tool_start", "tool_end"]
             assert trips.get(result["tripId"])["plan"]["days"] == 3

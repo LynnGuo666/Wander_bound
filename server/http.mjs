@@ -153,6 +153,26 @@ export function createRequestHandler({
         return respond(res, error.status || 502, { error: error.status ? error.message : '交通数据服务失败' }, origin);
       }
     }
+    if (req.method === 'POST' && req.url === '/api/data/stays') {
+      try {
+        const input = await readJson(req);
+        const city = typeof input.city === 'string' && input.city.trim() && input.city.length <= 100 ? input.city.trim() : null;
+        const area = typeof input.area === 'string' && input.area.length <= 100 ? input.area.trim() : '';
+        const checkInDate = input.checkInDate;
+        const stayNights = input.stayNights;
+        if (!city || typeof checkInDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(checkInDate)
+            || !Number.isInteger(stayNights) || stayNights < 1 || stayNights > 21) throw httpError(400, '住宿查询参数无效');
+        const config = await configStore.read();
+        const credentials = { ...config.credentials, ...extractCredentials(input) };
+        const providers = createRequestProviders(credentials);
+        const budget = Number.isFinite(input.budget) && input.budget > 0 ? input.budget : 600;
+        const hotels = await providers.searchDidaHotels(city, area, checkInDate, stayNights, budget);
+        return respond(res, 200, { ok: true, hotels, source: '道旅 Docker MCP',
+          configured: Boolean(credentials.dida || process.env.DIDA_API_KEY) }, origin);
+      } catch (error) {
+        return respond(res, error.status || 502, { error: error.status ? error.message : '住宿数据服务失败' }, origin);
+      }
+    }
     if (req.method === 'POST' && (req.url === '/api/plan' || req.url === '/api/plan/stream')) {
       const stream = req.url.endsWith('/stream');
       let session = null;

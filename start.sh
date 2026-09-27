@@ -26,6 +26,7 @@ export SPARK_QWEN_COMFY_URL="${SPARK_QWEN_COMFY_URL:-http://127.0.0.1:18191}"
 export TRAVEL_OTA_MCP_URL="${TRAVEL_OTA_MCP_URL:-http://127.0.0.1:14176/mcp}"
 export TRAVEL_12306_MCP_URL="${TRAVEL_12306_MCP_URL:-http://127.0.0.1:14177/mcp}"
 export TRAVEL_DATA_API_URL="${TRAVEL_DATA_API_URL:-http://127.0.0.1:14174/api/data/transport}"
+export TRAVEL_STAYS_API_URL="${TRAVEL_STAYS_API_URL:-http://127.0.0.1:14174/api/data/stays}"
 export SPARK_H3_WORKFLOW_FILE="${SPARK_H3_WORKFLOW_FILE:-workflows/minimax-h3-i2v-api.json}"
 export SPARK_QWEN_IMAGE_WORKFLOW_FILE="${SPARK_QWEN_IMAGE_WORKFLOW_FILE:-workflows/qwen-image-2.1-edit-api.json}"
 

@@ -95,3 +95,15 @@ test('Dida searches go through the local Docker MCP with a per-request key heade
   assert.equal(hotels[0].totalPrice, 566);
   assert.equal(hotels[0].priceBasis, '查询时2晚总价，预订前验价');
 });
+
+test('Dida does not bypass its Docker MCP when the endpoint is missing', async t => {
+  const previous = process.env.TRAVEL_DIDA_MCP_URL;
+  delete process.env.TRAVEL_DIDA_MCP_URL;
+  t.after(() => {
+    if (previous === undefined) delete process.env.TRAVEL_DIDA_MCP_URL;
+    else process.env.TRAVEL_DIDA_MCP_URL = previous;
+  });
+  t.mock.method(globalThis, 'fetch', async () => { throw new Error('unexpected direct request'); });
+  const { searchDidaHotels } = await import('../server/providers/dida.mjs');
+  await assert.rejects(searchDidaHotels('深圳', '', '2026-10-15', 2, 800, 'test-key'), /Docker MCP 未配置/);
+});

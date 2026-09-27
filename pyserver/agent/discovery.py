@@ -29,6 +29,16 @@ async def search_transport(state: dict, credentials: dict, priorities: dict) -> 
     return {"ok": True, **{key: data[key] for key in ("outboundFlights", "returnFlights", "outboundTrains", "returnTrains")},
             "providerStatus": state["providerStatus"], "warnings": data.get("warnings") or []}
 
-async def search_stays(state: dict) -> dict:
+async def search_stays(state: dict, credentials: dict, request: dict) -> dict:
+    if not state.get("destination") or not state.get("startDate") or not state.get("days"):
+        return _error("missing_stay_spec", "缺少住宿城市、日期或天数")
+    area = next((item.get("area") for item in state.get("places") or [] if item.get("area")), "")
+    preferences = state.get("preferences") or {}
+    budget = preferences.get("hotelNightBudget") or (request.get("memory") or {}).get("hotelNightBudget")
+    result = await providers.search_stays(state["destination"], area or "", state["startDate"],
+                                           max(1, state["days"] - 1), budget, credentials)
+    state["hotels"] = result["hotels"]
+    state.setdefault("providerStatus", {})["dida"] = {"configured": bool(result.get("configured")),
+                                                          "result": "ok" if state["hotels"] else "本次无酒店报价", "label": "道旅 Docker MCP"}
     state["staysDone"] = True
-    return {"ok": True, "hotels": state["hotels"], "source": "unconfigured"}
+    return {"ok": True, "hotels": state["hotels"], "source": result["source"]}
