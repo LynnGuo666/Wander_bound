@@ -36,13 +36,14 @@ def router_for(config: ConfigStore, trips: TripStore) -> APIRouter:
         if not keys["stepfun"]:
             return JSONResponse({"error": "请先在设置页配置 Step Plan 密钥", "tripId": trip["id"]}, status_code=503)
         request = trip["request"]
+        priorities = config.read()["priorities"]
         async def frames():
-            async for item in run_agent(trip, request, keys, trips, answer=answer, revision=revision):
+            async for item in run_agent(trip, request, keys, trips, answer=answer, revision=revision, priorities=priorities):
                 yield f"event: {item['event']}\ndata: {json.dumps(item['data'], ensure_ascii=False)}\n\n"
         if stream:
             return StreamingResponse(frames(), media_type="text/event-stream", headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
         result = None
-        async for item in run_agent(trip, request, keys, trips, answer=answer, revision=revision):
+        async for item in run_agent(trip, request, keys, trips, answer=answer, revision=revision, priorities=priorities):
             if item["event"] == "result":
                 result = item["data"]
         return JSONResponse(result, status_code=result.get("status", 200))

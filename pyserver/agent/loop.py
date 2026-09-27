@@ -13,7 +13,7 @@ from ..trips import TripStore, now
 
 
 async def run_agent(trip: dict, request: dict, credentials: dict, store: TripStore, *, answer: dict | None = None,
-                    revision: str | None = None) -> AsyncIterator[dict]:
+                    revision: str | None = None, priorities: dict | None = None) -> AsyncIterator[dict]:
     state = trip.get("continuation", {}).get("state") if trip.get("continuation") else initial_state(request)
     if not state:
         state = initial_state(request)
@@ -113,7 +113,7 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
                     result = _error("tool_not_loaded", "当前阶段未加载该工具")
                 else:
                     try:
-                        result = await execute(name, args, state, credentials, request)
+                        result = await execute(name, args, state, credentials, request, priorities)
                     except Exception as exc:
                         result = _error("tool_failed", str(exc)[:200])
             yield event("tool_end", turn=turns, source="model", tool=name, input=args, output=result, ok=result.get("ok", False), code=result.get("code", "ok"))
@@ -125,7 +125,7 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
     used_fallback = False
     if error and not state.get("plan") and not state.get("pendingQuestion"):
         yield event("fallback_start", reason=error)
-        async for phase, name, args, result in complete_with_tools(state, credentials, request):
+        async for phase, name, args, result in complete_with_tools(state, credentials, request, priorities or {}):
             used_fallback = True
             if phase == "start":
                 yield event("tool_start", turn=turns, source="server_fallback", tool=name, input=args)

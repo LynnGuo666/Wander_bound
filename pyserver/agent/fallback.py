@@ -22,7 +22,7 @@ def _assignments(state: dict, place_ids: list[str]) -> list[dict]:
     return result
 
 
-async def complete_with_tools(state: dict, credentials: dict, request: dict):
+async def complete_with_tools(state: dict, credentials: dict, request: dict, priorities: dict):
     """Yield executed tool calls; the caller records each one in the normal trace."""
     if not state.get("destination") or not state.get("originCity") or not state.get("startDate") or not isinstance(state.get("days"), int):
         return
@@ -40,7 +40,7 @@ async def complete_with_tools(state: dict, credentials: dict, request: dict):
         for attempt in range(2):
             yield "start", name, args, None
             try:
-                result = await execute(name, args, state, credentials, request)
+                result = await execute(name, args, state, credentials, request, priorities)
             except Exception as exc:
                 result = {"ok": False, "code": "tool_failed", "message": str(exc)[:200]}
             yield "end", name, args, result
@@ -52,5 +52,5 @@ async def complete_with_tools(state: dict, credentials: dict, request: dict):
     selected = [item["id"] for item in state["places"] if item.get("city") in cities][:min(8, max(2, state["days"] * 2))]
     args = {"placeIds": selected, "dayAssignments": _assignments(state, selected)}
     yield "start", "draft_plan", args, None
-    result = await execute("draft_plan", args, state, credentials, request)
+    result = await execute("draft_plan", args, state, credentials, request, priorities)
     yield "end", "draft_plan", args, result

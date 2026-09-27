@@ -15,10 +15,11 @@ async def discover_places(args: dict, state: dict, credentials: dict) -> dict:
     state["placesDone"] = True
     return {"ok": True, "city": city, "places": [{key: item.get(key) for key in ("id", "name", "area", "category", "duration", "city")} for item in found]}
 
-async def search_transport(state: dict) -> dict:
+async def search_transport(state: dict, credentials: dict, priorities: dict) -> dict:
     if not state["originDone"] or not state["startDate"]:
         return _error("missing_transport_spec", "缺少出发城市或日期")
-    data = await providers.search_transport(state["originCity"], state["destination"], state["startDate"], state["days"])
+    data = await providers.search_transport(state["originCity"], state["destination"], state["startDate"], state["days"],
+                                            credentials, priorities)
     state["trains"] = data["outboundTrains"]
     state["returnTrains"] = data["returnTrains"]
     state["flights"] = data["outboundFlights"]

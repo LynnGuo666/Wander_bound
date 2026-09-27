@@ -6,7 +6,8 @@ import os
 import httpx
 
 
-async def search_transport(origin: str, destination: str, start_date: str, days: int) -> dict:
+async def search_transport(origin: str, destination: str, start_date: str, days: int,
+                           credentials: dict, priorities: dict) -> dict:
     endpoint = os.getenv("TRAVEL_DATA_API_URL", "").rstrip("/")
     if not endpoint:
         raise RuntimeError("DGX Spark 交通数据 API 未配置")
@@ -15,7 +16,9 @@ async def search_transport(origin: str, destination: str, start_date: str, days:
         raise ValueError("交通数据 API 必须使用本机隧道、HTTPS 或 Tailscale 私网")
     async with httpx.AsyncClient(timeout=httpx.Timeout(95, connect=8)) as client:
         response = await client.post(endpoint, json={"originCity": origin, "destination": destination,
-                                                     "startDate": start_date, "days": days})
+                                                     "startDate": start_date, "days": days,
+                                                     "credentials": {key: credentials[key] for key in ("tuniu", "flyai", "duffel") if credentials.get(key)},
+                                                     "priorities": priorities})
         response.raise_for_status()
         data = response.json()
     if not data.get("ok"):

@@ -7,7 +7,7 @@ import { runTravelAgent } from './agent.mjs';
 import { createRequestProviders, providerAvailability } from './providers.mjs';
 import { createStepClient, STEP_MODEL, stepChannel } from './step-client.mjs';
 import { discoverCapabilities } from './capabilities.mjs';
-import { defaultConfigStore } from './config.mjs';
+import { defaultConfigStore, mergeConfig } from './config.mjs';
 
 const MAX_BODY_BYTES = 256 * 1024;
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -138,13 +138,14 @@ export function createRequestHandler({
       try {
         const input = transportRequest(await readJson(req));
         const config = await configStore.read();
-        const credentials = config.credentials;
+        const credentials = { ...config.credentials, ...extractCredentials(input) };
+        const priorities = input.priorities === undefined ? config.priorities : mergeConfig(config, { priorities: input.priorities }).priorities;
         const providers = createRequestProviders(credentials);
         const providerStatus = availability(credentials);
         const state = { ...input, originDone: true, flights: [], returnFlights: [], trains: [], returnTrains: [], providerStatus };
         const warnings = [];
         const { searchTransport } = await import('./agent/tool-handlers/transport.mjs');
-        const result = await searchTransport({ state, providers, providerPriority: config.priorities,
+        const result = await searchTransport({ state, providers, providerPriority: priorities,
           startDate: input.startDate, memory: {}, warnings });
         return respond(res, 200, { ...result, outboundFlights: state.flights, returnFlights: state.returnFlights,
           outboundTrains: state.trains, returnTrains: state.returnTrains, providerStatus, warnings }, origin);
