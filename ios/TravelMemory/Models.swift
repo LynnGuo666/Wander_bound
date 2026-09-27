@@ -30,9 +30,10 @@ struct PlaceStop: Codable, Identifiable {
     let lng: Double
     let area: String?
     let category: String
-    let duration: Int
+    // 服务端不再编造游玩时长与时刻；两者为 null 表示“已核实但未排时刻”。
+    let duration: Int?
     let description: String
-    let start: String
+    let start: String?
     let travelMinutes: Int?
     let travelSource: String?
     let rating: Double?
@@ -49,9 +50,9 @@ struct ItineraryDay: Codable, Identifiable {
 
 struct StayArea: Codable {
     let name: String
-    let lat: Double
-    let lng: Double
-    let note: String
+    let lat: Double?
+    let lng: Double?
+    let note: String?
     let averageKm: Double?
 }
 

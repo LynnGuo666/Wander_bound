@@ -13,7 +13,7 @@ cd travel-agent
 
 按 `Ctrl+C` 停止。网页默认打开 Agent Debug 工作台。进入「设置」页填写 Step Plan 与供应商密钥、调整数据源优先级，保存后立即写入服务端的 `config.yml`；也可在 `.env` 中配置密钥。
 
-打开 `http://localhost:5173`。直接输入“我想去深圳玩 3 天”，填写出发城市，或允许浏览器定位。无供应商密钥时仍可用内置的深圳地点资料规划；启动 OTA MCP 后，飞猪可在受限体验模式查询机票、火车票和景区，遮蔽价格会记为空值，班次时刻仍可查看。酒店报价和评论在未获授权时显示为未获取。定位坐标只有配置高德 Web 服务 Key 后才能在服务端反查出发城市，因此也可以直接填城市。
+打开 `http://localhost:5173`。填写目的地、出发城市与天数，或允许浏览器定位。行程地点只能来自供应商查询：未配置高德 Key 时无法核实地点，规划会明确失败，不使用内置假数据；启动 OTA MCP 后，飞猪可在受限体验模式查询机票、火车票和景区，遮蔽价格会记为空值，班次时刻仍可查看。酒店报价和评论在未获授权时显示为未获取。定位坐标只有配置高德 Web 服务 Key 后才能在服务端反查出发城市，因此也可以直接填城市。
 
 ## Agent Debug 与设置
 
@@ -23,13 +23,15 @@ cd travel-agent
 
 `npm run check` 运行测试并构建网页，GitHub Actions 在推送和 Pull Request 时执行同样的检查，并构建 iOS 模拟器应用。API 健康检查为 `GET http://127.0.0.1:4174/api/health`，设置接口为 `GET/PUT /api/settings`，规划接口为 `POST /api/plan`，实时调试接口为 `POST /api/plan/stream`（SSE）；写入接口只接受不超过 256 KiB 的 JSON 对象。请求包含 `query`、`destination`、`originCity`、`days`、`startDate`、`memory`，可选 `location: {lat, lng}`。网页和 iOS 均只在设备本地保存记忆；规划时将记忆发送到你配置的 API 地址。
 
-代码按用途分为 `src/`（网页）、`ios/TravelMemory/`（iOS）、`server/`（HTTP 入口、Agent loop、供应商适配器）、`shared/`（地点目录与规划规则）、`test/`（算法、供应商和 HTTP 契约测试）。`server/index.mjs` 只负责启动，`server/http.mjs` 可以独立测试请求处理。网页开发服务器通过 Vite 将 `/api` 代理到后端，因此本地不需要跨域配置。
+代码按用途分为 `src/`（网页）、`ios/TravelMemory/`（iOS）、`server/`（HTTP 入口、Agent loop、供应商适配器）、`shared/`（记忆归一化与行程规划算法）、`test/`（算法、供应商和 HTTP 契约测试）。`server/index.mjs` 只负责启动，`server/http.mjs` 可以独立测试请求处理。网页开发服务器通过 Vite 将 `/api` 代理到后端，因此本地不需要跨域配置。
 
 直接调试后端可运行 `npm run agent:cli -- "我想去深圳玩三天" --origin 上海 --date 2026-10-09`。加 `--require-model` 会要求本次由 Step 5 Preview 真正完成，否则以非零状态退出，适合密钥配置后的联调。
 
-API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`waiting_for_user` 表示模型提出待回答问题，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。`trace` 记录工具名、成功状态、错误代码、耗时和结果计数；`events` 记录可观察的执行过程和经过白名单筛选的工具输入输出，不记录用户坐标或密钥。Step 请求使用流式输出，模型公开说明会逐段出现在调试页；工具参数组装完整后才执行。每次请求最多 200 轮模型响应、200 次模型工具调用、2 次行程草拟；当前没有硬性 token 限额。上游不返回流式 token 用量时，页面标明“上游未返回”。模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤；外部 Step 模型会收到用户原始提示词、明确填写的表单字段和非敏感偏好，不会收到相册图片。
+API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`waiting_for_user` 表示模型提出待回答问题，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。`trace` 记录工具名、成功状态、错误代码、耗时和结果计数；`events` 记录可观察的执行过程和经过白名单筛选的工具输入输出，不记录用户坐标或密钥。Step 请求使用流式输出，模型公开说明会逐段出现在调试页；工具参数组装完整后才执行。每次请求最多 200 轮模型响应、200 次模型工具调用、2 次行程草拟；当前没有硬性 token 限额。上游不返回流式 token 用量时，页面标明“上游未返回”。模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商查询结果。详细到访记录在服务端过滤；外部 Step 模型会收到用户原始提示词、明确填写的表单字段和非敏感偏好，不会收到相册图片。
 
 模型接入使用 Step Plan 的 `https://api.stepfun.com/step_plan/v1/chat/completions`，采用兼容 Chat Completions 的函数工具调用；模型 ID 固定为 `step-5-preview`。Step Plan 与普通开放平台 API 是不同的入口，需使用对应账户的 Plan 额度。当前没有可用 Plan 密钥，真实 Step 5 Preview 响应尚待联调。单次模型调用最多重试两次限流或服务端错误；连续失败三次后冷却 30 秒，本次规划改走有标记的规则流程。无密钥时 `--require-model` 会立即失败，避免把规则规划误报为模型规划。
+
+Python 服务端的 Step 5 Preview 模型规格与请求参数核对见 [docs/STEP_MODEL_VERIFICATION.md](docs/STEP_MODEL_VERIFICATION.md)。
 
 ## Spark 快速调试入口
 
@@ -55,7 +57,7 @@ open TravelMemory.xcodeproj
 
 | 变量 | 用途 | 没有密钥时 |
 | --- | --- | --- |
-| `AMAP_WEB_KEY` | 位置反查、其他城市 POI、附近餐饮、步行与公交路线 | 深圳内置地点 + 直线距离估时；餐饮为空 |
+| `AMAP_WEB_KEY` | 位置反查、其他城市 POI、附近餐饮、步行与公交路线 | 无地点候选，规划明确失败；餐饮为空 |
 | `DIDA_API_KEY` | 道旅酒店 MCP 搜索 | 酒店区域建议，无房价 |
 | `DUFFEL_API_KEY` | Duffel 航班 offer 搜索 | 保留交通偏好，无机票报价 |
 | `TRAVEL_OTA_MCP_URL` | Docker OTA MCP 的内部地址 | 飞猪和途牛不接入 |
@@ -83,6 +85,6 @@ curl http://127.0.0.1:4176/health
 - 用户主动点击定位后才请求设备坐标。坐标和偏好用于本次规划；若配置高德 Key，坐标会发送至高德反查城市。
 - 记忆保存在浏览器 `localStorage` 或 iOS `UserDefaults`，服务端不落库。服务器默认只监听 `127.0.0.1`。
 - API 默认不向其他网页开放跨域访问。网页与 API 分域部署时，在服务端将 `CORS_ALLOWED_ORIGIN` 设为该网页的完整 Origin；同域部署无需设置。当前 API 没有用户认证或请求限流，不能直接作为公开服务暴露。
-- 深圳内置地点为编辑维护的起步目录，缺少实时营业时间、天气、门票和评论。餐饮建议依赖高德 Key，未知评分保持空白。
-- 当前分别查询去程和返程机票、火车票；无兼容行程的返程报价不会被推荐。途牛火车只保留有余票的席别参考价；门到门总费用尚未接入。行程起始时刻在没有真实航班时属于规划假设。餐饮建议尚未占用游玩时间。iOS Look Around 的实景入口尚未接入。
+- 行程中的地点、游玩时长和转场时间没有真实数据来源时保持为空并标注"未核实"，不编造数值；转场时间只采用高德实际路线结果，没有内置地点目录或直线距离估算。餐饮建议依赖高德 Key，未知评分保持空白。
+- 当前分别查询去程和返程机票、火车票；返程推荐依赖真实逐日时间轴（游玩时长与转场时间），在没有核实时间轴时只提供按价格与红眼排序的返程候选。途牛火车只保留有余票的席别参考价；门到门总费用尚未接入。行程起始时刻在没有真实航班时属于规划假设。餐饮建议尚未占用游玩时间。iOS Look Around 的实景入口尚未接入。
 - Spark 节点上现有 Laya 服务是另一个任务的模型部署；此项目不会把旅行记忆发送到现有的 BTC 模型。相册图片与回忆视频只在私有媒体服务及本地 MiniMax H3 工作流处理；Step 5 Preview 通过阶跃星辰 API 或你配置的兼容网关调用，接收用户原始规划提示词、明确填写的表单字段和非敏感偏好。

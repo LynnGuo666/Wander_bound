@@ -1,5 +1,3 @@
-import { CITY_CATALOG } from '../shared/catalog.mjs';
-import { parseTripRequest } from '../shared/planner.mjs';
 import * as defaultProviders from './providers.mjs';
 import { STEP_MODEL, stepChannel } from './step-client.mjs';
 import { AGENT_TOOLS } from './agent/definitions.mjs';
@@ -20,19 +18,19 @@ export async function runTravelAgent(input, {
     onEvent?.(entry);
   };
   const channel = model?.channel || stepChannel();
-  const parsed = model ? null : parseTripRequest(String(input.query || '').slice(0, 600));
+  // 目的地与天数只接受表单显式字段或模型提交；不再从自由文本里猜。
   const explicitDestination = cleanCity(input.destination);
   const explicitDays = input.days == null || input.days === '' ? null : Number(input.days);
   const startDate = String(input.startDate || nextFriday(now));
   const memory = resume?.memory || safeMemory(input.memory || {});
   const state = resume?.state || {
-    destination: explicitDestination || (model ? '' : cleanCity(parsed.destination)),
-    days: explicitDays ?? (model ? null : parsed.days ?? 3),
+    destination: explicitDestination,
+    days: explicitDays,
     startDate,
     totalBudgetCny: null,
     requiredStays: [],
     pendingQuestion: null,
-    desiredInterests: model ? [] : parsed.interests,
+    desiredInterests: [],
     originCity: cleanCity(input.originCity || memory.homeCity),
     locationDetected: false,
     places: [], flights: [], returnFlights: [], trains: [], returnTrains: [], hotels: [], plan: null,
@@ -83,7 +81,7 @@ export async function runTravelAgent(input, {
   if (!state.diningDone) await execute('search_dining', {}, true);
   if (!state.groundDone) await execute('explore_ground', {}, true);
 
-  const allAvailable = [...(CITY_CATALOG[state.destination]?.places || []), ...state.places];
+  const allAvailable = state.places;
   const invalid = planInvariant(state.plan, memory, allAvailable);
   emit({ type: 'validation', ok: !invalid, code: invalid ? 'plan_invariant' : 'ok' });
   if (invalid) return { status: 422, error: invalid, agentRun: { status: 'degraded', model: STEP_MODEL, channel, modelError, modelTurns, toolCalls, trace, warnings } };

@@ -41,7 +41,7 @@ export default function TripMap({ itinerary, selectedDay, onSelectDay }) {
           html: `<span style="background:${COLORS[(day.day - 1) % COLORS.length]}">${index + 1}</span>`,
           iconSize: [32, 32], iconAnchor: [16, 16],
         });
-        L.marker(point, { icon }).addTo(layer).bindPopup(`<strong>第 ${day.day} 天 · ${stop.name}</strong><br>${stop.start} · ${stop.category}`);
+        L.marker(point, { icon }).addTo(layer).bindPopup(`<strong>第 ${day.day} 天 · ${stop.name}</strong><br>${stop.start || '时间待核实'} · ${stop.category}`);
       });
       if (coordinates.length > 1) L.polyline(coordinates, { color: COLORS[(day.day - 1) % COLORS.length], weight: 4, opacity: .8, dashArray: '8 9' }).addTo(layer);
     }

@@ -2,19 +2,32 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runTravelAgent } from '../server/agent.mjs';
 import { createStepClient, STEP_BASE_URL, STEP_MODEL, stepChannel } from '../server/step-client.mjs';
-import { CITY_CATALOG } from '../shared/catalog.mjs';
 
-const request = { query: '从上海去深圳玩三天，便宜白天航班，别重复去过的地方', originCity: '上海', startDate: '2026-10-09', memory: {
+// 夹具模拟高德 POI 的真实形状：地点来自供应商查询，没有编造的游玩时长。
+const FIXTURE_PLACES = [
+  { id: 'sz-nantou', name: '南头古城', lat: 22.5345, lng: 113.9233, area: '南山', category: '历史街区', duration: null },
+  { id: 'sz-oct', name: '华侨城创意文化园', lat: 22.5428, lng: 113.9864, area: '南山', category: '艺术', duration: null },
+  { id: 'sz-bay', name: '深圳湾公园', lat: 22.5160, lng: 113.9440, area: '南山', category: '海岸', duration: null },
+  { id: 'sz-seaworld', name: '海上世界', lat: 22.4848, lng: 113.9182, area: '蛇口', category: '街区', duration: null },
+  { id: 'sz-museum', name: '深圳博物馆', lat: 22.5458, lng: 114.0606, area: '福田', category: '博物馆', duration: null },
+  { id: 'sz-lianhuashan', name: '莲花山公园', lat: 22.5560, lng: 114.0614, area: '福田', category: '公园', duration: null },
+  { id: 'sz-huaqiangbei', name: '华强北', lat: 22.5457, lng: 114.0885, area: '福田', category: '城市探索', duration: null },
+  { id: 'sz-baoanbay', name: '欢乐港湾', lat: 22.5527, lng: 113.8794, area: '宝安', category: '海岸', duration: null },
+  { id: 'sz-dafen', name: '大芬油画村', lat: 22.6142, lng: 114.1362, area: '龙岗', category: '艺术', duration: null },
+  { id: 'sz-gankeng', name: '甘坑古镇', lat: 22.6302, lng: 114.0906, area: '龙岗', category: '历史街区', duration: null },
+];
+
+const request = { query: '从上海去深圳玩三天，便宜白天航班，别重复去过的地方', destination: '深圳', days: 3, originCity: '上海', startDate: '2026-10-09', memory: {
   visitedCities: ['深圳'], visitedPlaces: [{ id: 'sz-oct', name: '华侨城创意文化园', city: '深圳' }],
 } };
 
 function stubProviders(overrides = {}) {
   return {
     providerAvailability: () => ({
-      amap: { configured: false, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' },
+      amap: { configured: true, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' },
     }),
     reverseLocation: async () => null,
-    searchAmapPlaces: async () => [],
+    searchAmapPlaces: async city => city === '深圳' ? FIXTURE_PLACES : [],
     searchDuffelFlights: async () => [],
     searchDidaHotels: async () => [],
     searchAmapDining: async () => [],
@@ -205,7 +218,7 @@ test('a city without place data keeps a dated itinerary without inventing POIs',
     searchDuffelFlights: async () => { supplierCalls += 1; return []; },
     searchDidaHotels: async () => { supplierCalls += 1; return []; },
   });
-  const result = await runTravelAgent({ query: '去苏州玩三天', startDate: '2026-10-09' }, { providers });
+  const result = await runTravelAgent({ query: '去苏州玩三天', destination: '苏州', days: 3, startDate: '2026-10-09' }, { providers });
   assert.equal(result.destination, '苏州');
   assert.equal(result.itinerary.length, 3);
   assert.equal(result.itinerary.flatMap(day => day.stops).length, 0);
@@ -241,7 +254,7 @@ test('malformed supplier data is discarded before it reaches clients', async () 
 test('agent merges read-only OTA flights, trains and selected attraction products with provenance', async () => {
   const providers = stubProviders({
     providerAvailability: () => ({
-      amap: { configured: false, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' },
+      amap: { configured: true, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' },
       flyai: { configured: true, label: '飞猪 FlyAI' }, tuniu: { configured: true, label: '途牛 MCP' },
     }),
     searchFlyaiTransport: async (kind, origin, destination, date) => [{
@@ -340,19 +353,19 @@ test('a route provider cannot turn a valid day into an overnight itinerary', asy
 });
 
 test('fully visited city does not claim to offer a new itinerary', async () => {
-  const visitedPlaces = CITY_CATALOG.深圳.places.map(place => ({ id: place.id, name: place.name, city: '深圳' }));
+  const visitedPlaces = FIXTURE_PLACES.map(place => ({ id: place.id, name: place.name, city: '深圳' }));
   const result = await runTravelAgent({ ...request, memory: { ...request.memory, visitedPlaces } }, { providers: stubProviders() });
   assert.equal(result.status, 422);
   assert.match(result.error, /没有可核实/);
 });
 
-test('one through seven days keep unique verified stops and valid clock times', async () => {
+test('one through seven days keep unique verified stops without fabricated clock times', async () => {
   for (let days = 1; days <= 7; days += 1) {
     const plan = await runTravelAgent({ ...request, days }, { providers: stubProviders() });
     assert.equal(plan.itinerary.length, days);
     const stops = plan.itinerary.flatMap(day => day.stops);
     assert.equal(stops.length, new Set(stops.map(stop => stop.id)).size);
-    assert.ok(stops.every(stop => Number(stop.start.slice(0, 2)) < 24));
+    assert.ok(stops.every(stop => stop.start === null && stop.travelSource === null));
     assert.ok(stops.every(stop => stop.id !== 'sz-oct'));
     assert.ok(plan.itinerary.every(day => day.stops.length > 0));
   }

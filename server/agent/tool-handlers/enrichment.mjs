@@ -1,4 +1,3 @@
-import { CITY_CATALOG } from '../../../shared/catalog.mjs';
 import { toolError } from '../definitions.mjs';
 import { attachDining, planInvariant } from '../plan-output.mjs';
 
@@ -61,7 +60,7 @@ export async function exploreGround(ctx, args = {}) {
   if (!state.plan) { return toolError('prerequisite', '请先调用 draft_plan'); }
   try {
     const enriched = await providers.enrichRoutes(state.plan);
-    const available = [...(CITY_CATALOG[state.destination]?.places || []), ...state.places];
+    const available = state.places;
     if (planInvariant(enriched, memory, available)) throw new Error('实时路线导致时刻冲突');
     const stopNames = new Set(enriched.itinerary.flatMap(day => day.stops.map(stop => stop.name)));
     const journeys = Array.isArray(enriched.groundJourneys) ? enriched.groundJourneys

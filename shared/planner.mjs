@@ -1,16 +1,4 @@
-import { CITY_CATALOG, DEFAULT_MEMORY } from './catalog.mjs';
-
-const CHINESE_DIGITS = { 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7 };
-const CATEGORIES = ['海岸', '艺术', '历史街区', '博物馆', '公园', '自然', '城市探索', '街区'];
-
-export function parseTripRequest(text = '') {
-  const destination = text.match(/(?:去|到|游玩|游览)([\p{Script=Han}]{2,5}?)(?:玩|旅行|旅游|待|逛|\s|\d|[一二两三四五六七])/u)?.[1] ||
-    Object.keys(CITY_CATALOG).find(city => text.includes(city)) || '';
-  const match = text.match(/([1-7一二两三四五六七])\s*(?:天|日)/u);
-  const days = match ? (Number(match[1]) || CHINESE_DIGITS[match[1]]) : null;
-  const interests = CATEGORIES.filter(category => text.includes(category));
-  return { destination, days, interests };
-}
+import { DEFAULT_MEMORY } from './catalog.mjs';
 
 export function normalizeMemory(value = {}) {
   return {
@@ -32,23 +20,15 @@ export function kmBetween(a, b) {
   return 6371 * 2 * Math.asin(Math.sqrt(h));
 }
 
-export function estimateTransitMinutes(a, b) {
-  const distance = kmBetween(a, b);
-  return Math.max(12, Math.round((distance / 22) * 60 + 10));
-}
-
 function noveltyScore(place, memory, cityVisited, desiredInterests, destination) {
   if (memory.visitedPlaces.some(item => item.id === place.id || (item.name === place.name && item.city === destination))) return -Infinity;
   const interests = desiredInterests.length ? desiredInterests : memory.interests;
-  const farAreaCost = { 龙岗: 2, 罗湖: 1, 盐田: 4, 大鹏: 7 }[place.area] || 0;
-  return (interests.includes(place.category) ? 4 : 0) + (cityVisited ? 1 : 0) - farAreaCost;
+  return (interests.includes(place.category) ? 4 : 0) + (cityVisited ? 1 : 0);
 }
 
 export function selectPlaces(destination, days, memory, desiredInterests = [], livePlaces = []) {
   const cityVisited = memory.visitedCities.includes(destination);
-  const catalog = CITY_CATALOG[destination];
-  const all = [...(catalog?.places || []), ...livePlaces];
-  const unique = [...new Map(all.map(place => [place.id || place.name, place])).values()];
+  const unique = [...new Map(livePlaces.map(place => [place.id || place.name, place])).values()];
   const candidates = unique
     .map(place => ({ ...place, score: noveltyScore(place, memory, cityVisited, desiredInterests, destination) }))
     .filter(place => Number.isFinite(place.score))
@@ -56,7 +36,7 @@ export function selectPlaces(destination, days, memory, desiredInterests = [], l
   if (!candidates.length) return [];
   const chosen = [];
   const target = Math.min(candidates.length, days === 1 ? 2 : days === 2 ? 4 : 4 + (days - 2) * 3);
-  const center = catalog?.center ? { lat: catalog.center[0], lng: catalog.center[1] } : candidates[0];
+  const center = centroid(candidates);
   while (chosen.length < target) {
     const last = chosen.at(-1);
     const next = candidates
@@ -70,6 +50,13 @@ export function selectPlaces(destination, days, memory, desiredInterests = [], l
     chosen.push(next);
   }
   return chosen;
+}
+
+function centroid(points) {
+  if (!points.length) return null;
+  const lat = points.reduce((sum, point) => sum + point.lat, 0) / points.length;
+  const lng = points.reduce((sum, point) => sum + point.lng, 0) / points.length;
+  return { lat, lng };
 }
 
 function shiftDate(iso, days) {
@@ -104,58 +91,56 @@ function chooseDayPlaces(available, count, anchor, edgeDay, lastDayCenter = null
   })[0] || [];
 }
 
-function orderDayPlaces(places) {
-  const order = { morning: 0, afternoon: 1, evening: 2 };
-  return [...places].sort((a, b) => (order[a.time] ?? 1) - (order[b.time] ?? 1) || a.name.localeCompare(b.name, 'zh'));
+function orderDayPlaces(places, anchor) {
+  const remaining = [...places];
+  const ordered = [];
+  let current = anchor;
+  while (remaining.length) {
+    remaining.sort((a, b) => kmBetween(current, a) - kmBetween(current, b));
+    const next = remaining.shift();
+    ordered.push(next);
+    current = next;
+  }
+  return ordered;
 }
 
-export function buildDays(places, startDate, days, arrivalIsFlight = true, destination = '', arrivalAt = '', stayArea = null) {
-  const catalog = CITY_CATALOG[destination];
-  const center = catalog?.center ? { lat: catalog.center[0], lng: catalog.center[1] } : null;
-  const airport = arrivalIsFlight ? catalog?.airport : null;
+// 行程只做逐日分组与组内顺序；不产出时钟时刻。游玩时长与转场时间
+// 没有任何真实数据来源，留空（null）并由能力状态如实标注。
+export function buildDays(places, startDate, days, arrivalAt = '') {
+  const center = centroid(places);
   const arrivalHour = Number(arrivalAt.slice(11, 13));
-  const firstStart = arrivalAt && Number.isFinite(arrivalHour) ? Math.max(13 * 60 + 30, arrivalHour * 60 + Number(arrivalAt.slice(14, 16) || 0) + 90) : 13 * 60 + 30;
+  const firstStart = arrivalAt && Number.isFinite(arrivalHour) ? arrivalHour * 60 + Number(arrivalAt.slice(14, 16) || 0) + 90 : 0;
   const counts = Array.from({ length: days }, (_, index) => days === 1 ? 2 : index === 0 || index === days - 1 ? 2 : 3);
   if (firstStart >= 20 * 60) counts[0] = 0;
-  else if (firstStart >= 17 * 60) counts[0] = 1;
+  else if (arrivalAt && firstStart >= 17 * 60) counts[0] = 1;
   const groups = Array.from({ length: days }, () => []);
   const sequence = days === 1 ? [0] : [0, days - 1, ...Array.from({ length: Math.max(0, days - 2) }, (_, index) => index + 1)];
   let available = [...places];
   for (const [position, index] of sequence.entries()) {
-    const anchor = (index === 0 || index === days - 1) ? airport || center : center;
     const balancedCount = Math.min(counts[index], Math.ceil(available.length / (sequence.length - position)));
-    const chosen = chooseDayPlaces(available, balancedCount, anchor, index === 0 || index === days - 1, index === days - 1 ? center : null);
-    groups[index] = orderDayPlaces(chosen);
+    const chosen = chooseDayPlaces(available, balancedCount, center, index === 0 || index === days - 1, index === days - 1 ? center : null);
+    groups[index] = orderDayPlaces(chosen, center);
     const selectedIds = new Set(chosen.map(place => place.id));
     available = available.filter(place => !selectedIds.has(place.id));
   }
-  return groups.map((selected, index) => {
-    let minutes = index === 0 ? firstStart : 9 * 60;
-    const stops = selected.map((place, placeIndex) => {
-      const previous = placeIndex ? selected[placeIndex - 1] : (index === 0 && arrivalIsFlight ? airport : stayArea);
-      const travelMinutes = previous ? estimateTransitMinutes(previous, place) : 0;
-      minutes += travelMinutes;
-      if (place.time === 'afternoon') minutes = Math.max(minutes, 12 * 60 + 30);
-      if (place.time === 'evening') minutes = Math.max(minutes, 17 * 60);
-      const start = `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
-      minutes += place.duration || 90;
-      if (placeIndex === 0 && index > 0) minutes += 45;
-      return { ...place, start, travelMinutes, travelSource: travelMinutes ? '直线距离估算' : null };
-    });
-    return { day: index + 1, date: shiftDate(startDate, index), title: selected.length ? `${selected[0].area || destinationArea(selected[0])} · 自由探索` : index === 0 ? '抵达与入住' : '留白 · 自由探索', stops };
-  });
+  return groups.map((selected, index) => ({
+    day: index + 1,
+    date: shiftDate(startDate, index),
+    title: selected.length ? `${selected[0].area || '城区'} · 自由探索` : index === 0 ? '抵达与入住' : '留白 · 自由探索',
+    stops: selected.map(place => ({ ...place, start: null, travelMinutes: null, travelSource: null })),
+  }));
 }
 
-function destinationArea(place) { return place.category || '城市'; }
-
-export function chooseStayArea(destination, days, memory) {
-  const catalog = CITY_CATALOG[destination];
-  if (!catalog) return null;
-  const points = days.flatMap(day => day.stops);
-  if (!points.length) return catalog.neighborhoods[0];
-  return catalog.neighborhoods
-    .map(area => ({ ...area, averageKm: points.reduce((sum, place) => sum + kmBetween(area, place), 0) / points.length }))
-    .sort((a, b) => a.averageKm - b.averageKm)[0];
+// 住宿区域建议从已核实地点的分布推导：取出现最多的区域，以其地点质心为坐标。
+export function chooseStayArea(itinerary) {
+  const stops = itinerary.flatMap(day => day.stops);
+  if (!stops.length) return null;
+  const counts = new Map();
+  for (const stop of stops) if (stop.area) counts.set(stop.area, (counts.get(stop.area) || 0) + 1);
+  const area = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (!area) return null;
+  const cluster = stops.filter(stop => stop.area === area);
+  return { name: area, ...centroid(cluster) };
 }
 
 export function rankFlights(flights, memory, providerPriority = []) {
@@ -178,18 +163,11 @@ export function rankFlights(flights, memory, providerPriority = []) {
   });
 }
 
-function clockMinutes(value) {
-  const hour = Number(value?.slice(11, 13));
-  const minute = Number(value?.slice(14, 16));
-  return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
-}
-
-export function assemblePlan({ destination, originCity, startDate, days, memory, places, flights = [], returnFlights = [], trains = [], returnTrains = [], hotels = [], providerStatus = {}, providerPriority = {}, desiredInterests = [], proposedPlaceIds = [] }) {
+export function assemblePlan({ destination, originCity, startDate, days, memory, places = [], flights = [], returnFlights = [], trains = [], returnTrains = [], hotels = [], providerStatus = {}, providerPriority = {}, desiredInterests = [], proposedPlaceIds = [] }) {
   const normalized = normalizeMemory(memory);
   const candidates = selectPlaces(destination, days, normalized, desiredInterests, places);
-  const allPlaces = [...(CITY_CATALOG[destination]?.places || []), ...places];
   const selected = proposedPlaceIds.length
-    ? proposedPlaceIds.map(id => allPlaces.find(place => place.id === id))
+    ? proposedPlaceIds.map(id => places.find(place => place.id === id))
       .filter(place => place && !normalized.visitedPlaces.some(visited => visited.id === place.id || (visited.name === place.name && visited.city === destination)))
     : candidates;
   const rankedFlights = rankFlights(flights, normalized, providerPriority.flights);
@@ -199,23 +177,12 @@ export function assemblePlan({ destination, originCity, startDate, days, memory,
   const selectedTransportMode = normalized.transportPreference === 'train'
     ? (preferredTrain ? 'train' : preferredFlight ? 'flight' : 'train')
     : (preferredFlight ? 'flight' : preferredTrain ? 'train' : 'flight');
-  const arrivalIsFlight = selectedTransportMode === 'flight';
-  const selectedArrival = arrivalIsFlight ? preferredFlight?.arrivalAt : preferredTrain?.arrivalAt;
-  const initialItinerary = buildDays(selected, startDate, days, arrivalIsFlight, destination, selectedArrival || '');
-  const stayArea = chooseStayArea(destination, initialItinerary, normalized);
-  const itinerary = buildDays(selected, startDate, days, arrivalIsFlight, destination, selectedArrival || '', stayArea);
+  const selectedArrival = selectedTransportMode === 'flight' ? preferredFlight?.arrivalAt : preferredTrain?.arrivalAt;
+  const itinerary = buildDays(selected, startDate, days, selectedArrival || '');
+  const stayArea = chooseStayArea(itinerary);
   const endDate = shiftDate(startDate, days - 1);
-  const finalStop = itinerary.at(-1)?.stops.at(-1);
-  const airport = CITY_CATALOG[destination]?.airport;
-  const finalActivityEnd = finalStop ? Number(finalStop.start.slice(0, 2)) * 60 + Number(finalStop.start.slice(3, 5)) + finalStop.duration : 9 * 60;
-  const returnEarliestMinutes = finalActivityEnd + (airport && finalStop ? estimateTransitMinutes(finalStop, airport) : 90) + 120;
   const rankedReturnFlights = rankFlights(returnFlights, normalized, providerPriority.flights);
   const rankedReturnTrains = rankFlights(returnTrains, normalized, providerPriority.trains);
-  const returnTrainEarliestMinutes = finalActivityEnd + 90;
-  const recommendedReturnTrain = rankedReturnTrains.find(train => returnTrainEarliestMinutes < 24 * 60 && !train.redEye && train.priceComplete !== false && Number.isFinite(train.totalPrice)
-    && train.departureAt.slice(0, 10) === endDate && clockMinutes(train.departureAt) >= returnTrainEarliestMinutes);
-  const recommendedReturnFlight = rankedReturnFlights.find(flight => returnEarliestMinutes < 24 * 60 && !flight.redEye && flight.priceComplete !== false && Number.isFinite(flight.totalPrice) && flight.departureAt.slice(0, 10) === endDate
-    && clockMinutes(flight.departureAt) >= returnEarliestMinutes);
   const rankedHotels = [...hotels].sort((a, b) => {
     const brand = hotel => normalized.hotelBrands.some(value => hotel.name?.includes(value)) ? -150 : 0;
     const price = hotel => Number(hotel.totalPrice) || 99999;
@@ -224,16 +191,17 @@ export function assemblePlan({ destination, originCity, startDate, days, memory,
   });
   return {
     destination, originCity, startDate, endDate, days,
-    intro: CITY_CATALOG[destination]?.intro || `为你探索${destination}的新地点。`,
+    intro: `为你探索${destination}的新地点。`,
     revisit: normalized.visitedCities.includes(destination),
     skippedPlaces: normalized.visitedPlaces.filter(place => place.city === destination).map(place => place.name),
     itinerary, stayArea, flights: rankedFlights, returnFlights: rankedReturnFlights, trains: rankedTrains, returnTrains: rankedReturnTrains,
     recommendedOutboundFlightId: preferredFlight?.id || null,
     recommendedOutboundTrainId: preferredTrain?.id || null,
-    recommendedReturnFlightId: recommendedReturnFlight?.id || null,
-    recommendedReturnTrainId: recommendedReturnTrain?.id || null,
-    returnFlightEarliestAt: returnEarliestMinutes < 24 * 60
-      ? `${endDate}T${String(Math.floor(returnEarliestMinutes / 60)).padStart(2, '0')}:${String(returnEarliestMinutes % 60).padStart(2, '0')}` : null,
+    // 返程最早出发时刻依赖逐日时间轴（真实游玩时长与转场时间），当前没有真实数据来源，
+    // 因此不做返程推荐，只保留按价格与红眼排序的返程候选。
+    recommendedReturnFlightId: null,
+    recommendedReturnTrainId: null,
+    returnFlightEarliestAt: null,
     hotels: rankedHotels, providerStatus, providerPriority,
     transportPreference: normalized.transportPreference,
     selectedTransportMode,

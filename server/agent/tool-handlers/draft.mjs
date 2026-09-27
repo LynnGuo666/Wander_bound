@@ -1,4 +1,3 @@
-import { CITY_CATALOG } from '../../../shared/catalog.mjs';
 import { assemblePlan } from '../../../shared/planner.mjs';
 import { toolError } from '../definitions.mjs';
 import { planInvariant } from '../plan-output.mjs';
@@ -7,10 +6,9 @@ export async function draftPlan(ctx, args = {}) {
   const { state, memory, providerPriority, startDate, cache, internal } = ctx;
   if (!state.placesDone || !state.originDone || !state.transportDone || !state.staysDone) { return toolError('prerequisite', '请先完成位置、地点、交通和住宿查询'); }
   if (state.drafts >= 2) { return toolError('draft_limit', '最多草拟两次'); }
-  const available = [...(CITY_CATALOG[state.destination]?.places || []), ...state.places]
+  const available = state.places
     .filter(place => place?.id && Number.isFinite(place.lat) && Number.isFinite(place.lng))
     .filter(place => !memory.visitedPlaces.some(visited => visited.id === place.id || (visited.name === place.name && visited.city === state.destination)));
-  if (!available.length && CITY_CATALOG[state.destination]) { return toolError('no_new_places', `没有可核实的${state.destination}新地点`); }
   const requested = args.placeIds;
   if (!Array.isArray(requested) || requested.some(id => typeof id !== 'string') || new Set(requested).size !== requested.length) {
     return toolError('invalid_places', 'placeIds 必须是无重复的地点 ID 数组');

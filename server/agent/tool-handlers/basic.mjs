@@ -1,4 +1,3 @@
-import { CITY_CATALOG } from '../../../shared/catalog.mjs';
 import { toolError } from '../definitions.mjs';
 import { addDays, cleanCity, cleanInterests, validDate } from '../request.mjs';
 
@@ -73,21 +72,24 @@ export async function resolveOrigin(ctx, args = {}) {
 export async function discoverPlaces(ctx, args = {}) {
   const { state, providers, memory, warnings } = ctx;
   if (!state.destination) { return toolError('missing_destination', '请先确定目的地'); }
-  const catalog = CITY_CATALOG[state.destination];
-  if (!catalog) {
-    try {
-      const found = await providers.searchAmapPlaces(state.destination);
-      state.places = Array.isArray(found) ? found.filter(place => place?.id && Number.isFinite(place.lat) && Number.isFinite(place.lng)) : [];
-      state.providerStatus.amap.result = state.places.length ? 'ok' : '本次无地点结果';
-    }
-    catch (error) { state.providerStatus.amap.result = error.message; state.places = []; warnings.push('地点查询失败'); }
+  if (!state.providerStatus.amap?.configured) {
+    state.placesDone = true;
+    return toolError('no_place_source', '未配置高德 Key，无法核实目的地地点；请在设置中配置高德 Web 服务 Key');
   }
+  try {
+    const found = await providers.searchAmapPlaces(state.destination);
+    state.places = Array.isArray(found) ? found.filter(place => place?.id && Number.isFinite(place.lat) && Number.isFinite(place.lng)) : [];
+    state.providerStatus.amap.result = state.places.length ? 'ok' : '本次无地点结果';
+  }
+  catch (error) { state.providerStatus.amap.result = error.message; state.places = []; warnings.push('地点查询失败'); }
   state.placesDone = true;
-  const available = [...(catalog?.places || []), ...state.places]
-    .filter(place => place?.id && Number.isFinite(place.lat) && Number.isFinite(place.lng))
+  const available = state.places
     .filter(place => !memory.visitedPlaces.some(visited => visited.id === place.id || (visited.name === place.name && visited.city === state.destination)));
   state.availableCount = available.length;
-  return available.length || !catalog
+  if (!state.places.length) {
+    return { ok: true, places: [], excludedVisitedCount: 0 };
+  }
+  return available.length
     ? { ok: true, places: compactPlaces(available), excludedVisitedCount: memory.visitedPlaces.filter(place => place.city === state.destination).length }
     : toolError('no_new_places', `没有可核实的${state.destination}新地点`);
 }

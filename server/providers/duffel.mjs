@@ -1,6 +1,3 @@
-import { CITY_AIRPORTS } from '../../shared/catalog.mjs';
-import { controllerFor } from './http-client.mjs';
-
 function minutes(iso) {
   const match = /^PT(?:(\d+)H)?(?:(\d+)M)?$/.exec(iso || '');
   return match ? Number(match[1] || 0) * 60 + Number(match[2] || 0) : null;
@@ -49,7 +46,7 @@ export function normalizeDuffelOffers(offers, originCity, destinationCity) {
       id: offer.id, provider: 'Duffel', airline: first.operatingCarrier || first.marketingCarrier || '', airlineCode: first.operatingCarrierCode || first.marketingCarrierCode,
       flightNumber: flightSegments.map(segment => segment.flightNumber).filter(Boolean).join(' · '), flightSegments,
       departureAt: first.departureAt || '', arrivalAt: last.arrivalAt || '',
-      origin: first.departureCode || CITY_AIRPORTS[originCity], destination: last.arrivalCode || CITY_AIRPORTS[destinationCity],
+      origin: first.departureCode || null, destination: last.arrivalCode || null,
       stops: Math.max(0, segments.length - 1), totalPrice: Number(offer.total_amount), currency: offer.total_currency,
       priceComplete: true, priceBasis: '供应商总价', fareBrand: slice?.fare_brand_name || null,
       basePrice: offer.base_amount == null ? null : Number(offer.base_amount), taxAmount: offer.tax_amount == null ? null : Number(offer.tax_amount),
@@ -60,19 +57,8 @@ export function normalizeDuffelOffers(offers, originCity, destinationCity) {
 }
 
 export async function searchDuffelFlights(originCity, destinationCity, date, key = process.env.DUFFEL_API_KEY) {
-  if (!key || !CITY_AIRPORTS[originCity] || !CITY_AIRPORTS[destinationCity] || originCity === destinationCity) return [];
-  const response = await fetch('https://api.duffel.com/air/offer_requests', {
-    method: 'POST', signal: controllerFor(15000),
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Duffel-Version': 'v2', 'Content-Type': 'application/json', Accept: 'application/json',
-    },
-    body: JSON.stringify({ data: {
-      slices: [{ origin: CITY_AIRPORTS[originCity], destination: CITY_AIRPORTS[destinationCity], departure_date: date }],
-      passengers: [{ type: 'adult' }], cabin_class: 'economy', max_connections: 1,
-    } }),
-  });
-  if (!response.ok) throw new Error(`Duffel HTTP ${response.status}`);
-  const payload = await response.json();
-  return normalizeDuffelOffers(payload.data?.offers || [], originCity, destinationCity);
+  if (!key || originCity === destinationCity) return [];
+  // Duffel 只接受 IATA 机场码；项目不再维护手编的城市映射表，
+  // 在接入真实机场码数据源之前明确失败，而不是猜一个码发起请求。
+  throw new Error('缺少城市到 IATA 机场码的真实数据源，Duffel 暂不可用');
 }

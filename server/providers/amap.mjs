@@ -1,4 +1,3 @@
-import { CITY_CATALOG } from '../../shared/catalog.mjs';
 import { kmBetween } from '../../shared/planner.mjs';
 import { jsonGet } from './http-client.mjs';
 
@@ -46,7 +45,8 @@ export async function searchAmapPlaces(city, key = process.env.AMAP_WEB_KEY) {
       const [lng, lat] = String(poi.location || '').split(',').map(Number);
       return {
         id: `amap-${poi.id}`, name: poi.name, lat, lng, area: String(poi.adname || poi.business_area || '城市').replace(/区$/, ''),
-        category: categoryFor(poi.name, poi.type), duration: 100, description: poi.address || '留出时间自由探索周边。',
+        // 高德不提供游玩时长；留空并交由能力状态标注“时长未核实”，不编造数值。
+        category: categoryFor(poi.name, poi.type), duration: null, description: poi.address || '留出时间自由探索周边。',
         rating: Number(poi.biz_ext?.rating) || null, ratingSource: poi.biz_ext?.rating ? '高德' : null,
         source: '高德地点搜索',
       };
@@ -127,30 +127,21 @@ export async function routeMinutes(origin, destination, city, key = process.env.
 
 export async function enrichRoutes(plan, key = process.env.AMAP_WEB_KEY) {
   if (!key) return plan;
-  const airport = CITY_CATALOG[plan.destination]?.airport;
   const groundJourneys = [];
   const itineraries = await Promise.all(plan.itinerary.map(async (day, index) => {
     const stops = await Promise.all(day.stops.map(async (stop, stopIndex) => {
-      const origin = stopIndex ? day.stops[stopIndex - 1] : (index === 0 && plan.selectedTransportMode === 'flight' ? airport : plan.stayArea);
-      if (!origin) return stop;
+      // 第一天第一段没有真实的抵达点（机场/车站坐标无数据来源），跳过而不估算。
+      const origin = stopIndex ? day.stops[stopIndex - 1] : (index === 0 ? null : plan.stayArea);
+      if (!origin || !Number.isFinite(origin.lat) || !Number.isFinite(origin.lng)) return stop;
       try {
         const route = await routeMinutes(origin, stop, plan.destination, key);
-        if (route) groundJourneys.push({ day: day.day, stopIndex, from: origin.name || (index === 0 && plan.selectedTransportMode === 'flight' ? '机场' : '住宿区域'), to: stop.name,
+        if (route) groundJourneys.push({ day: day.day, stopIndex, from: origin.name, to: stop.name,
           fromCoordinate: { lat: origin.lat, lng: origin.lng }, toCoordinate: { lat: stop.lat, lng: stop.lng },
           ...route, imagery: { status: 'check-on-device', provider: 'Apple MapKit Look Around' } });
         return route ? { ...stop, travelMinutes: route.minutes, travelSource: route.source } : stop;
       } catch { return stop; }
     }));
-    let shift = 0;
-    return { ...day, stops: stops.map((stop, stopIndex) => {
-      const original = day.stops[stopIndex];
-      shift += stop.travelMinutes - original.travelMinutes;
-      const originalMinutes = Number(original.start.slice(0, 2)) * 60 + Number(original.start.slice(3, 5));
-      const floor = stop.time === 'evening' ? 17 * 60 : stop.time === 'afternoon' ? 12 * 60 + 30 : 0;
-      const nextMinutes = Math.max(floor, originalMinutes + shift);
-      shift = nextMinutes - originalMinutes;
-      return { ...stop, start: `${String(Math.floor(nextMinutes / 60)).padStart(2, '0')}:${String(nextMinutes % 60).padStart(2, '0')}` };
-    }) };
+    return { ...day, stops };
   }));
   return { ...plan, itinerary: itineraries, groundJourneys: groundJourneys.sort((a, b) => a.day - b.day || a.stopIndex - b.stopIndex)
     .map(({ stopIndex, ...journey }) => journey) };

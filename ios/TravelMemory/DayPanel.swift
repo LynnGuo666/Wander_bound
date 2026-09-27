@@ -22,7 +22,7 @@ struct DayPanel: View {
                 }
                 ForEach(day.stops) { stop in
                     HStack(alignment: .top, spacing: 10) {
-                        Text(stop.start).font(.caption2.bold()).foregroundStyle(Palette.muted).frame(width: 41, alignment: .leading)
+                        Text(stop.start ?? "待核实").font(.caption2.bold()).foregroundStyle(Palette.muted).frame(width: 41, alignment: .leading)
                         Circle().fill(Palette.forest).frame(width: 8, height: 8).padding(.top, 4)
                         VStack(alignment: .leading, spacing: 5) {
                             HStack {
@@ -31,9 +31,15 @@ struct DayPanel: View {
                             }
                             Text(stop.description).font(.caption).foregroundStyle(Palette.muted)
                             HStack(spacing: 8) {
-                                Text("游玩约 \(stop.duration) 分钟")
+                                if let duration = stop.duration {
+                                    Text("游玩约 \(duration) 分钟")
+                                } else {
+                                    Text("游玩时长未核实")
+                                }
                                 if let minutes = stop.travelMinutes, minutes > 0 {
-                                    Text("路程约 \(minutes) 分钟 · \(stop.travelSource ?? "估算")")
+                                    Text("路程约 \(minutes) 分钟 · \(stop.travelSource ?? "高德")")
+                                } else {
+                                    Text("路程时间未核实")
                                 }
                                 if let rating = stop.rating {
                                     Text("评分 \(rating.formatted()) · \(stop.ratingSource ?? "供应商")")
