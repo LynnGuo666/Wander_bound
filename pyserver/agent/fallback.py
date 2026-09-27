@@ -4,11 +4,13 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from .handlers import execute
+from .schedule import day_windows, capacity
 
 
 def _assignments(state: dict, place_ids: list[str]) -> list[dict]:
     start = date.fromisoformat(state["startDate"])
     days = [(start + timedelta(days=index)).isoformat() for index in range(state["days"])]
+    windows = day_windows(state)
     result = []
     for day in days:
         required = next((stay for stay in state["requiredStays"] if stay["from"] <= day <= stay["to"]), None)
@@ -16,7 +18,9 @@ def _assignments(state: dict, place_ids: list[str]) -> list[dict]:
     catalog = {item["id"]: item for item in state["places"]}
     for place_id in place_ids:
         city = catalog[place_id]["city"]
-        matches = [item for item in result if item["city"] == city]
+        matches = [item for item in result if item["city"] == city and item["date"] in windows
+                   and ("夜" not in catalog[place_id]["name"] or windows[item["date"]][1].hour >= 21)
+                   and len(item["placeIds"]) < capacity(windows[item["date"]])]
         if matches:
             min(matches, key=lambda item: len(item["placeIds"]))["placeIds"].append(place_id)
     return result
@@ -49,7 +53,22 @@ async def complete_with_tools(state: dict, credentials: dict, request: dict, pri
         if not result.get("ok"):
             return
     cities = {state["destination"], *(stay["city"] for stay in state.get("requiredStays") or [])}
-    selected = [item["id"] for item in state["places"] if item.get("city") in cities][:min(8, max(2, state["days"] * 2))]
+    windows = day_windows(state)
+    maximum = min(8, max(2, state["days"] * 2), sum(capacity(window) for window in windows.values()))
+    city_slots = {}
+    for day, window in windows.items():
+        required = next((stay for stay in state.get("requiredStays") or [] if stay["from"] <= day <= stay["to"]), None)
+        city = required["city"] if required else state["destination"]
+        city_slots[city] = city_slots.get(city, 0) + capacity(window)
+    selected = []
+    for item in state["places"]:
+        city = item.get("city")
+        if len(selected) >= maximum or city not in cities or city_slots.get(city, 0) <= 0:
+            continue
+        if "夜" in item.get("name", "") and not any(window[1].hour >= 21 for window in windows.values()):
+            continue
+        selected.append(item["id"])
+        city_slots[city] -= 1
     args = {"placeIds": selected, "dayAssignments": _assignments(state, selected)}
     yield "start", "draft_plan", args, None
     result = await execute("draft_plan", args, state, credentials, request, priorities)
