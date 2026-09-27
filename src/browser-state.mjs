@@ -1,5 +1,3 @@
-import { assemblePlan } from '../shared/planner.mjs';
-
 export function upcomingFriday() {
   const date = new Date();
   date.setDate(date.getDate() + ((5 - date.getDay() + 7) % 7 || 7));
@@ -20,6 +18,3 @@ export const SAMPLE_STATUS = {
   reviews: { configured: false, label: '大众点评/美团评论 MCP' },
 };
 
-export function initialPlan(memory) {
-  return assemblePlan({ destination: '深圳', originCity: memory.homeCity, startDate: upcomingFriday(), days: 3, memory, places: [], providerStatus: SAMPLE_STATUS });
-}

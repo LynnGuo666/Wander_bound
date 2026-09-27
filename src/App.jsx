@@ -2,7 +2,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { Activity, Compass, Database, Heart, MapPinned, Server, ShieldCheck } from 'lucide-react';
 import { DEFAULT_MEMORY } from '../shared/catalog.mjs';
 import { normalizeMemory, parseTripRequest } from '../shared/planner.mjs';
-import { readStored, upcomingFriday } from './initial-plan.mjs';
+import { readStored, upcomingFriday } from './browser-state.mjs';
 import JourneyForm from './workbench/JourneyForm.jsx';
 import CredentialsPanel from './workbench/CredentialsPanel.jsx';
 import AgentTimeline from './workbench/AgentTimeline.jsx';

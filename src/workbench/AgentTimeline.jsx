@@ -31,6 +31,6 @@ export default function AgentTimeline({ events, running, error, plan, onCancel }
     <div className="wb-timeline-list" ref={list} aria-live="polite">{events.length ? events.map(event => <div className={`wb-event wb-event-${event.type} ${event.ok === false ? 'failed' : ''}`} key={event.sequence}><span className="wb-event-icon">{iconFor(event)}</span><div><strong>{labels[event.type]?.(event) || event.type}</strong><small>{event.type === 'model_turn_start' ? event.availableTools?.join(' · ') : event.type === 'model_turn_end' ? event.requestedTools?.join(' · ') || '未请求工具' : event.type === 'tool_end' ? `${event.durationMs} ms · ${event.code}` : new Date(event.at).toLocaleTimeString('zh-CN', { hour12: false })}</small></div><em>{String(event.sequence).padStart(2, '0')}</em></div>) : <div className="wb-empty-loop"><Activity size={30} /><strong>等待第一条真实事件</strong><span>点击“开始真实调试”后，这里会实时更新。</span></div>}</div>
     {error ? <div className="wb-error" role="alert"><CircleAlert size={16} /> {error}</div> : null}
     {run ? <div className={`wb-outcome ${run.status}`}><strong>{run.status === 'completed' ? '模型循环已完成' : run.status === 'degraded' ? '模型降级 · 行程由规则补全' : '模型未配置 · 规则规划'}</strong><span>{run.modelError ? `错误代码：${run.modelError}` : `模型：${run.model}`}</span></div> : null}
-    {running ? <button type="button" className="wb-cancel" onClick={onCancel}>停止本次请求</button> : null}
+    {running ? <button type="button" className="wb-cancel" onClick={onCancel}>停止等待结果</button> : null}
   </section>;
 }
