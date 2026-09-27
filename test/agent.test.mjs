@@ -345,7 +345,10 @@ test('Step client retries a rate limit and uses the exact Step 5 model ID', asyn
 test('Step client assembles streamed public text, tool calls and token usage', async () => {
   const encoder = new TextEncoder();
   const chunks = [
-    'data: {"choices":[{"delta":{"content":"<think>原始推理</think>我先查","reasoning_content":"另一段思考"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"<thi","reasoning_content":"另一段思考"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"nk>原始推"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"理</thi"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"nk>我先查"}}]}\n\n',
     'data: {"choices":[{"delta":{"content":"一下交通。","tool_calls":[{"index":0,"id":"call_1","function":{"name":"search_","arguments":"{"}}]}}]}\n\n',
     'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"transport","arguments":"}"}}]},"finish_reason":"tool_calls"}]}\n\n',
     'data: {"choices":[],"usage":{"prompt_tokens":20,"completion_tokens":8}}\n\n',
@@ -367,7 +370,22 @@ test('Step client assembles streamed public text, tool calls and token usage', a
   assert.equal(result.message.tool_calls[0].function.arguments, '{}');
   assert.equal(result.usage.prompt_tokens, 20);
   assert.equal(observed.join(''), '我先查一下交通。');
-  assert.deepEqual(reasoning, ['另一段思考', '原始推理']);
+  assert.equal(reasoning.join(''), '另一段思考原始推理');
+});
+
+test('agent forwards model reasoning deltas without adding them to the public note', async () => {
+  const events = [];
+  const model = { complete: async (_messages, _tools, { onReasoning, onDelta }) => {
+    onReasoning('原始片段一');
+    onReasoning('原始片段二');
+    onDelta('公开行动');
+    return tools(call('ask_question', { question: '选哪种交通？', options: [
+      { id: 'train', label: '火车' }, { id: 'plane', label: '飞机' },
+    ] }));
+  } };
+  await runTravelAgent(request, { model, providers: stubProviders(), onEvent: event => events.push(event) });
+  assert.equal(events.filter(event => event.type === 'model_reasoning_delta').map(event => event.text).join(''), '原始片段一原始片段二');
+  assert.equal(events.filter(event => event.type === 'model_text_delta').map(event => event.text).join(''), '公开行动');
 });
 
 test('Step client rejects truncated completions', async () => {
