@@ -11,15 +11,18 @@ function parseFrame(frame) {
 export function useAgentRun() {
   const [events, setEvents] = useState([]);
   const [plan, setPlan] = useState(null);
+  const [question, setQuestion] = useState(null);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
   const controller = useRef(null);
+  const lastPayload = useRef(null);
 
   const run = useCallback(async payload => {
+    lastPayload.current = payload;
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
-    setRunning(true); setError(''); setEvents([]); setPlan(null);
+    setRunning(true); setError(''); setEvents([]); setPlan(null); setQuestion(null);
     let receivedResult = false;
     try {
       const response = await fetch('/api/plan/stream', {
@@ -43,7 +46,8 @@ export function useAgentRun() {
           if (frame?.event === 'progress') setEvents(previous => [...previous, frame.data]);
           if (frame?.event === 'result') {
             receivedResult = true;
-            if (frame.data.error) setError(frame.data.error);
+            if (frame.data.question && frame.data.needsInput) setQuestion(frame.data.question);
+            else if (frame.data.error) setError(frame.data.error);
             else setPlan(frame.data);
           }
         }
@@ -56,6 +60,11 @@ export function useAgentRun() {
       if (controller.current === current) { controller.current = null; setRunning(false); }
     }
   }, []);
+  const answerQuestion = useCallback((optionId, customText = '') => {
+    const option = question?.options?.find(item => item.id === optionId);
+    if (!option || !lastPayload.current) return;
+    run({ ...lastPayload.current, answer: { questionId: question.id, optionId, label: option.label, customText: customText.trim() } });
+  }, [question, run]);
   const cancel = useCallback(() => controller.current?.abort(), []);
-  return { events, plan, error, running, run, cancel };
+  return { events, plan, question, error, running, run, answerQuestion, cancel };
 }

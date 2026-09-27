@@ -50,10 +50,10 @@ test('Step 5 agent runs tools, rejects an invented place, then validates a corre
   assert.equal(plan.agentRun.modelTurns, 5);
   assert.equal(plan.agentRun.toolCalls, 7);
   assert.deepEqual(toolLists, [
-    ['set_trip_spec', 'discover_places', 'resolve_origin'],
-    ['search_transport', 'search_stays'],
-    ['draft_plan'],
-    ['draft_plan'],
+    ['ask_question', 'set_trip_spec', 'discover_places', 'resolve_origin'],
+    ['ask_question', 'search_transport', 'search_stays'],
+    ['ask_question', 'draft_plan'],
+    ['ask_question', 'draft_plan'],
     ['search_attractions', 'search_dining', 'explore_ground'],
   ]);
   assert.equal(plan.agentRun.trace.filter(item => item.tool === 'draft_plan').length, 2);
@@ -80,10 +80,45 @@ test('early model answer triggers one reminder, then deterministic completion', 
   assert.ok(plan.agentRun.trace.some(item => item.tool === 'draft_plan' && item.ok));
 });
 
+test('Step 5 receives the complete natural-language request and can pause for a choice with Other', async () => {
+  const query = '我希望10月2号到10月5号一定在柳州，长春出发，放假13天，总预算4000元';
+  const model = { backend: 'external-stepfun', complete: async (messages, available) => {
+    assert.ok(JSON.stringify(messages).includes(query));
+    assert.ok(available.some(tool => tool.function.name === 'ask_question'));
+    return tools(call('ask_question', { question: '剩余假期如何安排？', options: [
+      { id: 'liuzhou', label: '都在柳州' }, { id: 'nearby', label: '顺路游览其他城市' },
+    ] }));
+  } };
+  const result = await runTravelAgent({ query }, { model, providers: stubProviders() });
+  assert.equal(result.status, 409);
+  assert.equal(result.needsInput, true);
+  assert.equal(result.agentRun.status, 'waiting_for_user');
+  assert.deepEqual(result.question.options.map(option => option.id), ['liuzhou', 'nearby', 'other']);
+});
+
+test('Step 5 structured 13-day stay preserves fixed dates and budget without invented places', async () => {
+  const script = [
+    tools(call('set_trip_spec', { destination: '柳州', originCity: '长春', days: 13, startDate: '2026-09-30', totalBudgetCny: 4000,
+      requiredStays: [{ city: '柳州', from: '2026-10-02', to: '2026-10-05' }] }), call('resolve_origin'), call('discover_places')),
+    tools(call('search_transport'), call('search_stays')),
+    tools(call('draft_plan', { placeIds: [] })), final,
+  ];
+  let turn = 0;
+  const model = { backend: 'external-stepfun', complete: async () => script[turn++] };
+  const plan = await runTravelAgent({ query: '10月2日到5日一定在柳州，长春出发，放假13天，预算4000元',
+    answer: { optionId: 'liuzhou', label: '都在柳州' } }, { model, providers: stubProviders() });
+  assert.equal(plan.agentRun.status, 'completed');
+  assert.equal(plan.startDate, '2026-09-30');
+  assert.equal(plan.days, 13);
+  assert.equal(plan.totalBudgetCny, 4000);
+  assert.equal(plan.itinerary.filter(day => day.requiredStay).length, 4);
+  assert.equal(plan.itinerary.flatMap(day => day.stops).length, 0);
+});
+
 test('an empty model draft is not reported as model-completed planning', async () => {
   let turn = 0;
   const script = [
-    tools(call('resolve_origin'), call('discover_places')),
+    tools(call('set_trip_spec', { destination: '深圳', days: 3 }), call('resolve_origin'), call('discover_places')),
     tools(call('search_transport'), call('search_stays')),
     tools(call('draft_plan', { placeIds: [] })),
     final,
@@ -126,15 +161,16 @@ test('model outage falls back without inventing supplier offers', async () => {
   assert.equal(plan.capabilityStatus.groundExploration.status, 'estimated');
 });
 
-test('missing destination data returns a clear error', async () => {
+test('a city without place data keeps a dated itinerary without inventing POIs', async () => {
   let supplierCalls = 0;
   const providers = stubProviders({
     searchDuffelFlights: async () => { supplierCalls += 1; return []; },
     searchDidaHotels: async () => { supplierCalls += 1; return []; },
   });
   const result = await runTravelAgent({ query: '去苏州玩三天', startDate: '2026-10-09' }, { providers });
-  assert.equal(result.status, 422);
-  assert.match(result.error, /没有可核实/);
+  assert.equal(result.destination, '苏州');
+  assert.equal(result.itinerary.length, 3);
+  assert.equal(result.itinerary.flatMap(day => day.stops).length, 0);
   assert.equal(supplierCalls, 0);
 });
 
@@ -146,7 +182,7 @@ test('repeated model tool calls are bounded and cached within one request', asyn
     providerAvailability: () => ({ amap: { configured: true, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' } }),
     reverseLocation: async () => { locationCalls += 1; return '上海'; },
   });
-  const plan = await runTravelAgent({ ...request, location: { lat: 31.2, lng: 121.5 } }, { model, providers });
+  const plan = await runTravelAgent({ ...request, originCity: '', location: { lat: 31.2, lng: 121.5 } }, { model, providers });
   assert.equal(modelCalls, 7);
   assert.equal(locationCalls, 1);
   assert.equal(plan.agentRun.status, 'degraded');
@@ -328,16 +364,16 @@ test('HTTP-compatible Step client passes tool results back through the full agen
     requests += 1;
     const advertised = body.tools.map(tool => tool.function.name);
     if (requests === 1) {
-      assert.deepEqual(advertised, ['set_trip_spec', 'discover_places', 'resolve_origin']);
-      assert.ok(!JSON.stringify(body.messages).includes(request.query));
+      assert.deepEqual(advertised, ['ask_question', 'set_trip_spec', 'discover_places', 'resolve_origin']);
+      assert.ok(JSON.stringify(body.messages).includes(request.query));
     }
     if (requests === 2) {
-      assert.deepEqual(advertised, ['search_transport', 'search_stays']);
+      assert.deepEqual(advertised, ['ask_question', 'search_transport', 'search_stays']);
       const results = body.messages.filter(message => message.role === 'tool').map(message => JSON.parse(message.content));
       assert.ok(results.every(result => !Object.hasOwn(result, 'locationDetected') && !Object.hasOwn(result, 'excludedVisitedCount')));
     }
     if (requests === 3) {
-      assert.deepEqual(advertised, ['draft_plan']);
+      assert.deepEqual(advertised, ['ask_question', 'draft_plan']);
       const stayResult = JSON.parse(body.messages.find(message => message.tool_call_id === 'stays').content);
       assert.ok(!Object.hasOwn(stayResult, 'brands') && !Object.hasOwn(stayResult, 'budget'));
     }

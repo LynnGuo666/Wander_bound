@@ -1,28 +1,52 @@
 import { CITY_CATALOG } from '../../../shared/catalog.mjs';
 import { toolError } from '../definitions.mjs';
-import { cleanCity, cleanInterests } from '../request.mjs';
+import { addDays, cleanCity, cleanInterests, validDate } from '../request.mjs';
 
 function compactPlaces(places) {
   return places.slice(0, 45).map(place => ({ id: place.id, name: place.name, area: place.area, category: place.category, duration: place.duration }));
 }
 
 export async function setTripSpec(ctx, args = {}) {
-  const { state, explicitDestination, explicitDays } = ctx;
+  const { state, explicitDestination, explicitDays, input } = ctx;
   if (state.placesDone) { return toolError('spec_locked', '地点查询后不能修改目的地'); }
   const destination = explicitDestination || cleanCity(args.destination || state.destination);
   const days = explicitDays ?? Number(args.days || state.days);
-  if (!destination || !Number.isInteger(days) || days < 1 || days > 7) { return toolError('invalid_trip', '目的地或天数无效'); }
+  const startDate = input.startDate || args.startDate || state.startDate;
+  const budget = args.totalBudgetCny == null ? null : Number(args.totalBudgetCny);
+  if (!destination || !Number.isInteger(days) || days < 1 || days > 21 || !validDate(startDate)) { return toolError('invalid_trip', '目的地、日期或 1–21 天的天数无效'); }
+  if (budget !== null && (!Number.isFinite(budget) || budget < 0 || budget > 1_000_000)) return toolError('invalid_budget', '总预算无效');
+  const requiredStays = Array.isArray(args.requiredStays) ? args.requiredStays.slice(0, 8).map(item => ({ city: cleanCity(item.city), from: String(item.from || ''), to: String(item.to || '') })) : [];
+  const endDate = addDays(startDate, days - 1);
+  if (requiredStays.some(stay => !validDate(stay.from) || !validDate(stay.to) || stay.from > stay.to || stay.from < startDate || stay.to > endDate)) {
+    return toolError('invalid_stay', '必须停留的日期不在旅行起止日期内');
+  }
+  if (requiredStays.some(stay => stay.city !== destination)) return toolError('multi_city_stay', '当前需要逐城指定旅行日期后才能编排多个停留城市');
   state.destination = destination;
   state.days = days;
+  state.startDate = startDate;
+  state.originCity = cleanCity(input.originCity || args.originCity || state.originCity);
+  state.totalBudgetCny = budget;
+  state.requiredStays = requiredStays;
   state.desiredInterests = cleanInterests(args.interests).length ? cleanInterests(args.interests) : state.desiredInterests;
-  return { ok: true, destination, days, interests: state.desiredInterests };
+  return { ok: true, destination, originCity: state.originCity, days, startDate, endDate, totalBudgetCny: budget, requiredStays, interests: state.desiredInterests };
+}
+
+export async function askQuestion(ctx, args = {}) {
+  const question = typeof args.question === 'string' ? args.question.trim().slice(0, 240) : '';
+  const options = Array.isArray(args.options) ? args.options.slice(0, 5).map((item, index) => ({
+    id: String(item?.id || `option-${index + 1}`).slice(0, 40), label: String(item?.label || '').trim().slice(0, 80),
+    description: String(item?.description || '').trim().slice(0, 160),
+  })).filter(item => item.label && item.id !== 'other') : [];
+  if (!question || options.length < 2 || new Set(options.map(item => item.id)).size !== options.length) return toolError('invalid_question', '请提供问题和 2–5 个不同的选项');
+  ctx.state.pendingQuestion = { id: `ask-${Date.now()}`, question, options: [...options, { id: 'other', label: '其他', description: '输入自己的答案' }] };
+  return { ok: true, waitingForUser: true, question: ctx.state.pendingQuestion };
 }
 
 export async function resolveOrigin(ctx, args = {}) {
   const { state, input, providers, warnings } = ctx;
   const lat = Number(input.location?.lat);
   const lng = Number(input.location?.lng);
-  if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && input.location && state.providerStatus.amap.configured) {
+  if (!state.originCity && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 && input.location && state.providerStatus.amap.configured) {
     try {
       const detected = await providers.reverseLocation({ lat, lng });
       if (detected) { state.originCity = cleanCity(detected); state.locationDetected = true; }
@@ -49,7 +73,7 @@ export async function discoverPlaces(ctx, args = {}) {
     .filter(place => place?.id && Number.isFinite(place.lat) && Number.isFinite(place.lng))
     .filter(place => !memory.visitedPlaces.some(visited => visited.id === place.id || (visited.name === place.name && visited.city === state.destination)));
   state.availableCount = available.length;
-  return available.length
+  return available.length || !catalog
     ? { ok: true, places: compactPlaces(available), excludedVisitedCount: memory.visitedPlaces.filter(place => place.city === state.destination).length }
     : toolError('no_new_places', `没有可核实的${state.destination}新地点`);
 }

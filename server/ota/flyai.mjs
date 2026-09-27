@@ -18,6 +18,19 @@ export function normalizeFlyaiTransport(rows, kind) {
     const totalPrice = price(item.ticketPrice ?? item.adultPrice ?? item.price);
     if (!departureAt || !arrivalAt || arrivalAt <= departureAt) return [];
     const number = segments.map(segment => segment.marketingTransportNo).filter(Boolean).join(' · ');
+    const flightSegments = kind === 'flight' ? segments.map(segment => ({
+      marketingCarrier: segment.marketingTransportName || null,
+      marketingCarrierCode: /^[A-Z0-9]{2}(?=\d)/i.exec(segment.marketingTransportNo || '')?.[0] || null,
+      flightNumber: segment.marketingTransportNo || null,
+      operatingCarrier: null, operatingCarrierCode: null, operatingFlightNumber: null,
+      aircraftModel: null, aircraftCode: null, mealIncluded: null,
+      cabinClass: segment.seatClassName || null,
+      departureAirport: segment.depStationName || null, departureCode: segment.depStationCode || null, departureTerminal: segment.depTerm || null,
+      arrivalAirport: segment.arrStationName || null, arrivalCode: segment.arrStationCode || null, arrivalTerminal: segment.arrTerm || null,
+      departureAt: isoLocal(segment.depDateTime), arrivalAt: isoLocal(segment.arrDateTime),
+      durationMinutes: Number(segment.duration) || null,
+      baggage: { carryOnPieces: null, checkedPieces: null, weightKg: null }, amenities: null,
+    })) : undefined;
     const common = {
       id: `flyai-${kind}-${item.id || `${departureAt}-${number}-${index}`}`, provider: '飞猪 FlyAI',
       departureAt, arrivalAt, totalPrice, currency: totalPrice === null ? null : 'CNY', stops: Math.max(0, segments.length - 1),
@@ -25,7 +38,9 @@ export function normalizeFlyaiTransport(rows, kind) {
       bookingUrl: /^https:\/\//.test(item.jumpUrl || '') ? item.jumpUrl : null,
       priceBasis: totalPrice === null ? '价格请在供应商页面查看' : '供应商票价，税费及行李待核', priceComplete: false,
     };
-    return [kind === 'flight' ? { ...common, airline: first.marketingTransportName || '', flightNumber: number } : { ...common, trainNumber: number, seatClass: first.seatClassName || '' }];
+    return [kind === 'flight' ? { ...common, airline: first.marketingTransportName || '', airlineCode: flightSegments[0]?.marketingCarrierCode,
+      flightNumber: number, flightSegments, fareBrand: null, changePolicy: null, refundPolicy: null, mealIncluded: null,
+      baggage: { carryOnPieces: null, checkedPieces: null, weightKg: null } } : { ...common, trainNumber: number, seatClass: first.seatClassName || '' }];
   });
 }
 

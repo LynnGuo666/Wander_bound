@@ -25,9 +25,18 @@ export function normalizeTuniuFlights(payload, date) {
     if (!departureAt || !arrivalAt || arrivalAt <= departureAt || base === null || tax === null) return [];
     const flightNumber = String(item.flightNumber || '').trim();
     if (!flightNumber) return [];
-    return [{ id: `tuniu-flight-${date}-${flightNumber}-${index}`, provider: '途牛 MCP', airline: item.airlineCompany || '', flightNumber,
+    return [{ id: `tuniu-flight-${date}-${flightNumber}-${index}`, provider: '途牛 MCP', airline: item.airlineCompany || '',
+      airlineCode: /^[A-Z0-9]{2}(?=\d)/i.exec(flightNumber)?.[0] || null, flightNumber,
       departureAt, arrivalAt, origin: item.departureAirport || '', destination: item.arrivalAirport || '',
-      stops: /直飞|直达/.test(item.type || '') ? 0 : 1, totalPrice: base + tax, currency: 'CNY', priceBasis: '基价及税费', priceComplete: true }];
+      stops: /直飞|直达/.test(item.type || '') ? 0 : 1, totalPrice: base + tax, currency: 'CNY', priceBasis: '基价及税费', priceComplete: true,
+      basePrice: base, taxAmount: tax, fareBrand: null, changePolicy: null, refundPolicy: null, mealIncluded: null,
+      baggage: { carryOnPieces: null, checkedPieces: null, weightKg: null },
+      flightSegments: [{ marketingCarrier: item.airlineCompany || null, marketingCarrierCode: /^[A-Z0-9]{2}(?=\d)/i.exec(flightNumber)?.[0] || null,
+        flightNumber, operatingCarrier: null, operatingCarrierCode: null, operatingFlightNumber: null,
+        aircraftModel: null, aircraftCode: null, mealIncluded: null, cabinClass: null,
+        departureAirport: item.departureAirport || null, departureCode: null, departureTerminal: null,
+        arrivalAirport: item.arrivalAirport || null, arrivalCode: null, arrivalTerminal: null,
+        departureAt, arrivalAt, durationMinutes: null, baggage: { carryOnPieces: null, checkedPieces: null, weightKg: null }, amenities: null }] }];
   });
 }
 

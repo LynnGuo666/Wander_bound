@@ -4,11 +4,11 @@ import { toolError } from '../definitions.mjs';
 export async function searchStays(ctx, args = {}) {
   const { state, providers, startDate, memory, warnings } = ctx;
   if (!state.placesDone) { return toolError('prerequisite', '请先调用 discover_places'); }
-  if (!state.availableCount) { return toolError('no_new_places', '没有可规划的新地点'); }
   const preliminary = assemblePlan({ destination: state.destination, originCity: state.originCity, startDate, days: state.days, memory, places: state.places, desiredInterests: state.desiredInterests });
   const area = preliminary.stayArea?.name || '';
   try {
-    const found = await providers.searchDidaHotels(state.destination, area, startDate, Math.max(1, state.days - 1), memory.hotelNightBudget);
+    const found = state.providerStatus.dida?.configured
+      ? await providers.searchDidaHotels(state.destination, area, startDate, Math.max(1, state.days - 1), memory.hotelNightBudget) : [];
     state.hotels = Array.isArray(found) ? found.filter(hotel => hotel?.id && hotel.name && hotel.currency) : [];
     state.providerStatus.dida.result = state.providerStatus.dida.configured ? (state.hotels.length ? 'ok' : '本次无酒店报价') : '未配置';
   } catch (error) { state.hotels = []; state.providerStatus.dida.result = error.message; state.providerStatus.dida.error = true; warnings.push('酒店查询失败'); }

@@ -5,7 +5,6 @@ export async function searchTransport(ctx, args = {}) {
   const { state, providers, startDate, memory, warnings } = ctx;
   if (!state.originDone) { return toolError('prerequisite', '请先调用 resolve_origin'); }
   if (!state.destination) { return toolError('missing_destination', '请先确定目的地'); }
-  if (state.placesDone && !state.availableCount) { return toolError('no_new_places', '没有可规划的新地点'); }
   const travelEndDate = addDays(startDate, state.days - 1);
   const sources = [
     { provider: 'flyai', kind: 'flight', fn: providers.searchFlyaiTransport },
@@ -13,6 +12,7 @@ export async function searchTransport(ctx, args = {}) {
     { provider: 'tuniu', kind: 'flight', fn: providers.searchTuniuTransport },
     { provider: 'tuniu', kind: 'train', fn: providers.searchTuniuTransport },
     { provider: 'duffel', kind: 'flight', fn: (_kind, from, to, date) => providers.searchDuffelFlights(from, to, date) },
+    { provider: 'rail12306', kind: 'train', fn: (_kind, from, to, date) => providers.searchRailTickets(from, to, date) },
   ].filter(source => typeof source.fn === 'function' && state.providerStatus[source.provider]?.configured);
   const tasks = sources.flatMap(source => [
     { ...source, direction: 'outbound', invoke: () => source.fn(source.kind, state.originCity, state.destination, startDate) },

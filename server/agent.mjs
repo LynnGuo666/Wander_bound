@@ -26,9 +26,13 @@ export async function runTravelAgent(input, {
   const startDate = String(input.startDate || nextFriday(now));
   const memory = safeMemory(input.memory || {});
   const state = {
-    destination: explicitDestination || cleanCity(parsed.destination),
-    days: explicitDays ?? parsed.days ?? 3,
-    desiredInterests: parsed.interests,
+    destination: explicitDestination || (model ? '' : cleanCity(parsed.destination)),
+    days: explicitDays ?? (model ? null : parsed.days ?? 3),
+    startDate,
+    totalBudgetCny: null,
+    requiredStays: [],
+    pendingQuestion: null,
+    desiredInterests: model ? [] : parsed.interests,
     originCity: cleanCity(input.originCity || memory.homeCity),
     locationDetected: false,
     places: [], flights: [], returnFlights: [], trains: [], returnTrains: [], hotels: [], plan: null,
@@ -38,8 +42,8 @@ export async function runTravelAgent(input, {
     providerStatus: providers.providerAvailability(),
   };
   emit({ type: 'run_start', model: STEP_MODEL, channel, mode: model ? 'model' : 'deterministic' });
-  if (!validDate(startDate) || (explicitDays !== null && (!Number.isInteger(explicitDays) || explicitDays < 1 || explicitDays > 7))) {
-    return { status: 400, error: '请填写有效出发日期和 1–7 天的天数。' };
+  if (!validDate(startDate) || (explicitDays !== null && (!Number.isInteger(explicitDays) || explicitDays < 1 || explicitDays > 21))) {
+    return { status: 400, error: '请填写有效出发日期和 1–21 天的天数。' };
   }
   const deadline = Date.now() + maxDurationMs;
   const trace = [];
@@ -47,10 +51,18 @@ export async function runTravelAgent(input, {
   const execute = createToolExecutor({ input, state, providers, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace, onEvent: emit });
   const { mode, modelError, modelTurns, toolCalls, usage } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent: emit });
 
+  if (state.pendingQuestion) return { status: 409, needsInput: true, question: state.pendingQuestion,
+    agentRun: { status: 'waiting_for_user', model: STEP_MODEL, channel, modelTurns, toolCalls, trace, events, warnings, usage } };
+
   if (!state.plan) {
     emit({ type: 'fallback_start', reason: model ? modelError || 'incomplete_plan' : 'model_unconfigured' });
-    if (!state.destination || !Number.isInteger(state.days) || state.days < 1 || state.days > 7) {
-      return { status: 400, error: '无法确定目的地或旅行天数。请明确输入城市与 1–7 天。', agentRun: { status: mode, model: STEP_MODEL, channel, modelError, modelTurns, toolCalls, trace, warnings } };
+    if (model) {
+      state.destination ||= cleanCity(parsed.destination);
+      state.days ??= parsed.days ?? 3;
+      if (!state.desiredInterests.length) state.desiredInterests = parsed.interests;
+    }
+    if (!state.destination || !Number.isInteger(state.days) || state.days < 1 || state.days > 21) {
+      return { status: 400, error: '无法确定目的地或旅行天数。请明确输入城市与 1–21 天。', agentRun: { status: mode, model: STEP_MODEL, channel, modelError, modelTurns, toolCalls, trace, warnings } };
     }
     for (const name of ['resolve_origin', 'discover_places', 'search_transport', 'search_stays']) {
       const result = await execute(name);
@@ -74,6 +86,21 @@ export async function runTravelAgent(input, {
     state.providerStatus.amap.result = enriched.itinerary.some(day => day.stops.some(stop => stop.travelSource?.startsWith('高德'))) ? 'ok' : '本次未取到路线';
   }
   const capabilityStatus = buildCapabilityStatus(enriched, state);
+  enriched.requiredStays = state.requiredStays;
+  enriched.totalBudgetCny = state.totalBudgetCny;
+  enriched.startDate = state.startDate;
+  enriched.endDate = state.plan.endDate;
+  if (state.totalBudgetCny !== null) {
+    const chosen = enriched.selectedTransportMode === 'train'
+      ? [[...enriched.trains, ...enriched.returnTrains], [enriched.recommendedOutboundTrainId, enriched.recommendedReturnTrainId]]
+      : [[...enriched.flights, ...enriched.returnFlights], [enriched.recommendedOutboundFlightId, enriched.recommendedReturnFlightId]];
+    const selectedQuotes = chosen[1].map(id => chosen[0].find(item => item.id === id));
+    const knownTransportCostCny = selectedQuotes.filter(item => Number.isFinite(item?.totalPrice)).reduce((sum, item) => sum + item.totalPrice, 0);
+    enriched.budgetAssessment = { totalBudgetCny: state.totalBudgetCny, knownTransportCostCny,
+      remainingAfterKnownTransportCny: state.totalBudgetCny - knownTransportCostCny,
+      quotedLegs: selectedQuotes.filter(item => Number.isFinite(item?.totalPrice)).length,
+      status: knownTransportCostCny > state.totalBudgetCny ? 'known_transport_exceeds_budget' : 'partial_cost_only' };
+  }
   emit({ type: 'result_assembled', output: {
     selectionMethod: mode === 'completed' ? '模型提交已查询的地点 ID；服务端排程与校验' : '服务端按兴趣、距离与已到访记录筛选地点',
     days: enriched.itinerary.length,

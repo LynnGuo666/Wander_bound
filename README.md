@@ -1,6 +1,6 @@
 # 旅忆 · 旅行规划 Agent
 
-网页端与原生 iOS 客户端共享同一个规划 API。服务端使用 Step 5 Preview 的函数调用 Agent loop：解析需求、查询位置和供应商、提出地点组合、校验行程。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。根据出发城市、位置、交通和酒店偏好、已到访记录生成深圳 1–7 天行程。iOS 相册、私有图片处理、DGX Spark 本地 Qwen-Image-2.1 创意重绘和 MiniMax H3 回忆短片的架构见[媒体说明](MEDIA_ARCHITECTURE.md)，模型选型与下一步模块化设计见[媒体模型调研](MEDIA_MODEL_RESEARCH.md)。
+网页端与原生 iOS 客户端共享同一个规划 API。服务端把用户自然语言原文交给 Step 5 Preview，由模型理解日期、跨城路线、预算和必须停留时段，并通过函数调用提交行程约束或追问用户。服务端校验约束并查询供应商。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。行程支持 1–21 天；火车票接入社区 12306 MCP 查询直达与中转。iOS 相册、私有图片处理、DGX Spark 本地 Qwen-Image-2.1 创意重绘和 MiniMax H3 回忆短片的架构见[媒体说明](MEDIA_ARCHITECTURE.md)，模型选型与下一步模块化设计见[媒体模型调研](MEDIA_MODEL_RESEARCH.md)。
 
 ## 本地启动
 
@@ -27,7 +27,7 @@ cd travel-agent
 
 直接调试后端可运行 `npm run agent:cli -- "我想去深圳玩三天" --origin 上海 --date 2026-10-09`。加 `--require-model` 会要求本次由 Step 5 Preview 真正完成，否则以非零状态退出，适合密钥配置后的联调。
 
-API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。服务端始终补齐景区产品、餐饮和地面交通三步。`trace` 记录工具名、成功状态、错误代码、耗时和结果计数；`events` 记录可观察的执行过程和经过白名单筛选的工具输入输出，不记录用户坐标或密钥。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次行程草拟；当前没有硬性 token 限额。模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤；外部 Step 模型收到结构化行程条件与可选地点，不收到原始自由文本和相册图片。
+API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`waiting_for_user` 表示模型提出待回答问题，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。`trace` 记录工具名、成功状态、错误代码、耗时和结果计数；`events` 记录可观察的执行过程和经过白名单筛选的工具输入输出，不记录用户坐标或密钥。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次行程草拟；当前没有硬性 token 限额。模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤；外部 Step 模型会收到用户原始提示词、明确填写的表单字段和非敏感偏好，不会收到相册图片。
 
 模型接入使用 Step Plan 的 `https://api.stepfun.com/step_plan/v1/chat/completions`，采用兼容 Chat Completions 的函数工具调用；模型 ID 固定为 `step-5-preview`。Step Plan 与普通开放平台 API 是不同的入口，需使用对应账户的 Plan 额度。当前没有可用 Plan 密钥，真实 Step 5 Preview 响应尚待联调。单次模型调用最多重试两次限流或服务端错误；连续失败三次后冷却 30 秒，本次规划改走有标记的规则流程。无密钥时 `--require-model` 会立即失败，避免把规则规划误报为模型规划。
 
@@ -59,12 +59,13 @@ open TravelMemory.xcodeproj
 | `DIDA_API_KEY` | 道旅酒店 MCP 搜索 | 酒店区域建议，无房价 |
 | `DUFFEL_API_KEY` | Duffel 航班 offer 搜索 | 保留交通偏好，无机票报价 |
 | `TRAVEL_OTA_MCP_URL` | Docker OTA MCP 的内部地址 | 飞猪和途牛不接入 |
+| `TRAVEL_12306_MCP_URL` | Docker 中社区 12306 MCP 的内部地址 | 不查询 12306 直达与中转车次 |
 | `FLYAI_API_KEY` | 飞猪 FlyAI；机票、火车、景区 | MCP 可查询受限体验模式；遮蔽价格不入报价 |
 | `TUNIU_API_KEY` | 途牛；机票、火车、门票 | 未认证时跳过途牛查询 |
 | `STEPFUN_API_KEY` | Step Plan 的 Step 5 Preview Agent loop | 明确标记 `unconfigured`，使用确定性流程 |
 | `STEPFUN_BASE_URL` | Step Plan API 地址；可按账户区域或兼容网关调整 | 使用 `https://api.stepfun.com/step_plan/v1` |
 
-Spark 上的 OTA CLI 独立封装在 Docker MCP 中。服务端只发送结构化 `tools/call`，Agent 只能使用明确注册的六个只读查询工具，不能输入任意 CLI 命令。容器使用固定版本的途牛 `tuniu-cli@1.1.1` 和飞猪 `@fly-ai/flyai-cli@1.0.16`，Node 基础镜像从 1Panel 的 `docker.1panel.live` 拉取，仅绑定服务器 `127.0.0.1:4176`。部署或本地启用时运行：
+Spark 上的 OTA CLI 独立封装在 Docker MCP 中。服务端只发送结构化 `tools/call`，Agent 只能使用明确注册的只读查询工具，不能输入任意 CLI 命令。另一个容器固定安装 [`12306-mcp@0.3.10`](https://github.com/Joooook/12306-mcp)，它是社区实现而非铁路官方 MCP。两个容器的 Node 基础镜像均从 1Panel 的 `docker.1panel.live` 拉取，仅绑定服务器回环端口 `4176` 和 `4177`。部署或本地启用时运行：
 
 ```sh
 docker compose -f deploy/ota-mcp/compose.yml up -d --build
@@ -72,6 +73,8 @@ curl http://127.0.0.1:4176/health
 ```
 
 `POST /api/capabilities` 会连接 MCP 的 `tools/list`，返回当前工具名、说明和参数 Schema；网页「能力与数据来源」用表格展示这些实时元数据。途牛无 Key 时仍能发现本项目包装的工具，但查询需要认证。道旅有 Key 后才直接向上游 MCP 请求 `tools/list`。工具被发现不代表查询成功，表格另列本次实际结果数。飞猪无 Key 的景区和机票体验查询此前已返回数据；正式额度、完整价格与库存需配置 Key 后复核。途牛当前无 Key，真实查询待认证。道旅数据结构与报价含义需要在账号开通后核验。预订前必须在供应商页面验价。高德配置后逐段查步行或公交时间，并查询每天末站附近的餐饮 POI；失败时保留并标注估算，餐饮保持空白。地图上的连线只表示地点顺序，不是导航路径。
+
+社区 12306 MCP 的车次、席别和中转结果仅作规划参考；余票与票价在预订前须到铁路官方核对。航班表格展示供应商实际返回的航司、航班号、机型、餐食、行李、税费与退改字段；供应商未提供的字段明确显示未知，不推断或编造。
 
 携程景区合作方、12306 官方接口和美团/大众点评评论 MCP 尚未取得面向本项目的只读权限。携程开放平台公开的是合作方 API，没有找到可直接供个人项目使用的官方景区 MCP；评论也不能把第三方爬虫当成官方数据源。途牛门票仅展示文档定义的「起价」及其对应团期，绝不当作出游日成交价。餐饮需要把位置、口碑和优惠分开处理；接入选择与许可问题见 [美食数据策略](FOOD_DATA_STRATEGY.md)。正式“货比三家”必须先取得多家授权并统一含税价格、房型、早餐、退改与库存条件；当前不会把不同条件的结果声称为可比的最低价。各平台开放资格、公开费用和计算口径见 [数据接入调查](travel_agent_data_sources.md)。
 
@@ -82,4 +85,4 @@ curl http://127.0.0.1:4176/health
 - API 默认不向其他网页开放跨域访问。网页与 API 分域部署时，在服务端将 `CORS_ALLOWED_ORIGIN` 设为该网页的完整 Origin；同域部署无需设置。当前 API 没有用户认证或请求限流，不能直接作为公开服务暴露。
 - 深圳内置地点为编辑维护的起步目录，缺少实时营业时间、天气、门票和评论。餐饮建议依赖高德 Key，未知评分保持空白。
 - 当前分别查询去程和返程机票、火车票；无兼容行程的返程报价不会被推荐。途牛火车只保留有余票的席别参考价；门到门总费用尚未接入。行程起始时刻在没有真实航班时属于规划假设。餐饮建议尚未占用游玩时间。iOS Look Around 的实景入口尚未接入。
-- Spark 节点上现有 Laya 服务是另一个任务的模型部署；此项目不会把旅行记忆发送到现有的 BTC 模型。相册图片与回忆视频只在私有媒体服务及本地 MiniMax H3 工作流处理；Step 5 Preview 通过阶跃星辰 API 或你配置的兼容网关调用，只接收规划所需的结构化条件。
+- Spark 节点上现有 Laya 服务是另一个任务的模型部署；此项目不会把旅行记忆发送到现有的 BTC 模型。相册图片与回忆视频只在私有媒体服务及本地 MiniMax H3 工作流处理；Step 5 Preview 通过阶跃星辰 API 或你配置的兼容网关调用，接收用户原始规划提示词、明确填写的表单字段和非敏感偏好。

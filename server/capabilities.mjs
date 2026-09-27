@@ -1,5 +1,6 @@
 import { providerAvailability } from './providers/status.mjs';
 import { listOtaMcpTools } from './ota/run-cli.mjs';
+import { listRailMcpTools } from './providers/rail12306.mjs';
 
 function toolRows(payload) {
   const tools = payload?.result?.tools || payload?.tools;
@@ -33,5 +34,10 @@ export async function discoverCapabilities(credentials = {}, { availability = pr
     } catch { ota = { ...ota, discovery: 'failed', error: 'discovery_failed' }; }
   }
   const dida = await didaDiscovery(credentials.dida || process.env.DIDA_API_KEY);
-  return { checkedAt: new Date().toISOString(), providers, connections: { ota, dida } };
+  let rail = { kind: 'MCP', discovery: 'unavailable', tools: [], metadataSource: 'tools/list（12306 社区 MCP）' };
+  if (process.env.TRAVEL_12306_MCP_URL) {
+    try { const tools = await listRailMcpTools({ timeoutMs: 5000 }); rail = { ...rail, discovery: tools.length ? 'runtime' : 'empty', tools }; }
+    catch { rail = { ...rail, discovery: 'failed', error: 'discovery_failed' }; }
+  }
+  return { checkedAt: new Date().toISOString(), providers, connections: { ota, dida, rail } };
 }

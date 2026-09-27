@@ -20,6 +20,7 @@ export function createRequestProviders(credentials = {}) {
     searchFlyaiTransport: async (...args) => (await import('./providers/ota.mjs')).searchFlyaiTransport(...args, runner),
     searchTuniuTransport: async (...args) => (await import('./providers/ota.mjs')).searchTuniuTransport(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY'))),
     searchAttractionProducts: async (...args) => (await import('./providers/ota.mjs')).searchAttractionProducts(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY'))),
+    searchRailTickets: async (origin, destination, date) => (await import('./providers/rail12306.mjs')).searchRailTickets(origin, destination, date),
   };
 }
 
@@ -79,5 +80,11 @@ export async function searchTuniuTransport(...args) {
 
 export async function searchAttractionProducts(...args) {
   const { searchAttractionProducts: search } = await import('./providers/ota.mjs');
+  return search(...args);
+}
+
+export async function searchRailTickets(...args) {
+  if (!process.env.TRAVEL_12306_MCP_URL) return [];
+  const { searchRailTickets: search } = await import('./providers/rail12306.mjs');
   return search(...args);
 }

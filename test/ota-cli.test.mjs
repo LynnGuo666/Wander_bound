@@ -41,6 +41,20 @@ test('complete FlyAI flight and train results preserve source, date, price and d
   assert.equal(train.priceComplete, false);
 });
 
+test('FlyAI flight detail preserves terminals and cabin while leaving absent aircraft, meals and bags unknown', () => {
+  const row = { ticketPrice: '710', journeys: [{ segments: [{ depDateTime: '2026-10-09 08:00:00', arrDateTime: '2026-10-09 10:00:00',
+    depStationName: '虹桥机场', depStationCode: 'SHA', depTerm: 'T1', arrStationName: '宝安机场', arrStationCode: 'SZX', arrTerm: 'T3',
+    marketingTransportName: '春秋', marketingTransportNo: '9C8955', seatClassName: '经济舱', duration: '120' }] }] };
+  const [flight] = normalizeFlyaiTransport([row], 'flight');
+  assert.equal(flight.airlineCode, '9C');
+  assert.equal(flight.flightSegments[0].departureTerminal, 'T1');
+  assert.equal(flight.flightSegments[0].arrivalTerminal, 'T3');
+  assert.equal(flight.flightSegments[0].cabinClass, '经济舱');
+  assert.equal(flight.flightSegments[0].aircraftModel, null);
+  assert.equal(flight.flightSegments[0].mealIncluded, null);
+  assert.equal(flight.flightSegments[0].baggage.checkedPieces, null);
+});
+
 test('Tuniu train fare is selected from a seat with actual availability', () => {
   const [offer] = normalizeTuniuTrains({ data: [{ trainNum: 'G11', departStationName: '上海虹桥', destStationName: '深圳北',
     trainType: 'direct', departureTime: '2026-10-09 08:00', arrivalTime: '2026-10-09 15:00',

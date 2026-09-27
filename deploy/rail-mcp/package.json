@@ -1,0 +1,8 @@
+{
+  "name": "travel-rail-mcp-runtime",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "12306-mcp": "0.3.10"
+  }
+}
