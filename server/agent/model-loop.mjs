@@ -50,19 +50,35 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
         const availableTools = availableToolsFor(state);
         const availableNames = new Set(availableTools.map(tool => tool.function.name));
         onEvent?.({ type: 'model_turn_start', turn: modelTurns + 1, availableTools: [...availableNames], input: {
+          toolChoice: state.plan ? 'auto' : 'required', maxOutputTokens: 4096,
           messageCount: messages.length,
           latest: messages.slice(-2).map(message => ({ role: message.role, tool: message.role === 'tool' ? message.tool_call_id : undefined, preview: String(message.content || '').slice(0, 1200) })),
         } });
-        const completion = await model.complete(messages, availableTools, { deadline, signal,
-          onDelta: text => onEvent?.({ type: 'model_text_delta', turn: modelTurns + 1, text }),
-          onReasoning: text => onEvent?.({ type: 'model_reasoning_delta', turn: modelTurns + 1, text }) });
+        let completion;
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            const retryMessages = attempt ? [...messages, { role: 'user', content: '上一轮模型响应未完成。请立即调用当前可用工具，修正参数；不要重复分析。' }] : messages;
+            completion = await model.complete(retryMessages, availableTools, { deadline, signal,
+              toolChoice: state.plan ? 'auto' : 'required',
+              onDelta: text => onEvent?.({ type: 'model_text_delta', turn: modelTurns + 1, text }),
+              onReasoning: text => onEvent?.({ type: 'model_reasoning_delta', turn: modelTurns + 1, text }) });
+            break;
+          } catch (error) {
+            if (error.usage) {
+              usage.prompt_tokens += Number(error.usage.prompt_tokens) || 0;
+              usage.completion_tokens += Number(error.usage.completion_tokens) || 0;
+              usage.reported ||= Number.isFinite(error.usage.prompt_tokens) || Number.isFinite(error.usage.completion_tokens);
+            }
+            if (signal?.aborted || attempt || !['output_limit', 'invalid_completion', 'network'].includes(error.code)) throw error;
+            onEvent?.({ type: 'model_retry', turn: modelTurns + 1, code: error.code, finishReason: error.finishReason || null, usage: error.usage || null, attempt: 2 });
+          }
+        }
         modelTurns += 1;
         usage.prompt_tokens += Number(completion.usage?.prompt_tokens) || 0;
         usage.completion_tokens += Number(completion.usage?.completion_tokens) || 0;
         if (completion.usage && (Number.isFinite(completion.usage.prompt_tokens) || Number.isFinite(completion.usage.completion_tokens))) usage.reported = true;
         const calls = completion.message.tool_calls || [];
-        const publicNote = typeof completion.message.content === 'string' && !/<\/?think\b/i.test(completion.message.content)
-          ? completion.message.content.slice(0, 240) : '';
+        const publicNote = String(completion.publicContent ?? (typeof completion.message.content === 'string' && !/<\/?think\b/i.test(completion.message.content) ? completion.message.content : '')).slice(0, 240);
         onEvent?.({ type: 'model_turn_end', turn: modelTurns, requestedTools: Array.isArray(calls) ? calls.map(call => String(call.function?.name || 'unknown')) : [], usage: completion.usage || null, finishReason: completion.finishReason || null, publicNote });
         if (!Array.isArray(calls) || calls.some(call => typeof call.id !== 'string' || !call.id || typeof call.function?.name !== 'string')) {
           const error = new Error('模型返回无效工具调用'); error.code = 'invalid_tool_call'; throw error;
@@ -98,7 +114,7 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
       mode = 'degraded';
       modelError = error.code || 'model_error';
       warnings.push('模型不可用，启用确定性规划');
-      onEvent?.({ type: 'model_error', code: modelError });
+      onEvent?.({ type: 'model_error', turn: modelTurns + 1, code: modelError, message: error.message, finishReason: error.finishReason || null, usage: error.usage || null });
     }
   }
 

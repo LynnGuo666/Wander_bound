@@ -20,7 +20,7 @@ export async function runTravelAgent(input, {
     onEvent?.(entry);
   };
   const channel = model?.channel || stepChannel();
-  const parsed = parseTripRequest(String(input.query || '').slice(0, 600));
+  const parsed = model ? null : parseTripRequest(String(input.query || '').slice(0, 600));
   const explicitDestination = cleanCity(input.destination);
   const explicitDays = input.days == null || input.days === '' ? null : Number(input.days);
   const startDate = String(input.startDate || nextFriday(now));
@@ -55,12 +55,12 @@ export async function runTravelAgent(input, {
     agentRun: { status: 'waiting_for_user', model: STEP_MODEL, channel, modelTurns, toolCalls, trace, events, warnings, usage } };
 
   if (!state.plan) {
-    emit({ type: 'fallback_start', reason: model ? modelError || 'incomplete_plan' : 'model_unconfigured' });
     if (model) {
-      state.destination ||= cleanCity(parsed.destination);
-      state.days ??= parsed.days ?? 3;
-      if (!state.desiredInterests.length) state.desiredInterests = parsed.interests;
+      emit({ type: 'run_failed', reason: modelError || 'incomplete_plan' });
+      return { status: 502, error: modelError ? `Step 未完成规划（${modelError}）。请查看完整调试记录。` : 'Step 没有提交完整行程。请查看完整调试记录。',
+        agentRun: { status: mode, model: STEP_MODEL, channel, modelError, modelTurns, toolCalls, trace, events, warnings, usage } };
     }
+    emit({ type: 'fallback_start', reason: model ? modelError || 'incomplete_plan' : 'model_unconfigured' });
     if (!state.destination || !Number.isInteger(state.days) || state.days < 1 || state.days > 21) {
       return { status: 400, error: '无法确定目的地或旅行天数。请明确输入城市与 1–21 天。', agentRun: { status: mode, model: STEP_MODEL, channel, modelError, modelTurns, toolCalls, trace, warnings } };
     }

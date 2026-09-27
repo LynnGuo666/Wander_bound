@@ -40,10 +40,11 @@ export function useAgentRun() {
         const { value, done } = await reader.read();
         buffer += decoder.decode(value || new Uint8Array(), { stream: !done }).replace(/\r\n/g, '\n');
         let boundary;
+        const progress = [];
         while ((boundary = buffer.indexOf('\n\n')) !== -1) {
           const frame = parseFrame(buffer.slice(0, boundary));
           buffer = buffer.slice(boundary + 2);
-          if (frame?.event === 'progress') setEvents(previous => [...previous, frame.data]);
+          if (frame?.event === 'progress') progress.push(frame.data);
           if (frame?.event === 'result') {
             receivedResult = true;
             if (frame.data.question && frame.data.needsInput) setQuestion(frame.data.question);
@@ -51,6 +52,7 @@ export function useAgentRun() {
             else setPlan(frame.data);
           }
         }
+        if (progress.length) setEvents(previous => [...previous, ...progress]);
         if (done) break;
       }
       if (!receivedResult) throw new Error('连接已结束，但 Agent 没有返回结果');

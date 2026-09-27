@@ -70,14 +70,14 @@ test('Step 5 agent runs tools, rejects an invented place, then validates a corre
   assert.ok(events.some(event => event.type === 'result_assembled' && event.output.stops > 0 && event.output.capabilities.attractions.source));
 });
 
-test('early model answer triggers one reminder, then deterministic completion', async () => {
+test('early model answer triggers one reminder, then reports an incomplete model run', async () => {
   let calls = 0;
   const model = { complete: async () => { calls += 1; return final; } };
   const plan = await runTravelAgent(request, { model, providers: stubProviders() });
   assert.equal(calls, 2);
   assert.equal(plan.agentRun.status, 'degraded');
-  assert.equal(plan.itinerary.length, 3);
-  assert.ok(plan.agentRun.trace.some(item => item.tool === 'draft_plan' && item.ok));
+  assert.equal(plan.status, 502);
+  assert.ok(plan.agentRun.events.some(event => event.type === 'run_failed'));
 });
 
 test('Step 5 receives the complete natural-language request and can pause for a choice with Other', async () => {
@@ -127,7 +127,7 @@ test('an empty model draft is not reported as model-completed planning', async (
   const plan = await runTravelAgent(request, { model, providers: stubProviders() });
   assert.equal(plan.agentRun.status, 'degraded');
   assert.ok(plan.agentRun.trace.some(item => item.tool === 'draft_plan' && !item.ok));
-  assert.equal(plan.itinerary.length, 3);
+  assert.equal(plan.status, 502);
 });
 
 test('a tool that has not been exposed cannot run ahead of its stage', async () => {
@@ -145,20 +145,17 @@ test('a tool that has not been exposed cannot run ahead of its stage', async () 
   const progress = [];
   const plan = await runTravelAgent(request, { model, providers: stubProviders(), onEvent: event => progress.push(event) });
   assert.equal(plan.agentRun.status, 'degraded');
-  assert.equal(plan.agentRun.trace.filter(item => item.tool === 'search_transport').length, 1);
+  assert.equal(plan.agentRun.trace.filter(item => item.tool === 'search_transport').length, 0);
   assert.ok(progress.some(event => event.type === 'tool_rejected' && event.tool === 'search_transport' && event.output.code === 'tool_not_loaded'));
 });
 
-test('model outage falls back without inventing supplier offers', async () => {
+test('model outage reports a debuggable error without inventing supplier offers', async () => {
   const model = { complete: async () => { const error = new Error('timeout'); error.code = 'deadline'; throw error; } };
   const plan = await runTravelAgent(request, { model, providers: stubProviders() });
   assert.equal(plan.agentRun.status, 'degraded');
   assert.equal(plan.agentRun.modelError, 'deadline');
-  assert.equal(plan.hotels.length, 0);
-  assert.equal(plan.flights.length, 0);
-  assert.deepEqual(Object.keys(plan.capabilityStatus), ['flights', 'trains', 'attractions', 'lodging', 'food', 'reviews', 'groundExploration']);
-  assert.equal(plan.capabilityStatus.flights.status, 'unavailable');
-  assert.equal(plan.capabilityStatus.groundExploration.status, 'estimated');
+  assert.equal(plan.status, 502);
+  assert.ok(plan.agentRun.events.some(event => event.type === 'model_error' && event.code === 'deadline'));
 });
 
 test('a city without place data keeps a dated itinerary without inventing POIs', async () => {
@@ -174,7 +171,7 @@ test('a city without place data keeps a dated itinerary without inventing POIs',
   assert.equal(supplierCalls, 0);
 });
 
-test('repeated model tool calls are bounded and cached within one request', async () => {
+test('repeated model tool calls are bounded and later rejected after the stage closes', async () => {
   let modelCalls = 0;
   let locationCalls = 0;
   const model = { complete: async () => { modelCalls += 1; return tools(call('resolve_origin', {}, `location-${modelCalls}`)); } };
@@ -186,8 +183,8 @@ test('repeated model tool calls are bounded and cached within one request', asyn
   assert.equal(modelCalls, 200);
   assert.equal(locationCalls, 1);
   assert.equal(plan.agentRun.status, 'degraded');
-  assert.equal(plan.originCity, '上海');
-  assert.ok(plan.agentRun.events.some(event => event.type === 'tool_cache_hit' && event.tool === 'resolve_origin' && event.output.ok));
+  assert.equal(plan.status, 502);
+  assert.ok(plan.agentRun.events.some(event => event.type === 'tool_rejected' && event.tool === 'resolve_origin' && event.code === 'tool_not_loaded'));
 });
 
 test('malformed supplier data is discarded before it reaches clients', async () => {
@@ -373,6 +370,22 @@ test('Step client assembles streamed public text, tool calls and token usage', a
   assert.equal(reasoning.join(''), '另一段思考原始推理');
 });
 
+test('Step content-only analysis is streamed as thinking and reports output truncation', async () => {
+  const frames = [
+    'data: {"choices":[{"delta":{"content":"Let me analyze the user request. "}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"I should call a tool now."},"finish_reason":"length"}]}\n\n',
+    'data: [DONE]\n\n',
+  ].join('');
+  const visible = [], thinking = [];
+  const client = createStepClient({ apiKey: 'test-only', fetchImpl: async () => ({ ok: true,
+    headers: { get: () => 'text/event-stream' }, body: new ReadableStream({ start(controller) {
+      controller.enqueue(new TextEncoder().encode(frames)); controller.close();
+    } }) }) });
+  await assert.rejects(client.complete([], [], { onDelta: text => visible.push(text), onReasoning: text => thinking.push(text) }), error => error.code === 'output_limit');
+  assert.deepEqual(visible, []);
+  assert.equal(thinking.join(''), 'Let me analyze the user request. I should call a tool now.');
+});
+
 test('agent forwards model reasoning deltas without adding them to the public note', async () => {
   const events = [];
   const model = { complete: async (_messages, _tools, { onReasoning, onDelta }) => {
@@ -409,6 +422,7 @@ test('HTTP-compatible Step client passes tool results back through the full agen
   const fetchImpl = async (_url, options) => {
     const body = JSON.parse(options.body);
     requests += 1;
+    assert.equal(body.tool_choice, requests === 4 ? 'auto' : 'required');
     const advertised = body.tools.map(tool => tool.function.name);
     if (requests === 1) {
       assert.deepEqual(advertised, ['ask_question', 'set_trip_spec', 'discover_places', 'resolve_origin']);
