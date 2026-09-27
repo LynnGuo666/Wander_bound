@@ -1,8 +1,8 @@
 import { availableToolsFor, cleanToolArguments, toolError } from './definitions.mjs';
 import { debugInput } from './tools.mjs';
 
-const MAX_TURNS = 7;
-const MAX_TOOL_CALLS = 14;
+const MAX_TURNS = 200;
+const MAX_TOOL_CALLS = 200;
 
 function externalToolResult(name, result) {
   if (!result?.ok) return result;
@@ -21,10 +21,10 @@ function externalToolResult(name, result) {
   return result;
 }
 
-export async function runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent }) {
+export async function runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent, signal }) {
   let modelTurns = 0;
   let toolCalls = 0;
-  const usage = { prompt_tokens: 0, completion_tokens: 0 };
+  const usage = { prompt_tokens: 0, completion_tokens: 0, reported: false };
   let mode = model ? 'completed' : 'unconfigured';
   let modelError = null;
   if (model) {
@@ -53,10 +53,12 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
           messageCount: messages.length,
           latest: messages.slice(-2).map(message => ({ role: message.role, tool: message.role === 'tool' ? message.tool_call_id : undefined, preview: String(message.content || '').slice(0, 1200) })),
         } });
-        const completion = await model.complete(messages, availableTools, { deadline });
+        const completion = await model.complete(messages, availableTools, { deadline, signal,
+          onDelta: text => onEvent?.({ type: 'model_text_delta', turn: modelTurns + 1, text }) });
         modelTurns += 1;
         usage.prompt_tokens += Number(completion.usage?.prompt_tokens) || 0;
         usage.completion_tokens += Number(completion.usage?.completion_tokens) || 0;
+        if (completion.usage && (Number.isFinite(completion.usage.prompt_tokens) || Number.isFinite(completion.usage.completion_tokens))) usage.reported = true;
         const calls = completion.message.tool_calls || [];
         const publicNote = typeof completion.message.content === 'string' && !/<\/?think\b/i.test(completion.message.content)
           ? completion.message.content.slice(0, 240) : '';
@@ -91,6 +93,7 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
       }
       if (!state.plan && !state.pendingQuestion) mode = 'degraded';
     } catch (error) {
+      if (signal?.aborted) throw error;
       mode = 'degraded';
       modelError = error.code || 'model_error';
       warnings.push('模型不可用，启用确定性规划');

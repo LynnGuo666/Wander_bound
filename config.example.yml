@@ -1,0 +1,7 @@
+# Copying is optional: the Settings page creates config.yml on first save.
+# Never commit config.yml. Saved credentials are readable only by the server user.
+credentials: {}
+priorities:
+  flights: [duffel, flyai, tuniu]
+  trains: [rail12306, flyai, tuniu]
+  attractions: [flyai, tuniu]

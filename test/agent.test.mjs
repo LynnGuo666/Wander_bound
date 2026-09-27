@@ -183,7 +183,7 @@ test('repeated model tool calls are bounded and cached within one request', asyn
     reverseLocation: async () => { locationCalls += 1; return '上海'; },
   });
   const plan = await runTravelAgent({ ...request, originCity: '', location: { lat: 31.2, lng: 121.5 } }, { model, providers });
-  assert.equal(modelCalls, 7);
+  assert.equal(modelCalls, 200);
   assert.equal(locationCalls, 1);
   assert.equal(plan.agentRun.status, 'degraded');
   assert.equal(plan.originCity, '上海');
@@ -335,10 +335,37 @@ test('Step client retries a rate limit and uses the exact Step 5 model ID', asyn
   const response = await client.complete([{ role: 'user', content: 'hi' }], [], { deadline: Date.now() + 3000 });
   assert.equal(attempts, 2);
   assert.ok(bodies.every(body => body.model === 'step-5-preview'));
+  assert.ok(bodies.every(body => body.stream === true));
   assert.ok(endpoints.every(url => url === 'https://api.stepfun.com/step_plan/v1/chat/completions'));
   assert.equal(client.channel, 'step-plan');
   assert.equal(stepChannel(STEP_BASE_URL), 'step-plan');
   assert.equal(response.message.content, '完成');
+});
+
+test('Step client assembles streamed public text, tool calls and token usage', async () => {
+  const encoder = new TextEncoder();
+  const chunks = [
+    'data: {"choices":[{"delta":{"content":"<think>不应展示的推理</think>我先查"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"一下交通。","tool_calls":[{"index":0,"id":"call_1","function":{"name":"search_","arguments":"{"}}]}}]}\n\n',
+    'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"transport","arguments":"}"}}]},"finish_reason":"tool_calls"}]}\n\n',
+    'data: {"choices":[],"usage":{"prompt_tokens":20,"completion_tokens":8}}\n\n',
+    'data: [DONE]\n\n',
+  ];
+  const observed = [];
+  const client = createStepClient({ apiKey: 'test-only', fetchImpl: async (_url, options) => {
+    assert.equal(JSON.parse(options.body).stream, true);
+    return { ok: true, headers: { get: () => 'text/event-stream' }, body: new ReadableStream({ start(controller) {
+      const bytes = encoder.encode(chunks.join(''));
+      for (let offset = 0; offset < bytes.length; offset += 7) controller.enqueue(bytes.slice(offset, offset + 7));
+      controller.close();
+    } }) };
+  } });
+  const result = await client.complete([], [], { onDelta: text => observed.push(text) });
+  assert.equal(result.message.content, '<think>不应展示的推理</think>我先查一下交通。');
+  assert.equal(result.message.tool_calls[0].function.name, 'search_transport');
+  assert.equal(result.message.tool_calls[0].function.arguments, '{}');
+  assert.equal(result.usage.prompt_tokens, 20);
+  assert.equal(observed.join(''), '我先查一下交通。');
 });
 
 test('Step client rejects truncated completions', async () => {

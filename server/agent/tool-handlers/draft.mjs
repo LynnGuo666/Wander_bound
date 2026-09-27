@@ -4,7 +4,7 @@ import { toolError } from '../definitions.mjs';
 import { planInvariant } from '../plan-output.mjs';
 
 export async function draftPlan(ctx, args = {}) {
-  const { state, memory, startDate, cache, internal } = ctx;
+  const { state, memory, providerPriority, startDate, cache, internal } = ctx;
   if (!state.placesDone || !state.originDone || !state.transportDone || !state.staysDone) { return toolError('prerequisite', '请先完成位置、地点、交通和住宿查询'); }
   if (state.drafts >= 2) { return toolError('draft_limit', '最多草拟两次'); }
   const available = [...(CITY_CATALOG[state.destination]?.places || []), ...state.places]
@@ -19,7 +19,7 @@ export async function draftPlan(ctx, args = {}) {
   if (requested.some(id => !available.some(place => place.id === id))) { return toolError('unverified_place', '包含未查询或已到访的地点'); }
   const target = state.days === 1 ? 2 : state.days === 2 ? 4 : 4 + (state.days - 2) * 3;
   if (requested.length && requested.length < Math.min(target, available.length)) { return toolError('too_few_places', `请选至少 ${Math.min(target, available.length)} 个地点`); }
-  const draft = assemblePlan({ destination: state.destination, originCity: state.originCity, startDate, days: state.days, memory, places: state.places, flights: state.flights, returnFlights: state.returnFlights, trains: state.trains, returnTrains: state.returnTrains, hotels: state.hotels, providerStatus: state.providerStatus, desiredInterests: state.desiredInterests, proposedPlaceIds: requested });
+  const draft = assemblePlan({ destination: state.destination, originCity: state.originCity, startDate, days: state.days, memory, places: state.places, flights: state.flights, returnFlights: state.returnFlights, trains: state.trains, returnTrains: state.returnTrains, hotels: state.hotels, providerStatus: state.providerStatus, providerPriority, desiredInterests: state.desiredInterests, proposedPlaceIds: requested });
   draft.itinerary = draft.itinerary.map(day => ({ ...day, city: state.destination,
     requiredStay: state.requiredStays.some(stay => stay.city === state.destination && day.date >= stay.from && day.date <= stay.to) }));
   const invalid = planInvariant(draft, memory, available);

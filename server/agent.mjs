@@ -11,7 +11,7 @@ import { createToolExecutor } from './agent/tools.mjs';
 export { AGENT_TOOLS };
 
 export async function runTravelAgent(input, {
-  model = null, providers = defaultProviders, now = new Date(), maxDurationMs = 100000, onEvent = null,
+  model = null, providers = defaultProviders, providerPriority = {}, now = new Date(), maxDurationMs = 300000, onEvent = null, signal = null,
 } = {}) {
   const events = [];
   const emit = event => {
@@ -48,8 +48,8 @@ export async function runTravelAgent(input, {
   const deadline = Date.now() + maxDurationMs;
   const trace = [];
   const warnings = [];
-  const execute = createToolExecutor({ input, state, providers, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace, onEvent: emit });
-  const { mode, modelError, modelTurns, toolCalls, usage } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent: emit });
+  const execute = createToolExecutor({ input, state, providers, providerPriority, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace, onEvent: emit });
+  const { mode, modelError, modelTurns, toolCalls, usage } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent: emit, signal });
 
   if (state.pendingQuestion) return { status: 409, needsInput: true, question: state.pendingQuestion,
     agentRun: { status: 'waiting_for_user', model: STEP_MODEL, channel, modelTurns, toolCalls, trace, events, warnings, usage } };
@@ -82,6 +82,16 @@ export async function runTravelAgent(input, {
   emit({ type: 'validation', ok: !invalid, code: invalid ? 'plan_invariant' : 'ok' });
   if (invalid) return { status: 422, error: invalid, agentRun: { status: 'degraded', model: STEP_MODEL, channel, modelError, modelTurns, toolCalls, trace, warnings } };
   const enriched = state.plan;
+  const chosenProvider = (offers, id, order) => {
+    const source = offers.find(item => item.id === id)?.sourceId || null;
+    return { preferred: order?.[0] || null, selected: source, fallback: Boolean(source && order?.length && source !== order[0]) };
+  };
+  enriched.sourceSelection = {
+    outboundFlight: chosenProvider(enriched.flights, enriched.recommendedOutboundFlightId, providerPriority.flights),
+    returnFlight: chosenProvider(enriched.returnFlights, enriched.recommendedReturnFlightId, providerPriority.flights),
+    outboundTrain: chosenProvider(enriched.trains, enriched.recommendedOutboundTrainId, providerPriority.trains),
+    returnTrain: chosenProvider(enriched.returnTrains, enriched.recommendedReturnTrainId, providerPriority.trains),
+  };
   if (state.providerStatus.amap.configured && !state.providerStatus.amap.result) {
     state.providerStatus.amap.result = enriched.itinerary.some(day => day.stops.some(stop => stop.travelSource?.startsWith('高德'))) ? 'ok' : '本次未取到路线';
   }
@@ -111,6 +121,7 @@ export async function runTravelAgent(input, {
     recommendedOutboundTrainId: enriched.recommendedOutboundTrainId,
     recommendedReturnFlightId: enriched.recommendedReturnFlightId,
     recommendedReturnTrainId: enriched.recommendedReturnTrainId,
+    sourceSelection: enriched.sourceSelection,
     flights: enriched.flights.length + enriched.returnFlights.length,
     trains: enriched.trains.length + enriched.returnTrains.length,
     hotels: enriched.hotels.length,

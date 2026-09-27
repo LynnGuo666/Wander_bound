@@ -25,8 +25,8 @@ async function searchTuniuTickets(placeName, visitDate, runner) {
 export async function searchAttractionProducts(city, places, runner, tuniuConfigured = providerAvailability().tuniu.configured) {
   const targets = places.filter(place => !/公园|广场|街区|海滩|海湾/.test(place.name)).slice(0, 7);
   const jobs = targets.flatMap(place => [
-    { place, promise: searchFlyaiAttractions(city, place.name, runner) },
-    ...(tuniuConfigured ? [{ place, promise: searchTuniuTickets(place.name, place.visitDate, runner) }] : []),
+    { place, sourceId: 'flyai', promise: searchFlyaiAttractions(city, place.name, runner) },
+    ...(tuniuConfigured ? [{ place, sourceId: 'tuniu', promise: searchTuniuTickets(place.name, place.visitDate, runner) }] : []),
   ]);
   const responses = await Promise.allSettled(jobs.map(job => job.promise));
   if (jobs.length && responses.every(item => item.status === 'rejected')) throw responses[0].reason;
@@ -36,6 +36,6 @@ export async function searchAttractionProducts(city, places, runner, tuniuConfig
   };
   const matched = responses.flatMap((item, index) => item.status === 'fulfilled'
     ? item.value.filter(offer => canonical(offer.name) === canonical(jobs[index].place.name))
-      .map(offer => ({ ...offer, placeId: jobs[index].place.id })) : []);
+      .map(offer => ({ ...offer, sourceId: jobs[index].sourceId, placeId: jobs[index].place.id })) : []);
   return [...new Map(matched.map(offer => [`${offer.placeId}:${offer.provider}:${offer.productName}:${offer.price}`, offer])).values()];
 }

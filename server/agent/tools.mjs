@@ -38,7 +38,7 @@ function debugOutput(name, result) {
     set_trip_spec: ['destination', 'originCity', 'days', 'startDate', 'endDate', 'totalBudgetCny', 'requiredStays', 'interests'],
     resolve_origin: ['originCity', 'locationDetected'],
     discover_places: ['places', 'excludedVisitedCount'],
-    search_transport: ['outboundFlights', 'returnFlights', 'outboundTrains', 'returnTrains'],
+    search_transport: ['sourcePriority', 'outboundFlights', 'returnFlights', 'outboundTrains', 'returnTrains'],
     search_stays: ['suggestedArea', 'hotels'],
     draft_plan: ['days', 'stayArea', 'flightQuotes', 'returnFlightQuotes', 'trainQuotes', 'returnTrainQuotes', 'hotelQuotes'],
     search_attractions: ['products'], search_dining: ['suggestions'], explore_ground: ['verifiedLegs', 'legs'],
@@ -75,7 +75,7 @@ export function createToolExecutor(context) {
     }
     const entry = { tool: name, ok: result.ok === true, code: result.ok ? 'ok' : String(result.code || 'failed'), durationMs: Date.now() - started, summary: resultSummary(name, result) };
     context.trace.push(entry);
-    context.onEvent?.({ type: 'tool_end', turn, output: debugOutput(name, result), ...entry });
+    context.onEvent?.({ type: 'tool_end', turn, source: internal ? 'agent' : 'model', output: debugOutput(name, result), ...entry });
     if (name !== 'draft_plan' && name !== 'set_trip_spec' && name !== 'ask_question' && (result.ok || result.code === 'no_new_places')) cache.set(name, result);
     return result;
   };

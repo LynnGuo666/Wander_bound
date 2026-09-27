@@ -158,7 +158,7 @@ export function chooseStayArea(destination, days, memory) {
     .sort((a, b) => a.averageKm - b.averageKm)[0];
 }
 
-export function rankFlights(flights, memory) {
+export function rankFlights(flights, memory, providerPriority = []) {
   return flights.map(flight => {
     const departureHour = Number(flight.departureAt?.slice(11, 13));
     const arrivalDate = flight.arrivalAt?.slice(0, 10);
@@ -169,7 +169,13 @@ export function rankFlights(flights, memory) {
     const score = (Number(flight.totalPrice) || 99999) + (flight.priceComplete === false ? 10000 : 0)
       + (redEye && memory.avoidRedEye ? 100000 : 0) + (flight.stops || 0) * 180 + lateArrivalCost;
     return { ...flight, redEye, score };
-  }).sort((a, b) => a.score - b.score);
+  }).sort((a, b) => {
+    const rank = item => {
+      const index = providerPriority.indexOf(item.sourceId);
+      return index < 0 ? providerPriority.length : index;
+    };
+    return rank(a) - rank(b) || a.score - b.score;
+  });
 }
 
 function clockMinutes(value) {
@@ -178,7 +184,7 @@ function clockMinutes(value) {
   return Number.isFinite(hour) && Number.isFinite(minute) ? hour * 60 + minute : null;
 }
 
-export function assemblePlan({ destination, originCity, startDate, days, memory, places, flights = [], returnFlights = [], trains = [], returnTrains = [], hotels = [], providerStatus = {}, desiredInterests = [], proposedPlaceIds = [] }) {
+export function assemblePlan({ destination, originCity, startDate, days, memory, places, flights = [], returnFlights = [], trains = [], returnTrains = [], hotels = [], providerStatus = {}, providerPriority = {}, desiredInterests = [], proposedPlaceIds = [] }) {
   const normalized = normalizeMemory(memory);
   const candidates = selectPlaces(destination, days, normalized, desiredInterests, places);
   const allPlaces = [...(CITY_CATALOG[destination]?.places || []), ...places];
@@ -186,10 +192,10 @@ export function assemblePlan({ destination, originCity, startDate, days, memory,
     ? proposedPlaceIds.map(id => allPlaces.find(place => place.id === id))
       .filter(place => place && !normalized.visitedPlaces.some(visited => visited.id === place.id || (visited.name === place.name && visited.city === destination)))
     : candidates;
-  const rankedFlights = rankFlights(flights, normalized);
-  const preferredFlight = rankedFlights.find(flight => !flight.redEye && Number.isFinite(flight.totalPrice));
-  const rankedTrains = rankFlights(trains, normalized);
-  const preferredTrain = rankedTrains.find(train => !train.redEye && Number.isFinite(train.totalPrice));
+  const rankedFlights = rankFlights(flights, normalized, providerPriority.flights);
+  const preferredFlight = rankedFlights.find(flight => !flight.redEye && flight.priceComplete !== false && Number.isFinite(flight.totalPrice));
+  const rankedTrains = rankFlights(trains, normalized, providerPriority.trains);
+  const preferredTrain = rankedTrains.find(train => !train.redEye && train.priceComplete !== false && Number.isFinite(train.totalPrice));
   const selectedTransportMode = normalized.transportPreference === 'train'
     ? (preferredTrain ? 'train' : preferredFlight ? 'flight' : 'train')
     : (preferredFlight ? 'flight' : preferredTrain ? 'train' : 'flight');
@@ -203,12 +209,12 @@ export function assemblePlan({ destination, originCity, startDate, days, memory,
   const airport = CITY_CATALOG[destination]?.airport;
   const finalActivityEnd = finalStop ? Number(finalStop.start.slice(0, 2)) * 60 + Number(finalStop.start.slice(3, 5)) + finalStop.duration : 9 * 60;
   const returnEarliestMinutes = finalActivityEnd + (airport && finalStop ? estimateTransitMinutes(finalStop, airport) : 90) + 120;
-  const rankedReturnFlights = rankFlights(returnFlights, normalized);
-  const rankedReturnTrains = rankFlights(returnTrains, normalized);
+  const rankedReturnFlights = rankFlights(returnFlights, normalized, providerPriority.flights);
+  const rankedReturnTrains = rankFlights(returnTrains, normalized, providerPriority.trains);
   const returnTrainEarliestMinutes = finalActivityEnd + 90;
-  const recommendedReturnTrain = rankedReturnTrains.find(train => returnTrainEarliestMinutes < 24 * 60 && !train.redEye && Number.isFinite(train.totalPrice)
+  const recommendedReturnTrain = rankedReturnTrains.find(train => returnTrainEarliestMinutes < 24 * 60 && !train.redEye && train.priceComplete !== false && Number.isFinite(train.totalPrice)
     && train.departureAt.slice(0, 10) === endDate && clockMinutes(train.departureAt) >= returnTrainEarliestMinutes);
-  const recommendedReturnFlight = rankedReturnFlights.find(flight => returnEarliestMinutes < 24 * 60 && !flight.redEye && Number.isFinite(flight.totalPrice) && flight.departureAt.slice(0, 10) === endDate
+  const recommendedReturnFlight = rankedReturnFlights.find(flight => returnEarliestMinutes < 24 * 60 && !flight.redEye && flight.priceComplete !== false && Number.isFinite(flight.totalPrice) && flight.departureAt.slice(0, 10) === endDate
     && clockMinutes(flight.departureAt) >= returnEarliestMinutes);
   const rankedHotels = [...hotels].sort((a, b) => {
     const brand = hotel => normalized.hotelBrands.some(value => hotel.name?.includes(value)) ? -150 : 0;
@@ -228,7 +234,7 @@ export function assemblePlan({ destination, originCity, startDate, days, memory,
     recommendedReturnTrainId: recommendedReturnTrain?.id || null,
     returnFlightEarliestAt: returnEarliestMinutes < 24 * 60
       ? `${endDate}T${String(Math.floor(returnEarliestMinutes / 60)).padStart(2, '0')}:${String(returnEarliestMinutes % 60).padStart(2, '0')}` : null,
-    hotels: rankedHotels, providerStatus,
+    hotels: rankedHotels, providerStatus, providerPriority,
     transportPreference: normalized.transportPreference,
     selectedTransportMode,
     hotelBrands: normalized.hotelBrands,

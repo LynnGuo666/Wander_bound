@@ -6,6 +6,7 @@ import { runTravelAgent } from './agent.mjs';
 import { createRequestProviders, providerAvailability } from './providers.mjs';
 import { createStepClient, STEP_MODEL, stepChannel } from './step-client.mjs';
 import { discoverCapabilities } from './capabilities.mjs';
+import { defaultConfigStore } from './config.mjs';
 
 const MAX_BODY_BYTES = 256 * 1024;
 const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
@@ -54,7 +55,7 @@ function respond(res, status, payload, origin) {
   };
   if (origin) {
     headers['Access-Control-Allow-Origin'] = origin;
-    headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
+    headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, OPTIONS';
     headers['Access-Control-Allow-Headers'] = 'Content-Type';
     headers.Vary = 'Origin';
   }
@@ -87,6 +88,7 @@ export function createRequestHandler({
   modelFactory = createStepClient,
   runAgent = runTravelAgent,
   availability = providerAvailability,
+  configStore = defaultConfigStore,
   mediaHandler = null,
   allowedOrigin = process.env.CORS_ALLOWED_ORIGIN || '',
 } = {}) {
@@ -97,13 +99,25 @@ export function createRequestHandler({
     }
     const origin = allowedOrigin && req.headers.origin === allowedOrigin ? allowedOrigin : null;
     if (req.method === 'OPTIONS') return respond(res, 204, null, origin);
+    if (req.method === 'GET' && req.url === '/api/settings') {
+      try { return respond(res, 200, await configStore.public(), origin); }
+      catch { return respond(res, 500, { error: '无法读取设置' }, origin); }
+    }
+    if (req.method === 'PUT' && req.url === '/api/settings') {
+      try { return respond(res, 200, await configStore.update(await readJson(req)), origin); }
+      catch (error) { return respond(res, error.status || 500, { error: error.status ? error.message : '无法保存设置' }, origin); }
+    }
     if (req.method === 'GET' && req.url === '/api/health') {
-      return respond(res, 200, { ok: true, model: { id: STEP_MODEL, configured: Boolean(model), channel: model?.channel || stepChannel() }, providers: availability() }, origin);
+      try {
+        const config = await configStore.read();
+        return respond(res, 200, { ok: true, model: { id: STEP_MODEL, configured: Boolean(config.credentials.stepfun || model), channel: model?.channel || stepChannel() }, providers: availability(config.credentials) }, origin);
+      } catch { return respond(res, 500, { error: '无法读取设置' }, origin); }
     }
     if (req.method === 'POST' && req.url === '/api/capabilities') {
       try {
         const input = await readJson(req);
-        const credentials = extractCredentials(input);
+        const config = await configStore.read();
+        const credentials = { ...config.credentials, ...extractCredentials(input) };
         return respond(res, 200, await discoverCapabilities(credentials), origin);
       } catch (error) { return respond(res, error.status || 500, { error: error.status ? error.message : '能力发现失败' }, origin); }
     }
@@ -111,21 +125,25 @@ export function createRequestHandler({
       const stream = req.url.endsWith('/stream');
       try {
         const input = await readJson(req);
-        const credentials = extractCredentials(input);
+        const config = await configStore.read();
+        const credentials = { ...config.credentials, ...extractCredentials(input) };
         const { credentials: _removed, ...request } = input;
         const requestModel = credentials.stepfun ? modelFactory({ apiKey: credentials.stepfun }) : model;
-        const providers = Object.keys(credentials).length ? createRequestProviders(credentials) : undefined;
+        const providers = createRequestProviders(credentials);
+        const controller = stream ? new AbortController() : null;
         if (stream) {
           const headers = { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' };
           if (origin) headers['Access-Control-Allow-Origin'] = origin;
           res.writeHead(200, headers);
           res.write(': connected\n\n');
+          res.on('close', () => controller.abort());
         }
         const emit = event => { if (stream && !res.writableEnded && !res.destroyed) res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`); };
-        const result = await runAgent(request, { model: requestModel, ...(providers ? { providers } : {}), onEvent: emit });
+        const result = await runAgent(request, { model: requestModel, providers, providerPriority: config.priorities, onEvent: emit, signal: controller?.signal });
         if (stream) { res.end(`event: result\ndata: ${JSON.stringify(result)}\n\n`); return; }
         return respond(res, result.status || 200, result, origin);
       } catch (error) {
+        if (stream && res.destroyed) return;
         if (stream && res.headersSent) { res.end(`event: result\ndata: ${JSON.stringify({ error: error.status ? error.message : '规划服务发生内部错误' })}\n\n`); return; }
         return respond(res, error.status || 500, { error: error.status ? error.message : '规划服务发生内部错误' }, origin);
       }

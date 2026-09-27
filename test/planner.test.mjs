@@ -50,6 +50,20 @@ test('prefers an affordable daytime flight over a cheaper red-eye flight', () =>
   assert.equal(ranked[1].redEye, true);
 });
 
+test('train recommendation follows source priority and falls back when its first source has no price', () => {
+  const memory = normalizeMemory({ transportPreference: 'train' });
+  const offers = [
+    { id: 'rail', sourceId: 'rail12306', departureAt: '2026-10-09T08:00:00', arrivalAt: '2026-10-09T15:00:00', totalPrice: 800, stops: 0 },
+    { id: 'flyai', sourceId: 'flyai', departureAt: '2026-10-09T09:00:00', arrivalAt: '2026-10-09T16:00:00', totalPrice: 500, stops: 0 },
+  ];
+  const preferences = { trains: ['rail12306', 'flyai', 'tuniu'] };
+  const preferred = assemblePlan({ ...base, memory, trains: offers, providerPriority: preferences });
+  assert.equal(preferred.recommendedOutboundTrainId, 'rail');
+  const fallback = assemblePlan({ ...base, memory, trains: [{ ...offers[0], totalPrice: null }, offers[1]], providerPriority: preferences });
+  assert.equal(fallback.recommendedOutboundTrainId, 'flyai');
+  assert.equal(fallback.trains.length, 2);
+});
+
 test('return flight recommendation leaves time for the last activity and airport transfer', () => {
   const plan = assemblePlan({ ...base, memory: normalizeMemory(), returnFlights: [
     { id: 'too-early', departureAt: '2026-10-11T15:00:00', arrivalAt: '2026-10-11T17:30:00', totalPrice: 350, stops: 0 },

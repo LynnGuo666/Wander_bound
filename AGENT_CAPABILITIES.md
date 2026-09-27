@@ -28,7 +28,7 @@ flowchart LR
 
 ## Agent loop 的边界
 
-Step 5 Preview 直接接收用户原始提示词，自行理解城市、日期、总天数、预算和必须停留日期。需要澄清时调用 `ask_question`，界面提供模型生成的选项和“其他”自由输入；确定后调用 `set_trip_spec` 提交约束。后续按阶段可见的工具为 `resolve_origin → discover_places → search_transport → search_stays → draft_plan → search_attractions → search_dining → explore_ground`。服务端校验约束和地点来源；模型不可用时明确标记规则流程。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次草案。跨城火车票通过社区 12306 MCP 查询直达与中转，并展示逐段席别和换乘；它不是铁路官方维护的 MCP。
+Step 5 Preview 直接接收用户原始提示词，自行理解城市、日期、总天数、预算和必须停留日期。需要澄清时调用 `ask_question`，界面底部浮出常驻提问条，提供模型生成的选项和“其他”自由输入；确定后调用 `set_trip_spec` 提交约束。后续按阶段可见的工具为 `resolve_origin → discover_places → search_transport → search_stays → draft_plan → search_attractions → search_dining → explore_ground`。服务端校验约束和地点来源；模型不可用时明确标记规则流程。Step 请求使用流式输出，公开说明逐段展示；工具调用在参数流结束后执行。每次请求最多 200 轮模型响应、200 次模型工具调用、2 次草案。跨城火车票通过社区 12306 MCP 查询直达与中转，并展示逐段席别和换乘；它不是铁路官方维护的 MCP。
 
 `POST /api/plan` 的新增字段：`returnFlights`、`trains`、`returnTrains`、`recommendedOutboundFlightId`、`recommendedOutboundTrainId`、`recommendedReturnFlightId`、`recommendedReturnTrainId`、`attractionOffers`、`returnFlightEarliestAt`、`dining`、每天的 `diningSuggestions`、`groundJourneys`、`providerStatus.dining`、`providerStatus.ground`，以及按五类组织的 `capabilityStatus`。其中 `offers_found` / `schedules_found` / `places_found` / `routes_found` 分别表示取得数字报价、仅有班次、地点和路线；`area_only` / `estimated` 表示只有区域建议或估算；`unavailable` / `empty` / `failed` 分别表示未配置、已查询无结果、查询失败。`groundJourneys[].imagery.status = "check-on-device"` 只表示客户端可尝试请求，**不表示街景已经存在**。`agentRun.trace` 可检查实际调用了哪些能力。
 

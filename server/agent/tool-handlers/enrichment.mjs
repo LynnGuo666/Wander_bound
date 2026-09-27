@@ -3,7 +3,7 @@ import { toolError } from '../definitions.mjs';
 import { attachDining, planInvariant } from '../plan-output.mjs';
 
 export async function searchAttractions(ctx, args = {}) {
-  const { state, providers, warnings } = ctx;
+  const { state, providers, providerPriority = {}, warnings } = ctx;
   if (!state.plan) { return toolError('prerequisite', '请先调用 draft_plan'); }
   const selected = state.plan.itinerary.flatMap(day => day.stops.map(stop => ({ ...stop, visitDate: day.date })));
   try {
@@ -13,6 +13,13 @@ export async function searchAttractions(ctx, args = {}) {
     const offers = Array.isArray(found) ? found.filter(item => item?.provider && names.has(item.name)
       && (item.price === null || (Number.isFinite(item.price) && item.price >= 0))
       && (!item.bookingUrl || /^https:\/\//.test(item.bookingUrl))).slice(0, 60) : [];
+    const order = providerPriority.attractions || [];
+    const rank = item => {
+      const source = item.sourceId || (/飞猪/.test(item.provider) ? 'flyai' : /途牛/.test(item.provider) ? 'tuniu' : '');
+      const index = order.indexOf(source);
+      return index < 0 ? order.length : index;
+    };
+    offers.sort((a, b) => rank(a) - rank(b));
     state.plan = { ...state.plan, attractionOffers: offers };
     state.providerStatus.attractions = { configured: typeof providers.searchAttractionProducts === 'function', result: offers.length ? 'ok' : '本次无景区产品', label: '飞猪/途牛景区产品' };
   } catch (error) {
