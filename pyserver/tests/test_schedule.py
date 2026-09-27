@@ -2,6 +2,8 @@ import asyncio
 
 from pyserver.agent.planning import draft_plan
 from pyserver.agent.schedule import day_windows
+from pyserver.agent.spec import set_trip_spec
+from pyserver.agent.fallback import complete_with_tools
 
 
 def _state(days):
@@ -32,3 +34,22 @@ def test_longer_trip_keeps_middle_days_for_verified_places():
     assert result["ok"] is True
     assert not state["plan"]["itinerary"][0]["stops"]
     assert not state["plan"]["itinerary"][1]["stops"]
+
+
+def test_answer_can_change_explicit_days_and_infeasible_plan_asks_user(monkeypatch):
+    state = _state(3)
+    state.update({"originDone": True, "placesDone": True, "transportDone": True, "staysDone": True,
+                  "pendingQuestion": None, "answerNeedsCommit": False})
+
+    async def scenario():
+        events = [item async for item in complete_with_tools(state, {}, {"days": 3}, {})]
+        assert any(phase == "end" and name == "draft_plan" and result["code"] == "infeasible_trip"
+                   for phase, name, _, result in events)
+        assert state["pendingQuestion"]["question"].startswith("按真实去返程时刻")
+        state["pendingQuestion"] = None
+        state["answerNeedsCommit"] = True
+        changed = await set_trip_spec({"days": 13}, state, {"days": 3})
+        assert changed["ok"] is True
+        assert state["days"] == 13
+
+    asyncio.run(scenario())

@@ -14,11 +14,12 @@ async def set_trip_spec(args: dict, state: dict, request: dict) -> dict:
         if not isinstance(args["preferences"], dict):
             return _error("invalid_preferences", "偏好必须是对象")
         proposal["preferences"] = {**(state.get("preferences") or {}), **args["preferences"]}
-    for field in ("destination", "originCity", "startDate"):
-        if request.get(field):
-            proposal[field] = request[field]
-    if request.get("days") not in (None, ""):
-        proposal["days"] = int(request["days"])
+    if not state.get("answerNeedsCommit"):
+        for field in ("destination", "originCity", "startDate"):
+            if request.get(field):
+                proposal[field] = request[field]
+        if request.get("days") not in (None, ""):
+            proposal["days"] = int(request["days"])
     try:
         if proposal["days"] is not None and not 1 <= int(proposal["days"]) <= 21:
             raise ValueError("天数须为 1–21")

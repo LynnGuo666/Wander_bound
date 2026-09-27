@@ -73,3 +73,11 @@ async def complete_with_tools(state: dict, credentials: dict, request: dict, pri
     yield "start", "draft_plan", args, None
     result = await execute("draft_plan", args, state, credentials, request, priorities)
     yield "end", "draft_plan", args, result
+    if result.get("code") == "infeasible_trip":
+        question = {"question": "按真实去返程时刻，这几天没有足够的游玩时间。您希望怎样调整？",
+                    "options": [{"id": "longer", "label": "延长旅行天数"},
+                                {"id": "flight", "label": "改用更快的交通"},
+                                {"id": "dates", "label": "更改出发日期"}]}
+        yield "start", "ask_question", question, None
+        response = await execute("ask_question", question, state, credentials, request, priorities)
+        yield "end", "ask_question", question, response
