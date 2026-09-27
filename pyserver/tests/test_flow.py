@@ -10,6 +10,7 @@ from pyserver.app import create_app
 from pyserver.settings import ConfigStore
 from pyserver.media import MediaStore
 from pyserver.trips import TripStore
+from pyserver.agent.spec import set_trip_spec
 
 
 def call(name, args, call_id):
@@ -78,3 +79,40 @@ def test_photo_belongs_to_trip_and_exif_is_removed(tmp_path, monkeypatch):
             assert b"Exif" not in result.content
             assert (await client.get(f"/api/trips/{trip['id']}/photos/{photo['id']}", params={"variant": "missing"})).status_code == 404
     asyncio.run(scenario())
+
+
+def test_text_only_model_turn_continues_to_tool_call(tmp_path, monkeypatch):
+    config = ConfigStore(tmp_path / "config.yml")
+    config.update({"credentials": {"stepfun": "test-secret"}})
+    trips = TripStore(tmp_path / "trips")
+    app = create_app(config=config, trips=trips, media=MediaStore(tmp_path / "media"))
+    seen = []
+
+    async def fake_complete(messages, tools, key, **kwargs):
+        seen.append(list(messages))
+        calls = [] if len(seen) == 1 else [call("ask_question", {"question": "何时出发？", "options": [
+            {"id": "d1", "label": "10月1日"}, {"id": "d2", "label": "10月2日"}]}, "q1")]
+        yield {"type": "completion", "message": {"role": "assistant", "content": "我先想一下", "tool_calls": calls},
+               "finishReason": "stop" if not calls else "tool_calls", "usage": {}, "publicNote": ""}
+
+    monkeypatch.setattr(agent.step, "complete", fake_complete)
+
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            result = (await client.post("/api/plan", json={"query": "安排旅行"})).json()
+            assert result["needsInput"] is True
+            assert result["agentRun"]["modelTurns"] == 2
+            assert any(event["type"] == "model_continuation" for event in result["agentRun"]["events"])
+            assert "继续调用当前可用工具" in seen[1][-1]["content"]
+
+    asyncio.run(scenario())
+
+
+def test_preferences_are_merged_into_trip_memory():
+    state = {"destination": "柳州", "originCity": "长春", "days": 3, "startDate": "2026-10-02",
+             "totalBudgetCny": None, "requiredStays": [], "interests": [], "preferences": {"pace": "轻松"},
+             "answerNeedsCommit": True}
+    result = asyncio.run(set_trip_spec({"preferences": {"transport": "高铁"}}, state, {}))
+    assert result["ok"] is True
+    assert state["preferences"] == {"pace": "轻松", "transport": "高铁"}
+    assert state["answerNeedsCommit"] is False

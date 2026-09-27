@@ -6,6 +6,7 @@ MAX_CALLS = 200
 SYSTEM = ("你是旅行规划 Agent。直接理解用户原话，不能编造日期、地点、路线和价格。"
           "每次用户回答 ask_question 后必须先调用 set_trip_spec 增量保存答案，再问下一题。"
           "按需调用地点、交通、住宿工具。工具调用失败可根据错误重试。"
+          "仅在缺少会改变路线的关键信息时提问；已有足够信息就立即继续查询并编排行程。"
           "只使用工具返回的地点 ID 制作行程。最终用简短中文总结。")
 
 
@@ -20,7 +21,8 @@ TOOLS = {
         "startDate": {"type": "string"}, "totalBudgetCny": {"type": "number"},
         "requiredStays": {"type": "array", "items": {"type": "object", "properties": {"city": {"type": "string"},
                           "from": {"type": "string"}, "to": {"type": "string"}}}},
-        "interests": {"type": "array", "items": {"type": "string"}}}),
+        "interests": {"type": "array", "items": {"type": "string"}},
+        "preferences": {"type": "object", "description": "把用户刚回答的交通、住宿、玩法等偏好按字段增量保存"}}),
     "ask_question": definition("ask_question", "向用户提出一个会改变行程决定的问题，提供 2–5 个选项，界面会补充其他。", {
         "question": {"type": "string"}, "options": {"type": "array", "items": {"type": "object", "properties": {
             "id": {"type": "string"}, "label": {"type": "string"}, "description": {"type": "string"}}}}}, ["question", "options"]),
@@ -49,4 +51,3 @@ def available(state: dict) -> list[dict]:
     if state.get("placesDone") and state.get("transportDone") and state.get("staysDone"):
         names.append("draft_plan")
     return [TOOLS[name] for name in names]
-

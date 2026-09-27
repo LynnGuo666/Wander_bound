@@ -6,10 +6,14 @@ from datetime import date
 from .state import _error
 
 async def set_trip_spec(args: dict, state: dict, request: dict) -> dict:
-    keys = {"destination", "originCity", "days", "startDate", "totalBudgetCny", "requiredStays", "interests"}
+    keys = {"destination", "originCity", "days", "startDate", "totalBudgetCny", "requiredStays", "interests", "preferences"}
     if not keys.intersection(args):
         return _error("empty_spec", "请提交已确认的字段")
     proposal = {key: args.get(key, state.get(key)) for key in keys}
+    if "preferences" in args:
+        if not isinstance(args["preferences"], dict):
+            return _error("invalid_preferences", "偏好必须是对象")
+        proposal["preferences"] = {**(state.get("preferences") or {}), **args["preferences"]}
     for field in ("destination", "originCity", "startDate"):
         if request.get(field):
             proposal[field] = request[field]
@@ -46,4 +50,3 @@ async def ask_question(args: dict, state: dict) -> dict:
 async def resolve_origin(state: dict) -> dict:
     state["originDone"] = bool(state["originCity"])
     return {"ok": state["originDone"], "originCity": state["originCity"]} if state["originDone"] else _error("missing_origin", "请先询问出发城市")
-

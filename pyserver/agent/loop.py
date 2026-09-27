@@ -53,6 +53,7 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
     else:
         yield event("run_start", model=step.MODEL, channel="step-plan", mode="model")
     error = None
+    empty_turns = 0
     while turns < MAX_TURNS and calls < MAX_CALLS and not state.get("pendingQuestion") and not state.get("plan"):
         exposed = available(state)
         names = [item["function"]["name"] for item in exposed]
@@ -84,8 +85,14 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
         yield event("model_turn_end", turn=turns, requestedTools=[item["function"]["name"] for item in requested],
                     usage=reported, finishReason=completed["finishReason"], publicNote=completed["publicNote"])
         if not requested:
-            error = "incomplete_plan"
-            break
+            empty_turns += 1
+            if empty_turns >= 3:
+                error = "incomplete_plan"
+                break
+            yield event("model_continuation", turn=turns, reason="tool_call_required", attempt=empty_turns)
+            messages.append({"role": "user", "content": "规划尚未由工具完成。请继续调用当前可用工具；只有 draft_plan 成功后才能结束。若工具失败，请依据返回的错误重试。"})
+            continue
+        empty_turns = 0
         messages.append(completed["message"])
         for call in requested:
             if calls >= MAX_CALLS:
