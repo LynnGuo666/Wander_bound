@@ -18,6 +18,7 @@ export function createToolExecutor(context) {
     const started = Date.now();
     if (Date.now() >= context.deadline) return toolError('deadline', '规划超时');
     if (name !== 'draft_plan' && name !== 'set_trip_spec' && cache.has(name)) return cache.get(name);
+    context.onEvent?.({ type: 'tool_start', tool: name, source: internal ? 'agent' : 'model' });
     let result;
     try {
       const handler = loaders[name] ? await loaders[name]() : null;
@@ -26,7 +27,9 @@ export function createToolExecutor(context) {
       result = toolError('tool_failed', error.message || '工具执行失败');
       context.warnings.push(`${name} 执行失败`);
     }
-    context.trace.push({ tool: name, ok: result.ok === true, durationMs: Date.now() - started });
+    const entry = { tool: name, ok: result.ok === true, code: result.ok ? 'ok' : String(result.code || 'failed'), durationMs: Date.now() - started };
+    context.trace.push(entry);
+    context.onEvent?.({ type: 'tool_end', ...entry });
     if (name !== 'draft_plan' && name !== 'set_trip_spec' && (result.ok || result.code === 'no_new_places')) cache.set(name, result);
     return result;
   };

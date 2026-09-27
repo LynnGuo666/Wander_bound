@@ -1,12 +1,12 @@
 import { CITY_AIRPORTS } from '../../shared/catalog.mjs';
 import { controllerFor } from './http-client.mjs';
 
-export async function searchDuffelFlights(originCity, destinationCity, date) {
-  if (!process.env.DUFFEL_API_KEY || !CITY_AIRPORTS[originCity] || !CITY_AIRPORTS[destinationCity] || originCity === destinationCity) return [];
+export async function searchDuffelFlights(originCity, destinationCity, date, key = process.env.DUFFEL_API_KEY) {
+  if (!key || !CITY_AIRPORTS[originCity] || !CITY_AIRPORTS[destinationCity] || originCity === destinationCity) return [];
   const response = await fetch('https://api.duffel.com/air/offer_requests', {
     method: 'POST', signal: controllerFor(15000),
     headers: {
-      Authorization: `Bearer ${process.env.DUFFEL_API_KEY}`,
+      Authorization: `Bearer ${key}`,
       'Duffel-Version': 'v2', 'Content-Type': 'application/json', Accept: 'application/json',
     },
     body: JSON.stringify({ data: {

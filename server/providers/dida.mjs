@@ -17,15 +17,15 @@ function unpackMcp(body) {
   throw new Error('酒店服务没有返回可解析的数据');
 }
 
-export async function searchDidaHotels(city, area, startDate, stayNights, budget) {
-  if (!process.env.DIDA_API_KEY) return [];
+export async function searchDidaHotels(city, area, startDate, stayNights, budget, key = process.env.DIDA_API_KEY) {
+  if (!key) return [];
   const response = await fetch('https://mcp.rollinggo.cn/mcp', {
     method: 'POST',
     signal: controllerFor(14000),
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',
-      Authorization: `Bearer ${process.env.DIDA_API_KEY}`,
+      Authorization: `Bearer ${key}`,
     },
     body: JSON.stringify({
       jsonrpc: '2.0', id: 1, method: 'tools/call',

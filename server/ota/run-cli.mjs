@@ -4,10 +4,13 @@ import { fileURLToPath } from 'node:url';
 const BIN = fileURLToPath(new URL('../../node_modules/.bin/', import.meta.url));
 const MAX_OUTPUT = 2_000_000;
 
-export function runCli(binary, args, { timeoutMs = 18000 } = {}) {
+export function runCli(binary, args, { timeoutMs = 18000, credentials = {} } = {}) {
   if (!['tuniu', 'flyai'].includes(binary)) throw new Error('未允许的供应商命令');
   return new Promise((resolve, reject) => {
-    const child = spawn(`${BIN}${binary}`, args, { shell: false, env: process.env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const env = { ...process.env };
+    if (credentials.flyai) env.FLYAI_API_KEY = credentials.flyai;
+    if (credentials.tuniu) env.TUNIU_API_KEY = credentials.tuniu;
+    const child = spawn(`${BIN}${binary}`, args, { shell: false, env, stdio: ['ignore', 'pipe', 'pipe'] });
     let stdout = '';
     let stderr = '';
     let finished = false;

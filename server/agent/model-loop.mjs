@@ -20,7 +20,7 @@ function externalToolResult(name, result) {
   return result;
 }
 
-export async function runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings }) {
+export async function runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent }) {
   let modelTurns = 0;
   let toolCalls = 0;
   const usage = { prompt_tokens: 0, completion_tokens: 0 };
@@ -45,11 +45,13 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
       while (modelTurns < MAX_TURNS && toolCalls < MAX_TOOL_CALLS && Date.now() < deadline) {
         const availableTools = availableToolsFor(state);
         const availableNames = new Set(availableTools.map(tool => tool.function.name));
+        onEvent?.({ type: 'model_turn_start', turn: modelTurns + 1, availableTools: [...availableNames] });
         const completion = await model.complete(messages, availableTools, { deadline });
         modelTurns += 1;
         usage.prompt_tokens += Number(completion.usage?.prompt_tokens) || 0;
         usage.completion_tokens += Number(completion.usage?.completion_tokens) || 0;
         const calls = completion.message.tool_calls || [];
+        onEvent?.({ type: 'model_turn_end', turn: modelTurns, requestedTools: Array.isArray(calls) ? calls.map(call => String(call.function?.name || 'unknown')) : [], usage: completion.usage || null });
         if (!Array.isArray(calls) || calls.some(call => typeof call.id !== 'string' || !call.id || typeof call.function?.name !== 'string')) {
           const error = new Error('模型返回无效工具调用'); error.code = 'invalid_tool_call'; throw error;
         }
@@ -78,6 +80,7 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
       mode = 'degraded';
       modelError = error.code || 'model_error';
       warnings.push('模型不可用，启用确定性规划');
+      onEvent?.({ type: 'model_error', code: modelError });
     }
   }
 

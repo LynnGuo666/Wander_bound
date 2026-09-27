@@ -2,10 +2,10 @@ import { CITY_CATALOG } from '../../shared/catalog.mjs';
 import { kmBetween } from '../../shared/planner.mjs';
 import { jsonGet } from './http-client.mjs';
 
-export async function reverseLocation(location) {
-  if (!process.env.AMAP_WEB_KEY || !location?.lat || !location?.lng) return null;
+export async function reverseLocation(location, key = process.env.AMAP_WEB_KEY) {
+  if (!key || !location?.lat || !location?.lng) return null;
   const url = new URL('https://restapi.amap.com/v3/geocode/regeo');
-  url.searchParams.set('key', process.env.AMAP_WEB_KEY);
+  url.searchParams.set('key', key);
   url.searchParams.set('location', `${location.lng.toFixed(6)},${location.lat.toFixed(6)}`);
   const payload = await jsonGet(url);
   if (payload.status !== '1') throw new Error(payload.info || '高德逆地理编码失败');
@@ -25,12 +25,12 @@ function categoryFor(name, type) {
   return '街区';
 }
 
-export async function searchAmapPlaces(city) {
-  if (!process.env.AMAP_WEB_KEY) return [];
+export async function searchAmapPlaces(city, key = process.env.AMAP_WEB_KEY) {
+  if (!key) return [];
   const keywords = ['景点', '博物馆', '公园'];
   const responses = await Promise.allSettled(keywords.map(async keyword => {
     const url = new URL('https://restapi.amap.com/v3/place/text');
-    url.searchParams.set('key', process.env.AMAP_WEB_KEY);
+    url.searchParams.set('key', key);
     url.searchParams.set('keywords', keyword);
     url.searchParams.set('city', city);
     url.searchParams.set('citylimit', 'true');
@@ -54,12 +54,12 @@ export async function searchAmapPlaces(city) {
     .filter(place => Number.isFinite(place.lat) && Number.isFinite(place.lng));
 }
 
-export async function searchAmapDining(city, anchors = []) {
-  if (!process.env.AMAP_WEB_KEY) return [];
+export async function searchAmapDining(city, anchors = [], key = process.env.AMAP_WEB_KEY) {
+  if (!key) return [];
   const points = anchors.filter(point => Number.isFinite(point?.lat) && Number.isFinite(point?.lng)).slice(0, 7);
   const responses = await Promise.allSettled(points.map(async (point, day) => {
     const url = new URL('https://restapi.amap.com/v3/place/around');
-    url.searchParams.set('key', process.env.AMAP_WEB_KEY);
+    url.searchParams.set('key', key);
     url.searchParams.set('location', `${point.lng.toFixed(6)},${point.lat.toFixed(6)}`);
     url.searchParams.set('city', city);
     url.searchParams.set('types', '050000');
@@ -95,11 +95,11 @@ export async function searchAmapDining(city, anchors = []) {
     .filter(poi => poi.id !== 'amap-undefined' && poi.name && Number.isFinite(poi.lat) && Number.isFinite(poi.lng));
 }
 
-export async function routeMinutes(origin, destination, city) {
-  if (!process.env.AMAP_WEB_KEY || !origin || !destination) return null;
+export async function routeMinutes(origin, destination, city, key = process.env.AMAP_WEB_KEY) {
+  if (!key || !origin || !destination) return null;
   const walking = kmBetween(origin, destination) < 1.8;
   const url = new URL(`https://restapi.amap.com/v3/direction/${walking ? 'walking' : 'transit/integrated'}`);
-  url.searchParams.set('key', process.env.AMAP_WEB_KEY);
+  url.searchParams.set('key', key);
   url.searchParams.set('origin', `${origin.lng},${origin.lat}`);
   url.searchParams.set('destination', `${destination.lng},${destination.lat}`);
   if (!walking) url.searchParams.set('city', city);
@@ -125,8 +125,8 @@ export async function routeMinutes(origin, destination, city) {
   };
 }
 
-export async function enrichRoutes(plan) {
-  if (!process.env.AMAP_WEB_KEY) return plan;
+export async function enrichRoutes(plan, key = process.env.AMAP_WEB_KEY) {
+  if (!key) return plan;
   const airport = CITY_CATALOG[plan.destination]?.airport;
   const groundJourneys = [];
   const itineraries = await Promise.all(plan.itinerary.map(async (day, index) => {
@@ -134,7 +134,7 @@ export async function enrichRoutes(plan) {
       const origin = stopIndex ? day.stops[stopIndex - 1] : (index === 0 && plan.selectedTransportMode === 'flight' ? airport : plan.stayArea);
       if (!origin) return stop;
       try {
-        const route = await routeMinutes(origin, stop, plan.destination);
+        const route = await routeMinutes(origin, stop, plan.destination, key);
         if (route) groundJourneys.push({ day: day.day, stopIndex, from: origin.name || (index === 0 && plan.selectedTransportMode === 'flight' ? '机场' : '住宿区域'), to: stop.name,
           fromCoordinate: { lat: origin.lat, lng: origin.lng }, toCoordinate: { lat: stop.lat, lng: stop.lng },
           ...route, imagery: { status: 'check-on-device', provider: 'Apple MapKit Look Around' } });

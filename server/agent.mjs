@@ -11,8 +11,14 @@ import { createToolExecutor } from './agent/tools.mjs';
 export { AGENT_TOOLS };
 
 export async function runTravelAgent(input, {
-  model = null, providers = defaultProviders, now = new Date(), maxDurationMs = 100000,
+  model = null, providers = defaultProviders, now = new Date(), maxDurationMs = 100000, onEvent = null,
 } = {}) {
+  const events = [];
+  const emit = event => {
+    const entry = { sequence: events.length + 1, at: new Date().toISOString(), ...event };
+    events.push(entry);
+    onEvent?.(entry);
+  };
   const parsed = parseTripRequest(String(input.query || '').slice(0, 600));
   const explicitDestination = cleanCity(input.destination);
   const explicitDays = input.days == null || input.days === '' ? null : Number(input.days);
@@ -30,16 +36,18 @@ export async function runTravelAgent(input, {
     drafts: 0,
     providerStatus: providers.providerAvailability(),
   };
+  emit({ type: 'run_start', model: STEP_MODEL, mode: model ? 'model' : 'deterministic' });
   if (!validDate(startDate) || (explicitDays !== null && (!Number.isInteger(explicitDays) || explicitDays < 1 || explicitDays > 7))) {
     return { status: 400, error: '请填写有效出发日期和 1–7 天的天数。' };
   }
   const deadline = Date.now() + maxDurationMs;
   const trace = [];
   const warnings = [];
-  const execute = createToolExecutor({ input, state, providers, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace });
-  const { mode, modelError, modelTurns, toolCalls, usage } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings });
+  const execute = createToolExecutor({ input, state, providers, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace, onEvent: emit });
+  const { mode, modelError, modelTurns, toolCalls, usage } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent: emit });
 
   if (!state.plan) {
+    emit({ type: 'fallback_start', reason: model ? modelError || 'incomplete_plan' : 'model_unconfigured' });
     if (!state.destination || !Number.isInteger(state.days) || state.days < 1 || state.days > 7) {
       return { status: 400, error: '无法确定目的地或旅行天数。请明确输入城市与 1–7 天。', agentRun: { status: mode, model: STEP_MODEL, modelError, modelTurns, toolCalls, trace, warnings } };
     }
@@ -58,6 +66,7 @@ export async function runTravelAgent(input, {
 
   const allAvailable = [...(CITY_CATALOG[state.destination]?.places || []), ...state.places];
   const invalid = planInvariant(state.plan, memory, allAvailable);
+  emit({ type: 'validation', ok: !invalid, code: invalid ? 'plan_invariant' : 'ok' });
   if (invalid) return { status: 422, error: invalid, agentRun: { status: 'degraded', model: STEP_MODEL, modelError, modelTurns, toolCalls, trace, warnings } };
   const enriched = state.plan;
   if (state.providerStatus.amap.configured && !state.providerStatus.amap.result) {
@@ -68,6 +77,6 @@ export async function runTravelAgent(input, {
     ...enriched,
     locationDetected: state.locationDetected,
     capabilityStatus,
-    agentRun: { status: mode, model: STEP_MODEL, modelError, modelTurns, toolCalls, trace, warnings, usage },
+    agentRun: { status: mode, model: STEP_MODEL, modelError, modelTurns, toolCalls, trace, events, warnings, usage },
   };
 }

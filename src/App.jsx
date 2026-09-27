@@ -1,36 +1,44 @@
-import React, { useMemo, useState } from 'react';
-import { Compass, Sparkles, Heart, Database, CircleCheck, ChevronRight } from 'lucide-react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { Activity, Compass, Database, Heart, MapPinned, Server, ShieldCheck } from 'lucide-react';
 import { DEFAULT_MEMORY } from '../shared/catalog.mjs';
 import { normalizeMemory, parseTripRequest } from '../shared/planner.mjs';
-import { initialPlan, readStored, upcomingFriday } from './initial-plan.mjs';
-import PlanView from './views/PlanView.jsx';
-import MemoryView from './views/MemoryView.jsx';
-import SourcesView from './views/SourcesView.jsx';
+import { readStored, upcomingFriday } from './initial-plan.mjs';
+import JourneyForm from './workbench/JourneyForm.jsx';
+import CredentialsPanel from './workbench/CredentialsPanel.jsx';
+import AgentTimeline from './workbench/AgentTimeline.jsx';
+import PlanSnapshot from './workbench/PlanSnapshot.jsx';
+import { useAgentRun } from './workbench/useAgentRun.js';
 
-function NavItem({ icon: Icon, label, active, onClick, count }) {
-  return <button type="button" className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}><Icon size={20} /><span>{label}</span>{count ? <em>{count}</em> : null}</button>;
-}
+const PlanView = React.lazy(() => import('./views/PlanView.jsx'));
+const MemoryView = React.lazy(() => import('./views/MemoryView.jsx'));
+const SourcesView = React.lazy(() => import('./views/SourcesView.jsx'));
+const tabs = [ ['debug', Activity, 'Agent Debug'], ['plan', MapPinned, '完整行程'], ['memory', Heart, '旅行记忆'], ['sources', Database, '数据来源'] ];
 
 export default function App() {
+  const [view, setView] = useState('debug');
   const [memory, setMemory] = useState(() => normalizeMemory(readStored('travel-memory-v1', DEFAULT_MEMORY)));
-  const [plan, setPlan] = useState(() => readStored('travel-plan-v1', null) || initialPlan(normalizeMemory(readStored('travel-memory-v1', DEFAULT_MEMORY))));
-  const [view, setView] = useState('plan');
-  const [query, setQuery] = useState('我想去深圳玩 3 天，机票尽量便宜，但不要红眼航班。');
-  const [destination, setDestination] = useState('深圳');
-  const [originCity, setOriginCity] = useState(memory.homeCity || '');
-  const [days, setDays] = useState(3);
-  const [startDate, setStartDate] = useState(upcomingFriday());
-  const [location, setLocation] = useState(null);
-  const [locationState, setLocationState] = useState('点击后获取当前位置');
+  const [form, setForm] = useState(() => ({ query: '我想去深圳玩 3 天，机票尽量便宜，但不要红眼航班。', originCity: memory.homeCity || '', destination: '深圳', days: 3, startDate: upcomingFriday() }));
+  const [credentials, setCredentials] = useState({});
+  const [health, setHealth] = useState(null);
   const [selectedDay, setSelectedDay] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [newPlace, setNewPlace] = useState('');
   const [newCity, setNewCity] = useState('');
-
+  const [newPlace, setNewPlace] = useState('');
+  const [message, setMessage] = useState('');
+  const { events, plan, error, running, run, cancel } = useAgentRun();
   const placeCount = useMemo(() => plan?.itinerary?.reduce((sum, day) => sum + day.stops.length, 0) || 0, [plan]);
-  const sourcesActive = Object.values(plan?.providerStatus || {}).filter(source => source.configured).length;
 
+  useEffect(() => { fetch('/api/health').then(response => response.json()).then(setHealth).catch(() => setHealth({ ok: false })); }, []);
+  function update(field, value) {
+    setForm(previous => {
+      const next = { ...previous, [field]: value };
+      if (field === 'query') {
+        const parsed = parseTripRequest(value);
+        if (parsed.destination) next.destination = parsed.destination;
+        if (parsed.days) next.days = parsed.days;
+      }
+      return next;
+    });
+  }
   function updateMemory(patch) {
     setMemory(previous => {
       const next = normalizeMemory({ ...previous, ...patch });
@@ -38,101 +46,38 @@ export default function App() {
       return next;
     });
   }
-
-  function updateQuery(value) {
-    setQuery(value);
-    const parsed = parseTripRequest(value);
-    if (parsed.destination) setDestination(parsed.destination);
-    if (parsed.days) setDays(parsed.days);
+  function generate() {
+    setView('debug'); setMessage('');
+    run({ ...form, memory, credentials: Object.fromEntries(Object.entries(credentials).filter(([, value]) => value.trim()).map(([name, value]) => [name, value.trim()])) });
   }
-
-  function detectLocation() {
-    if (!navigator.geolocation) { setLocationState('当前环境不支持定位，请填写出发城市'); return; }
-    setLocationState('正在获取位置…');
-    navigator.geolocation.getCurrentPosition(
-      position => {
-        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude });
-        setLocationState('坐标已获取 · 配置地点服务后识别城市');
-      },
-      () => setLocationState('无法获取位置，请填写出发城市'),
-      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
-    );
-  }
-
-  async function generate() {
-    setLoading(true); setMessage('');
-    try {
-      const response = await fetch('/api/plan', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, destination, originCity, days, startDate, location, memory }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || '规划失败');
-      setPlan(result);
-      localStorage.setItem('travel-plan-v1', JSON.stringify(result));
-      if (result.originCity) setOriginCity(result.originCity);
-      setSelectedDay(null);
-      setView('plan');
-      const sourceMessage = result.agentRun?.status === 'completed' ? 'Step 5 Preview 已完成规划' : result.agentRun?.status === 'degraded' ? '模型暂不可用，已用规则生成行程' : 'Step 5 Preview 未配置，已用规则生成行程';
-      setMessage(result.locationDetected ? `已识别出发城市：${result.originCity}。${sourceMessage}` : sourceMessage);
-    } catch (error) { setMessage(`${error.message}。请确认规划服务正在运行。`); }
-    finally { setLoading(false); }
-  }
-
   function rememberTrip() {
+    if (!plan) return;
     const visitedPlaces = [...memory.visitedPlaces];
     for (const day of plan.itinerary) for (const stop of day.stops) {
       if (!visitedPlaces.some(place => place.id === stop.id)) visitedPlaces.push({ id: stop.id, name: stop.name, city: plan.destination });
     }
     updateMemory({ visitedCities: [...new Set([...memory.visitedCities, plan.destination])], visitedPlaces });
-    setMessage(`已记录 ${plan.destination} 的 ${placeCount} 个地点，下次会避开它们。`);
+    setMessage(`已记录 ${plan.destination} 的 ${placeCount} 个地点。`);
   }
-
-  function addVisitedPlace() {
-    const name = newPlace.trim();
-    if (!name) return;
-    updateMemory({ visitedPlaces: [...memory.visitedPlaces, { id: `manual-${Date.now()}`, name, city: destination }] });
-    setNewPlace('');
-  }
-
   function addVisitedCity() {
     const city = newCity.trim().replace(/市$/, '');
-    if (!city) return;
-    updateMemory({ visitedCities: [...new Set([...memory.visitedCities, city])] });
-    setNewCity('');
+    if (city) { updateMemory({ visitedCities: [...new Set([...memory.visitedCities, city])] }); setNewCity(''); }
   }
-
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><span className="brand-mark"><Compass size={24} strokeWidth={2.3} /></span><div><strong>旅忆</strong><small>TRAVEL, REMEMBERED</small></div></div>
-      <div className="sidebar-title">WORKSPACE</div>
-      <nav aria-label="主导航">
-        <NavItem icon={Sparkles} label="智能规划" active={view === 'plan'} onClick={() => setView('plan')} />
-        <NavItem icon={Heart} label="旅行记忆" active={view === 'memory'} onClick={() => setView('memory')} count={memory.visitedPlaces.length || undefined} />
-        <NavItem icon={Database} label="数据来源" active={view === 'sources'} onClick={() => setView('sources')} />
-      </nav>
-      <div className="sidebar-spacer" />
-      <div className="sidebar-card"><span className="sidebar-card-icon"><Sparkles size={18} /></span><h3>每一次出发<br />都值得全新发现</h3><p>记住你喜欢的，也记住你已经看过的。</p></div>
-      <div className="sidebar-foot"><span className="avatar">旅</span><div><strong>本地记忆</strong><small>只保存在此设备</small></div><CircleCheck size={16} /></div>
-    </aside>
-
-    <div className="main-area">
-      <header className="topbar"><div className="breadcrumb">工作台 <ChevronRight size={14} /> <strong>{view === 'plan' ? '智能规划' : view === 'memory' ? '旅行记忆' : '数据来源'}</strong></div><div className="topbar-right"><span className="live-dot" /> {sourcesActive} 个实时源已连接 <span className="topbar-divider" /> <span className="topbar-date">{new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' }).format(new Date())}</span></div></header>
-
-      <main className="content">
-        {view === 'plan' ? <PlanView
-          form={{ query, destination, originCity, days, startDate, location, locationState, loading }}
-          actions={{ updateQuery, setDestination, setStartDate, setDays, generate, detectLocation, setOriginCity, updateMemory, setMessage, rememberTrip, setSelectedDay }}
-          plan={plan} placeCount={placeCount} selectedDay={selectedDay} message={message} memory={memory}
-        /> : null}
-        {view === 'memory' ? <MemoryView
-          memory={memory} destination={destination} updateMemory={updateMemory} setOriginCity={setOriginCity}
-          newCity={newCity} setNewCity={setNewCity} addVisitedCity={addVisitedCity}
-          newPlace={newPlace} setNewPlace={setNewPlace} addVisitedPlace={addVisitedPlace}
-        /> : null}
-        {view === 'sources' ? <SourcesView plan={plan} /> : null}
+  function addVisitedPlace() {
+    const name = newPlace.trim();
+    if (name) { updateMemory({ visitedPlaces: [...memory.visitedPlaces, { id: `manual-${Date.now()}`, name, city: form.destination }] }); setNewPlace(''); }
+  }
+  return <div className="wb-app">
+    <aside className="wb-sidebar"><div className="wb-brand"><span><Compass size={22} /></span><div><strong>行驿</strong><small>WAYSTATION / SPARK</small></div></div><div className="wb-nav-label">MISSION CONTROL</div><nav aria-label="主导航">{tabs.map(([id, Icon, label]) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={17} /><span>{label}</span>{id === 'debug' && running ? <i className="wb-nav-pulse" /> : null}</button>)}</nav><div className="wb-sidebar-bottom"><div className="wb-node"><span className={health?.ok ? 'wb-node-light online' : 'wb-node-light'} /><div><strong>DGX SPARK / 82</strong><small>{health?.ok ? 'Agent API 已连接' : '检查连接中'}</small></div></div><p>规划执行与媒体处理运行在 Spark 节点。敏感密钥按请求传递。</p></div></aside>
+    <div className="wb-main"><header className="wb-header"><div><span className="wb-header-kicker">DEEPSLEEP–TT / TRAVEL AGENT</span><strong>{tabs.find(tab => tab[0] === view)?.[2]}</strong></div><div className="wb-header-status"><Server size={14} /><span>{health?.ok ? 'SPARK ONLINE' : 'SPARK OFFLINE'}</span><i className={health?.ok ? 'online' : ''} /></div></header>
+      <main className="wb-content">{view === 'debug' ? <><div className="wb-hero"><div><span className="wb-hero-kicker">AGENT OPERATIONS · LIVE TRACE</span><h1>从一句想法，<br /><em>到一段真实旅程。</em></h1><p>输入旅程，观察模型按阶段选择工具、验证地点并完成行程。</p></div><div className="wb-hero-stamp"><span>NODE 032</span><strong>SPARK</strong><small>LOCAL INTELLIGENCE</small></div></div><div className="wb-grid"><div className="wb-stack"><JourneyForm form={form} update={update} onSubmit={generate} running={running} /><CredentialsPanel credentials={credentials} setCredentials={setCredentials} serverModelConfigured={health?.model?.configured} /></div><AgentTimeline events={events} running={running} error={error} plan={plan} onCancel={cancel} /><PlanSnapshot plan={plan} onDetails={() => setView('plan')} /></div><div className="wb-footer-note"><ShieldCheck size={15} /> 调试记录只显示可验证的执行事件，不包含密钥、工具原始返回或模型隐藏思维链。</div></> : null}
+        <Suspense fallback={<div className="wb-loading">正在加载视图…</div>}>
+          {view === 'plan' ? plan ? <PlanView detailOnly form={{ ...form, loading: running }} actions={{ updateQuery: value => update('query', value), setDestination: value => update('destination', value), setStartDate: value => update('startDate', value), setDays: value => update('days', value), generate, detectLocation: () => {}, setOriginCity: value => update('originCity', value), updateMemory, setMessage, rememberTrip, setSelectedDay }} plan={plan} placeCount={placeCount} selectedDay={selectedDay} message={message} memory={memory} /> : <div className="wb-await"><MapPinned size={35} /><h2>还没有真实行程</h2><p>先在 Agent Debug 执行一次规划。</p><button type="button" onClick={() => setView('debug')}>前往调试台</button></div> : null}
+          {view === 'memory' ? <MemoryView memory={memory} destination={form.destination} updateMemory={updateMemory} setOriginCity={value => update('originCity', value)} newCity={newCity} setNewCity={setNewCity} addVisitedCity={addVisitedCity} newPlace={newPlace} setNewPlace={setNewPlace} addVisitedPlace={addVisitedPlace} /> : null}
+          {view === 'sources' ? <SourcesView plan={plan} /> : null}
+        </Suspense>
       </main>
     </div>
-    <nav className="mobile-nav" aria-label="移动端导航"><NavItem icon={Sparkles} label="规划" active={view === 'plan'} onClick={() => setView('plan')} /><NavItem icon={Heart} label="记忆" active={view === 'memory'} onClick={() => setView('memory')} /><NavItem icon={Database} label="来源" active={view === 'sources'} onClick={() => setView('sources')} /></nav>
+    <nav className="wb-mobile-nav" aria-label="移动端导航">{tabs.map(([id, Icon, label]) => <button type="button" key={id} className={view === id ? 'active' : ''} onClick={() => setView(id)}><Icon size={18} /><span>{label.replace('Agent ', '')}</span></button>)}</nav>
   </div>;
 }

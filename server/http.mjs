@@ -1,9 +1,46 @@
 import http from 'node:http';
+import { readFile, stat } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import { runTravelAgent } from './agent.mjs';
-import { providerAvailability } from './providers.mjs';
-import { STEP_MODEL } from './step-client.mjs';
+import { createRequestProviders, providerAvailability } from './providers.mjs';
+import { createStepClient, STEP_MODEL } from './step-client.mjs';
 
 const MAX_BODY_BYTES = 256 * 1024;
+const DIST = fileURLToPath(new URL('../dist/', import.meta.url));
+const KEY_NAMES = ['stepfun', 'amap', 'dida', 'duffel', 'tuniu', 'flyai'];
+
+function extractCredentials(input) {
+  const supplied = input.credentials;
+  if (supplied == null) return {};
+  if (!supplied || typeof supplied !== 'object' || Array.isArray(supplied)) throw httpError(400, '密钥格式无效');
+  const credentials = {};
+  for (const name of KEY_NAMES) {
+    const value = supplied[name];
+    if (value == null || value === '') continue;
+    if (typeof value !== 'string' || value.length > 512 || /[\r\n\x00-\x1f]/.test(value)) throw httpError(400, '密钥格式无效');
+    credentials[name] = value.trim();
+  }
+  return credentials;
+}
+
+async function serveApp(req, res) {
+  if (!['GET', 'HEAD'].includes(req.method) || !req.url || req.url.startsWith('/api/')) return false;
+  let pathname;
+  try { pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname); }
+  catch { return false; }
+  if (pathname.includes('..') || pathname.includes('\\')) return false;
+  const file = pathname === '/' ? 'index.html' : pathname.slice(1);
+  const filename = path.join(DIST, file);
+  if (!filename.startsWith(DIST)) return false;
+  try {
+    if (!(await stat(filename)).isFile()) return false;
+    const type = file.endsWith('.js') ? 'text/javascript' : file.endsWith('.css') ? 'text/css' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : 'text/html';
+    res.writeHead(200, { 'Content-Type': `${type}; charset=utf-8`, 'Cache-Control': file.startsWith('assets/') ? 'public, max-age=31536000, immutable' : 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    res.end(req.method === 'HEAD' ? undefined : await readFile(filename));
+    return true;
+  } catch { return false; }
+}
 
 function httpError(status, message) {
   return Object.assign(new Error(message), { status });
@@ -46,6 +83,7 @@ async function readJson(req) {
 
 export function createRequestHandler({
   model = null,
+  modelFactory = createStepClient,
   runAgent = runTravelAgent,
   availability = providerAvailability,
   mediaHandler = null,
@@ -61,14 +99,30 @@ export function createRequestHandler({
     if (req.method === 'GET' && req.url === '/api/health') {
       return respond(res, 200, { ok: true, model: { id: STEP_MODEL, configured: Boolean(model) }, providers: availability() }, origin);
     }
-    if (req.method === 'POST' && req.url === '/api/plan') {
+    if (req.method === 'POST' && (req.url === '/api/plan' || req.url === '/api/plan/stream')) {
+      const stream = req.url.endsWith('/stream');
       try {
-        const result = await runAgent(await readJson(req), { model });
+        const input = await readJson(req);
+        const credentials = extractCredentials(input);
+        const { credentials: _removed, ...request } = input;
+        const requestModel = credentials.stepfun ? modelFactory({ apiKey: credentials.stepfun }) : model;
+        const providers = Object.keys(credentials).length ? createRequestProviders(credentials) : undefined;
+        if (stream) {
+          const headers = { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' };
+          if (origin) headers['Access-Control-Allow-Origin'] = origin;
+          res.writeHead(200, headers);
+          res.write(': connected\n\n');
+        }
+        const emit = event => { if (stream && !res.writableEnded && !res.destroyed) res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`); };
+        const result = await runAgent(request, { model: requestModel, ...(providers ? { providers } : {}), onEvent: emit });
+        if (stream) { res.end(`event: result\ndata: ${JSON.stringify(result)}\n\n`); return; }
         return respond(res, result.status || 200, result, origin);
       } catch (error) {
+        if (stream && res.headersSent) { res.end(`event: result\ndata: ${JSON.stringify({ error: error.status ? error.message : '规划服务发生内部错误' })}\n\n`); return; }
         return respond(res, error.status || 500, { error: error.status ? error.message : '规划服务发生内部错误' }, origin);
       }
     }
+    if (await serveApp(req, res)) return;
     return respond(res, 404, { error: '未找到接口' }, origin);
   };
 }

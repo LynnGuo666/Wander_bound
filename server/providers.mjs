@@ -1,4 +1,28 @@
-export { providerAvailability } from './providers/status.mjs';
+import { providerAvailability } from './providers/status.mjs';
+export { providerAvailability };
+
+// A request owns its credentials. Never mutate process.env: concurrent users must remain isolated.
+export function createRequestProviders(credentials = {}) {
+  const key = (name, envName) => credentials[name] || process.env[envName];
+  const runner = async (binary, args) => {
+    const { runCli } = await import('./ota/run-cli.mjs');
+    return runCli(binary, args, { credentials });
+  };
+  return {
+    providerAvailability: () => providerAvailability(credentials),
+    reverseLocation: async location => key('amap', 'AMAP_WEB_KEY') ? (await import('./providers/amap.mjs')).reverseLocation(location, key('amap', 'AMAP_WEB_KEY')) : null,
+    searchAmapPlaces: async city => key('amap', 'AMAP_WEB_KEY') ? (await import('./providers/amap.mjs')).searchAmapPlaces(city, key('amap', 'AMAP_WEB_KEY')) : [],
+    searchAmapDining: async (city, anchors) => key('amap', 'AMAP_WEB_KEY') ? (await import('./providers/amap.mjs')).searchAmapDining(city, anchors, key('amap', 'AMAP_WEB_KEY')) : [],
+    routeMinutes: async (origin, destination, city) => key('amap', 'AMAP_WEB_KEY') ? (await import('./providers/amap.mjs')).routeMinutes(origin, destination, city, key('amap', 'AMAP_WEB_KEY')) : null,
+    enrichRoutes: async plan => key('amap', 'AMAP_WEB_KEY') ? (await import('./providers/amap.mjs')).enrichRoutes(plan, key('amap', 'AMAP_WEB_KEY')) : plan,
+    searchDidaHotels: async (...args) => key('dida', 'DIDA_API_KEY') ? (await import('./providers/dida.mjs')).searchDidaHotels(...args, key('dida', 'DIDA_API_KEY')) : [],
+    searchDuffelFlights: async (...args) => key('duffel', 'DUFFEL_API_KEY') ? (await import('./providers/duffel.mjs')).searchDuffelFlights(...args, key('duffel', 'DUFFEL_API_KEY')) : [],
+    searchFlyaiTransport: async (...args) => (await import('./providers/ota.mjs')).searchFlyaiTransport(...args, runner),
+    searchTuniuTransport: async (...args) => (await import('./providers/ota.mjs')).searchTuniuTransport(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY') || process.env.TUNIU_USE_OAUTH === '1')),
+    searchAttractionProducts: async (...args) => (await import('./providers/ota.mjs')).searchAttractionProducts(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY') || process.env.TUNIU_USE_OAUTH === '1')),
+  };
+}
+
 
 export async function reverseLocation(location) {
   if (!process.env.AMAP_WEB_KEY) return null;

@@ -4,18 +4,18 @@ import TripMap from '../TripMap.jsx';
 import { Pill, SectionHeading } from '../components/Primitives.jsx';
 import { dateLabel, money, timeOnly } from '../format.mjs';
 
-export default function PlanView({ form, actions, plan, placeCount, selectedDay, message, memory }) {
+export default function PlanView({ form, actions, plan, placeCount, selectedDay, message, memory, detailOnly = false }) {
   const { query, destination, originCity, days, startDate, location, locationState, loading } = form;
   const { updateQuery, setDestination, setStartDate, setDays, generate, detectLocation, setOriginCity, updateMemory, setMessage, rememberTrip, setSelectedDay } = actions;
   const bestFlight = plan?.flights?.find(flight => !flight.redEye);
   const bestTrain = plan?.trains?.find(train => !train.redEye);
   return <>
-          <section className="hero">
+          {!detailOnly ? <section className="hero">
             <div className="hero-copy"><Pill icon={Sparkles} className="hero-pill">更懂你的旅行 Agent</Pill><h1>下一站，<em>去发现新的。</em></h1><p>说出你想去的地方。我们结合你的出发位置、偏好和过往足迹，安排一段真正属于你的旅程。</p></div>
             <div className="hero-art" aria-hidden="true"><div className="sun" /><div className="orbit orbit-a" /><div className="orbit orbit-b" /><div className="hero-plane"><Plane size={32} fill="currentColor" /></div><div className="hero-pin"><MapPin size={22} fill="currentColor" /></div><div className="hero-caption">A NEW ROUTE<br />AWAITS YOU ↗</div></div>
-          </section>
+          </section> : null}
 
-          <section className="composer" aria-label="创建旅行计划">
+          {!detailOnly ? <section className="composer" aria-label="创建旅行计划">
             <div className="composer-top"><div className="composer-icon"><Sparkles size={18} /></div><strong>想去哪里走走？</strong><span>自然语言规划</span></div>
             <textarea value={query} onChange={event => updateQuery(event.target.value)} placeholder="例如：我想去深圳玩 3 天，坐飞机，票价优先但不要红眼航班…" rows={2} />
             <div className="composer-controls">
@@ -24,8 +24,8 @@ export default function PlanView({ form, actions, plan, placeCount, selectedDay,
               <label><Clock3 size={16} /><span>天数</span><select aria-label="旅行天数" value={days} onChange={event => setDays(Number(event.target.value))}>{[1, 2, 3, 4, 5, 6, 7].map(value => <option key={value} value={value}>{value} 天</option>)}</select></label>
               <button type="button" className="primary-button" onClick={generate} disabled={loading}>{loading ? <LoaderCircle size={18} className="spin" /> : <Sparkles size={18} />}{loading ? '正在规划' : '生成行程'}</button>
             </div>
-          </section>
-          <div className="origin-strip"><div><LocateFixed size={18} /><button type="button" onClick={detectLocation}>{locationState}</button>{location ? <small>{location.lat.toFixed(3)}, {location.lng.toFixed(3)}</small> : null}</div><label>或手动输入出发城市 <input aria-label="出发城市" value={originCity} onChange={event => { setOriginCity(event.target.value); updateMemory({ homeCity: event.target.value }); }} placeholder="如：上海" /></label></div>
+          </section> : null}
+          {!detailOnly ? <div className="origin-strip"><div><LocateFixed size={18} /><button type="button" onClick={detectLocation}>{locationState}</button>{location ? <small>{location.lat.toFixed(3)}, {location.lng.toFixed(3)}</small> : null}</div><label>或手动输入出发城市 <input aria-label="出发城市" value={originCity} onChange={event => { setOriginCity(event.target.value); updateMemory({ homeCity: event.target.value }); }} placeholder="如：上海" /></label></div> : null}
           {message ? <div className="feedback" role="status"><CircleAlert size={16} />{message}<button type="button" onClick={() => setMessage('')} aria-label="关闭消息"><X size={15} /></button></div> : null}
 
           <section className="overview"><div><div className="eyebrow">YOUR NEXT JOURNEY</div><h2>{plan.destination}<span> / {plan.days} 天的全新探索</span></h2><p>{plan.intro}</p><div className="overview-pills"><Pill icon={CalendarDays}>{dateLabel(plan.startDate)} — {dateLabel(plan.endDate)}</Pill><Pill icon={MapPin}>{placeCount} 个地点</Pill><Pill icon={RotateCcw}>{plan.revisit ? '再次探索 · 已排除到访地点' : '初次探索'}</Pill></div></div><div className="overview-number"><strong>{String(plan.days).padStart(2, '0')}</strong><span>DAYS<br />AWAY</span></div></section>

@@ -11,17 +11,23 @@ cd travel-agent
 ./start.sh
 ```
 
-按 `Ctrl+C` 停止。需要真正的 Step 5 Agent 或实时供应商数据时，在 `.env` 中填写下面列出的密钥并重新启动。
+按 `Ctrl+C` 停止。网页默认打开 Agent Debug 工作台。需要真正的 Step 5 Agent 或实时供应商数据时，可在工作台填写单次请求密钥，也可在 `.env` 中配置服务端密钥并重新启动。
 
 打开 `http://localhost:5173`。直接输入“我想去深圳玩 3 天”，填写出发城市，或允许浏览器定位。无供应商密钥时仍可用内置的深圳地点资料规划；飞猪 CLI 可在受限体验模式查询机票、火车票和景区，遮蔽价格会记为空值，班次时刻仍可查看。酒店报价和评论在未获授权时显示为未获取。定位坐标只有配置高德 Web 服务 Key 后才能在服务端反查出发城市，因此也可以直接填城市。
 
-`npm run check` 运行测试并构建网页，GitHub Actions 在推送和 Pull Request 时执行同样的检查，并构建 iOS 模拟器应用。API 健康检查为 `GET http://127.0.0.1:4174/api/health`，规划接口为 `POST /api/plan`，仅接受不超过 256 KiB 的 JSON 对象。请求包含 `query`、`destination`、`originCity`、`days`、`startDate`、`memory`，可选 `location: {lat, lng}`。网页和 iOS 均只在设备本地保存记忆；规划时将记忆发送到你配置的 API 地址。
+## Agent Debug 与单次请求密钥
+
+打开 `http://localhost:5173`，填写目的地、出发城市并点击「开始真实调试」。`POST /api/plan/stream` 通过 SSE 实时显示模型轮次、按阶段加载的工具、工具耗时、降级路径和行程校验。没有模型密钥时，页面明确标记「模型未配置 · 规则规划」。执行记录是可验证的运行事件，不显示模型隐藏思维链。
+
+工作台支持按请求填写 StepFun、高德、道旅、Duffel、途牛和飞猪密钥。密钥只在当前页面内存中，刷新即清空；服务端为每个请求创建独立的模型与供应商适配器，不修改全局环境变量。密钥不进入 Agent 输入、执行日志或浏览器存储。请只在队伍 Tailscale 私网或 HTTPS 域名填写。生产环境先运行 `npm run build`，再运行 `node --env-file-if-exists=.env server/index.mjs`，前端和 API 使用同一端口。
+
+`npm run check` 运行测试并构建网页，GitHub Actions 在推送和 Pull Request 时执行同样的检查，并构建 iOS 模拟器应用。API 健康检查为 `GET http://127.0.0.1:4174/api/health`，规划接口为 `POST /api/plan`，实时调试接口为 `POST /api/plan/stream`（SSE），二者仅接受不超过 256 KiB 的 JSON 对象。请求包含 `query`、`destination`、`originCity`、`days`、`startDate`、`memory`，可选 `location: {lat, lng}`。网页和 iOS 均只在设备本地保存记忆；规划时将记忆发送到你配置的 API 地址。
 
 代码按用途分为 `src/`（网页）、`ios/TravelMemory/`（iOS）、`server/`（HTTP 入口、Agent loop、供应商适配器）、`shared/`（地点目录与规划规则）、`test/`（算法、供应商和 HTTP 契约测试）。`server/index.mjs` 只负责启动，`server/http.mjs` 可以独立测试请求处理。网页开发服务器通过 Vite 将 `/api` 代理到后端，因此本地不需要跨域配置。
 
 直接调试后端可运行 `npm run agent:cli -- "我想去深圳玩三天" --origin 上海 --date 2026-10-09`。加 `--require-model` 会要求本次由 Step 5 Preview 真正完成，否则以非零状态退出，适合密钥配置后的联调。
 
-API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。服务端始终补齐景区产品、餐饮和地面交通三步。`trace` 只记录工具名、成功状态和耗时，不记录用户坐标或密钥。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次行程草拟；模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤；外部 Step 模型收到结构化行程条件与可选地点，不收到原始自由文本和相册图片。当前环境未提供 StepFun Key，真实模型调用尚待密钥配置后联调。
+API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。服务端始终补齐景区产品、餐饮和地面交通三步。`trace` 只记录工具名、成功状态、错误代码和耗时；`events` 记录可观察的执行过程，不记录用户坐标或密钥。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次行程草拟；模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤；外部 Step 模型收到结构化行程条件与可选地点，不收到原始自由文本和相册图片。当前环境未提供 StepFun Key，真实模型调用尚待密钥配置后联调。
 
 模型接入依据为[阶跃星辰官方 Chat Completions API 文档](https://platform.stepfun.com/docs/zh/api-reference/chat/chat-completion-create)：模型 ID 固定为 `step-5-preview`，使用函数工具调用。单次模型调用最多重试两次限流或服务端错误；连续失败三次后冷却 30 秒，本次规划改走有标记的规则流程。无密钥时 `--require-model` 会立即失败，避免把规则规划误报为模型规划。
 
