@@ -54,7 +54,8 @@ export async function runModelLoop({ model, input, state, memory, startDate, dea
           latest: messages.slice(-2).map(message => ({ role: message.role, tool: message.role === 'tool' ? message.tool_call_id : undefined, preview: String(message.content || '').slice(0, 1200) })),
         } });
         const completion = await model.complete(messages, availableTools, { deadline, signal,
-          onDelta: text => onEvent?.({ type: 'model_text_delta', turn: modelTurns + 1, text }) });
+          onDelta: text => onEvent?.({ type: 'model_text_delta', turn: modelTurns + 1, text }),
+          onReasoning: text => onEvent?.({ type: 'model_reasoning_delta', turn: modelTurns + 1, text }) });
         modelTurns += 1;
         usage.prompt_tokens += Number(completion.usage?.prompt_tokens) || 0;
         usage.completion_tokens += Number(completion.usage?.completion_tokens) || 0;

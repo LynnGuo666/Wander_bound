@@ -345,13 +345,14 @@ test('Step client retries a rate limit and uses the exact Step 5 model ID', asyn
 test('Step client assembles streamed public text, tool calls and token usage', async () => {
   const encoder = new TextEncoder();
   const chunks = [
-    'data: {"choices":[{"delta":{"content":"<think>不应展示的推理</think>我先查"}}]}\n\n',
+    'data: {"choices":[{"delta":{"content":"<think>原始推理</think>我先查","reasoning_content":"另一段思考"}}]}\n\n',
     'data: {"choices":[{"delta":{"content":"一下交通。","tool_calls":[{"index":0,"id":"call_1","function":{"name":"search_","arguments":"{"}}]}}]}\n\n',
     'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"transport","arguments":"}"}}]},"finish_reason":"tool_calls"}]}\n\n',
     'data: {"choices":[],"usage":{"prompt_tokens":20,"completion_tokens":8}}\n\n',
     'data: [DONE]\n\n',
   ];
   const observed = [];
+  const reasoning = [];
   const client = createStepClient({ apiKey: 'test-only', fetchImpl: async (_url, options) => {
     assert.equal(JSON.parse(options.body).stream, true);
     return { ok: true, headers: { get: () => 'text/event-stream' }, body: new ReadableStream({ start(controller) {
@@ -360,12 +361,13 @@ test('Step client assembles streamed public text, tool calls and token usage', a
       controller.close();
     } }) };
   } });
-  const result = await client.complete([], [], { onDelta: text => observed.push(text) });
-  assert.equal(result.message.content, '<think>不应展示的推理</think>我先查一下交通。');
+  const result = await client.complete([], [], { onDelta: text => observed.push(text), onReasoning: text => reasoning.push(text) });
+  assert.equal(result.message.content, '<think>原始推理</think>我先查一下交通。');
   assert.equal(result.message.tool_calls[0].function.name, 'search_transport');
   assert.equal(result.message.tool_calls[0].function.arguments, '{}');
   assert.equal(result.usage.prompt_tokens, 20);
   assert.equal(observed.join(''), '我先查一下交通。');
+  assert.deepEqual(reasoning, ['另一段思考', '原始推理']);
 });
 
 test('Step client rejects truncated completions', async () => {

@@ -21,7 +21,7 @@ export class ModelCallError extends Error {
 
 const pause = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
-function publicTextFilter(onDelta) {
+function publicTextFilter(onDelta, onReasoning) {
   let pending = '';
   let hidden = false;
   let emitted = 0;
@@ -36,7 +36,13 @@ function publicTextFilter(onDelta) {
     while (pending) {
       if (hidden) {
         const end = pending.indexOf('</think>');
-        if (end < 0) { pending = final ? '' : pending.slice(-7); break; }
+        if (end < 0) {
+          const keep = final ? 0 : 7;
+          if (pending.length > keep) onReasoning?.(pending.slice(0, pending.length - keep));
+          pending = keep ? pending.slice(-keep) : '';
+          break;
+        }
+        onReasoning?.(pending.slice(0, end));
         pending = pending.slice(end + 8);
         hidden = false;
       } else {
@@ -66,11 +72,11 @@ function completeJson(payload) {
   return { message: choice.message, finishReason: choice.finish_reason, usage: payload.usage || null };
 }
 
-async function completeStream(response, onDelta) {
+async function completeStream(response, onDelta, onReasoning) {
   const reader = response.body?.getReader?.();
   if (!reader) throw new ModelCallError('invalid_stream', 'StepFun 没有返回可读取的流');
   const decoder = new TextDecoder();
-  const filter = publicTextFilter(onDelta);
+  const filter = publicTextFilter(onDelta, onReasoning);
   const calls = new Map();
   let buffer = '';
   let content = '';
@@ -87,6 +93,9 @@ async function completeStream(response, onDelta) {
     if (payload.usage) usage = payload.usage;
     for (const choice of payload.choices || []) {
       const delta = choice.delta || {};
+      const reasoning = typeof delta.reasoning_content === 'string' ? delta.reasoning_content
+        : Array.isArray(delta.reasoning_content) ? delta.reasoning_content.map(item => typeof item === 'string' ? item : item.text || '').join('') : '';
+      if (reasoning) onReasoning?.(reasoning);
       const part = typeof delta.content === 'string' ? delta.content
         : Array.isArray(delta.content) ? delta.content.map(item => item.text || '').join('') : '';
       if (part) { content += part; filter(part); }
@@ -140,7 +149,7 @@ export function createStepClient({
     model: STEP_MODEL,
     backend: 'external-stepfun',
     channel: stepChannel(baseUrl),
-    async complete(messages, tools, { deadline = Date.now() + 60000, signal = null, onDelta = null } = {}) {
+    async complete(messages, tools, { deadline = Date.now() + 60000, signal = null, onDelta = null, onReasoning = null } = {}) {
       if (Date.now() < circuitOpenUntil) throw new ModelCallError('circuit_open', 'StepFun 暂时不可用，等待冷却后重试');
       try {
       for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -170,13 +179,14 @@ export function createStepClient({
         }
         let completion;
         if (response.body?.getReader && !response.headers?.get?.('content-type')?.includes('application/json')) {
-          completion = await completeStream(response, onDelta);
+          completion = await completeStream(response, onDelta, onReasoning);
         } else {
           let payload;
           try { payload = await response.json(); }
           catch { throw new ModelCallError('invalid_json', 'StepFun 返回无效 JSON'); }
           completion = completeJson(payload);
           if (completion.message.content && !/<\/?think\b/i.test(completion.message.content)) onDelta?.(completion.message.content.slice(0, 240));
+          if (typeof completion.message.reasoning_content === 'string') onReasoning?.(completion.message.reasoning_content);
         }
         consecutiveFailures = 0;
         return completion;
