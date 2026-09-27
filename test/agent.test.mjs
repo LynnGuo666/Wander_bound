@@ -1,0 +1,304 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { runTravelAgent } from '../server/agent.mjs';
+import { createStepClient, STEP_MODEL } from '../server/step-client.mjs';
+import { CITY_CATALOG } from '../shared/catalog.mjs';
+
+const request = { query: '从上海去深圳玩三天，便宜白天航班，别重复去过的地方', originCity: '上海', startDate: '2026-10-09', memory: {
+  visitedCities: ['深圳'], visitedPlaces: [{ id: 'sz-oct', name: '华侨城创意文化园', city: '深圳' }],
+} };
+
+function stubProviders(overrides = {}) {
+  return {
+    providerAvailability: () => ({
+      amap: { configured: false, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' },
+    }),
+    reverseLocation: async () => null,
+    searchAmapPlaces: async () => [],
+    searchDuffelFlights: async () => [],
+    searchDidaHotels: async () => [],
+    searchAmapDining: async () => [],
+    enrichRoutes: async plan => plan,
+    ...overrides,
+  };
+}
+
+const call = (name, args = {}, id = name) => ({ id, type: 'function', function: { name, arguments: JSON.stringify(args) } });
+const tools = (...toolCalls) => ({ message: { role: 'assistant', content: null, tool_calls: toolCalls }, finishReason: 'tool_calls', usage: { prompt_tokens: 100, completion_tokens: 30 } });
+const final = { message: { role: 'assistant', content: '行程已完成。' }, finishReason: 'stop', usage: { prompt_tokens: 50, completion_tokens: 10 } };
+
+test('Step 5 agent runs tools, rejects an invented place, then validates a corrected draft', async () => {
+  const selected = ['sz-nantou', 'sz-baoanbay', 'sz-gankeng', 'sz-dafen', 'sz-huaqiangbei', 'sz-lianhuashan', 'sz-museum'];
+  const script = [
+    tools(call('set_trip_spec', { destination: '深圳', days: 3 }), call('resolve_origin'), call('discover_places')),
+    tools(call('search_transport'), call('search_stays')),
+    tools(call('draft_plan', { placeIds: [...selected.slice(0, 6), 'made-up-place'] }, 'bad-draft')),
+    tools(call('draft_plan', { placeIds: selected }, 'good-draft')),
+    final,
+  ];
+  let calls = 0;
+  let transcript = '';
+  const model = { complete: async messages => { transcript = JSON.stringify(messages); return script[calls++]; } };
+  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  assert.equal(plan.agentRun.status, 'completed');
+  assert.equal(plan.agentRun.model, STEP_MODEL);
+  assert.equal(plan.agentRun.modelTurns, 5);
+  assert.equal(plan.agentRun.toolCalls, 7);
+  assert.equal(plan.agentRun.trace.filter(item => item.tool === 'draft_plan').length, 2);
+  assert.equal(plan.agentRun.trace.find(item => item.tool === 'draft_plan').ok, false);
+  assert.ok(plan.itinerary.flatMap(day => day.stops).every(stop => selected.includes(stop.id)));
+  assert.ok(plan.itinerary.flatMap(day => day.stops).every(stop => stop.id !== 'sz-oct'));
+  assert.deepEqual(plan.flights, []);
+  assert.ok(!transcript.includes('华侨城创意文化园'));
+});
+
+test('early model answer triggers one reminder, then deterministic completion', async () => {
+  let calls = 0;
+  const model = { complete: async () => { calls += 1; return final; } };
+  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  assert.equal(calls, 2);
+  assert.equal(plan.agentRun.status, 'degraded');
+  assert.equal(plan.itinerary.length, 3);
+  assert.ok(plan.agentRun.trace.some(item => item.tool === 'draft_plan' && item.ok));
+});
+
+test('an empty model draft is not reported as model-completed planning', async () => {
+  let turn = 0;
+  const model = { complete: async () => turn++ === 0
+    ? tools(call('resolve_origin'), call('discover_places'), call('search_transport'), call('search_stays'), call('draft_plan', { placeIds: [] }))
+    : final };
+  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  assert.equal(plan.agentRun.status, 'degraded');
+  assert.ok(plan.agentRun.trace.some(item => item.tool === 'draft_plan' && !item.ok));
+  assert.equal(plan.itinerary.length, 3);
+});
+
+test('model outage falls back without inventing supplier offers', async () => {
+  const model = { complete: async () => { const error = new Error('timeout'); error.code = 'deadline'; throw error; } };
+  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  assert.equal(plan.agentRun.status, 'degraded');
+  assert.equal(plan.agentRun.modelError, 'deadline');
+  assert.equal(plan.hotels.length, 0);
+  assert.equal(plan.flights.length, 0);
+  assert.deepEqual(Object.keys(plan.capabilityStatus), ['flights', 'trains', 'attractions', 'lodging', 'food', 'reviews', 'groundExploration']);
+  assert.equal(plan.capabilityStatus.flights.status, 'unavailable');
+  assert.equal(plan.capabilityStatus.groundExploration.status, 'estimated');
+});
+
+test('missing destination data returns a clear error', async () => {
+  let supplierCalls = 0;
+  const providers = stubProviders({
+    searchDuffelFlights: async () => { supplierCalls += 1; return []; },
+    searchDidaHotels: async () => { supplierCalls += 1; return []; },
+  });
+  const result = await runTravelAgent({ query: '去苏州玩三天', startDate: '2026-10-09' }, { providers });
+  assert.equal(result.status, 422);
+  assert.match(result.error, /没有可核实/);
+  assert.equal(supplierCalls, 0);
+});
+
+test('repeated model tool calls are bounded and cached within one request', async () => {
+  let modelCalls = 0;
+  let locationCalls = 0;
+  const model = { complete: async () => { modelCalls += 1; return tools(call('resolve_origin', {}, `location-${modelCalls}`)); } };
+  const providers = stubProviders({
+    providerAvailability: () => ({ amap: { configured: true, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' } }),
+    reverseLocation: async () => { locationCalls += 1; return '上海'; },
+  });
+  const plan = await runTravelAgent({ ...request, location: { lat: 31.2, lng: 121.5 } }, { model, providers });
+  assert.equal(modelCalls, 7);
+  assert.equal(locationCalls, 1);
+  assert.equal(plan.agentRun.status, 'degraded');
+  assert.equal(plan.originCity, '上海');
+});
+
+test('malformed supplier data is discarded before it reaches clients', async () => {
+  const providers = stubProviders({
+    searchDuffelFlights: async () => [{ id: 'bad', totalPrice: null, departureAt: '', arrivalAt: '', currency: 'CNY' }],
+    searchDidaHotels: async () => [{ id: 'bad', currency: 'CNY' }],
+  });
+  const plan = await runTravelAgent(request, { providers });
+  assert.deepEqual(plan.flights, []);
+  assert.deepEqual(plan.hotels, []);
+});
+
+test('agent merges read-only OTA flights, trains and selected attraction products with provenance', async () => {
+  const providers = stubProviders({
+    providerAvailability: () => ({
+      amap: { configured: false, label: '高德' }, dida: { configured: false, label: '道旅' }, duffel: { configured: false, label: 'Duffel' },
+      flyai: { configured: true, label: '飞猪 FlyAI' }, tuniu: { configured: true, label: '途牛 MCP' },
+    }),
+    searchFlyaiTransport: async (kind, origin, destination, date) => [{
+      id: `flyai-${kind}-${origin}-${date}`, provider: '飞猪 FlyAI', departureAt: `${date}T09:00:00`, arrivalAt: `${date}T11:00:00`,
+      totalPrice: kind === 'flight' ? 500 : 260, currency: 'CNY', stops: 0,
+    }],
+    searchTuniuTransport: async (kind, origin, destination, date) => kind === 'flight' ? [{
+      id: `tuniu-${origin}-${date}`, provider: '途牛 MCP', departureAt: `${date}T08:00:00`, arrivalAt: `${date}T10:00:00`,
+      totalPrice: 450, currency: 'CNY', stops: 0,
+    }] : [],
+    searchAttractionProducts: async (_city, places) => [{ placeId: places[0].id, name: places[0].name, provider: '飞猪 FlyAI',
+      productName: '成人票', price: null, currency: null, bookingUrl: 'https://example.com/ticket' }],
+  });
+  const plan = await runTravelAgent(request, { providers });
+  assert.equal(plan.flights.length, 2);
+  assert.equal(plan.trains.length, 1);
+  assert.equal(plan.flights[0].provider, '途牛 MCP');
+  assert.equal(plan.recommendedOutboundFlightId, plan.flights[0].id);
+  assert.equal(plan.attractionOffers[0].price, null);
+  assert.equal(plan.capabilityStatus.attractions.status, 'products_found');
+  assert.equal(plan.capabilityStatus.reviews.status, 'unavailable');
+  assert.ok(plan.agentRun.trace.some(item => item.tool === 'search_attractions'));
+});
+
+test('a partial OTA outage keeps successful schedules and reports a partial failure', async () => {
+  const providers = stubProviders({
+    providerAvailability: () => ({ amap: { configured: false, label: '高德' }, dida: { configured: false, label: '道旅' },
+      duffel: { configured: false, label: 'Duffel' }, flyai: { configured: true, label: '飞猪 FlyAI' } }),
+    searchFlyaiTransport: async (kind, origin, destination, date) => {
+      if (kind === 'train' && origin === '上海') throw new Error('upstream busy');
+      return [{ id: `${kind}-${origin}`, provider: '飞猪 FlyAI', departureAt: `${date}T08:00:00`, arrivalAt: `${date}T10:00:00`,
+        totalPrice: kind === 'train' ? null : 400, currency: kind === 'train' ? null : 'CNY', stops: 0 }];
+    },
+  });
+  const plan = await runTravelAgent(request, { providers });
+  assert.equal(plan.flights.length, 1);
+  assert.equal(plan.returnTrains.length, 1);
+  assert.equal(plan.providerStatus.flyai.partialError, true);
+  assert.equal(plan.providerStatus.flyai.error, false);
+  assert.equal(plan.capabilityStatus.trains.status, 'schedules_found');
+});
+
+test('dining stays grounded in nearby supplier POIs and excludes visited restaurants', async () => {
+  const providers = stubProviders({
+    searchAmapDining: async (_city, anchors) => anchors.flatMap(anchor => [
+      { id: `visited-${anchor.day}`, name: '吃过的店', day: anchor.day, lat: anchor.lat, lng: anchor.lng, source: '高德餐饮 POI' },
+      { id: `food-${anchor.day}`, name: `第${anchor.day}天餐厅`, day: anchor.day, lat: anchor.lat, lng: anchor.lng,
+        rating: 4.5, averageCost: 90, currency: 'CNY', source: '高德餐饮 POI' },
+      { id: `far-${anchor.day}`, name: '远处餐厅', day: anchor.day, lat: 0, lng: 0, source: '高德餐饮 POI' },
+    ]),
+  });
+  const plan = await runTravelAgent({ ...request, memory: { ...request.memory, visitedPlaces: [
+    ...request.memory.visitedPlaces, ...[1, 2, 3].map(day => ({ id: `visited-${day}`, name: '吃过的店', city: '深圳' })),
+  ] } }, { providers });
+  assert.equal(plan.dining.length, 3);
+  assert.ok(plan.dining.every(item => item.id.startsWith('food-') && item.source === '高德餐饮 POI'));
+  assert.ok(plan.itinerary.every(day => day.diningSuggestions.length === 1));
+  assert.equal(plan.providerStatus.dining.result, 'ok');
+});
+
+test('dining ranking considers rating and per-person budget as well as distance', async () => {
+  const providers = stubProviders({ searchAmapDining: async (_city, anchors) => anchors.flatMap(anchor => [
+    { id: `close-${anchor.day}`, name: '就近普通店', day: anchor.day, lat: anchor.lat, lng: anchor.lng,
+      rating: 3.5, averageCost: 70, source: '高德餐饮 POI' },
+    { id: `better-${anchor.day}`, name: '稍远好评店', day: anchor.day, lat: anchor.lat + 0.004, lng: anchor.lng,
+      rating: 4.6, averageCost: 85, source: '高德餐饮 POI' },
+    { id: `expensive-${anchor.day}`, name: '高价店', day: anchor.day, lat: anchor.lat, lng: anchor.lng,
+      rating: 4.8, averageCost: 600, source: '高德餐饮 POI' },
+  ]) });
+  const plan = await runTravelAgent({ ...request, memory: { ...request.memory, diningBudgetPerPerson: 100 } }, { providers });
+  assert.ok(plan.dining.every(item => item.id.startsWith('better-')));
+});
+
+test('ground route detail is preserved with its source and imagery coverage is not fabricated', async () => {
+  const providers = stubProviders({ enrichRoutes: async plan => ({ ...plan, groundJourneys: [{
+    day: 1, from: '机场', to: plan.itinerary[0].stops[0].name, minutes: 42, mode: 'transit',
+    source: '高德公共交通', walkingMeters: 350, segments: [{ mode: 'transit', line: '地铁11号线', board: '机场', alight: '前海湾' }],
+    imagery: { status: 'check-on-device', provider: 'Apple MapKit Look Around' },
+  }] }) });
+  const plan = await runTravelAgent(request, { providers });
+  assert.equal(plan.groundJourneys.length, 1);
+  assert.equal(plan.groundJourneys[0].segments[0].board, '机场');
+  assert.equal(plan.groundJourneys[0].imagery.status, 'check-on-device');
+  assert.equal(plan.providerStatus.ground.result, 'ok');
+});
+
+test('a route provider cannot turn a valid day into an overnight itinerary', async () => {
+  const providers = stubProviders({
+    enrichRoutes: async plan => ({ ...plan, itinerary: plan.itinerary.map((day, index) => index === 0
+      ? { ...day, stops: day.stops.map((stop, stopIndex) => stopIndex === 0 ? { ...stop, start: '23:30' } : stop) }
+      : day) }),
+  });
+  const plan = await runTravelAgent(request, { providers });
+  assert.notEqual(plan.itinerary[0].stops[0].start, '23:30');
+  assert.ok(plan.agentRun.warnings.some(warning => warning.includes('时刻冲突')));
+});
+
+test('fully visited city does not claim to offer a new itinerary', async () => {
+  const visitedPlaces = CITY_CATALOG.深圳.places.map(place => ({ id: place.id, name: place.name, city: '深圳' }));
+  const result = await runTravelAgent({ ...request, memory: { ...request.memory, visitedPlaces } }, { providers: stubProviders() });
+  assert.equal(result.status, 422);
+  assert.match(result.error, /没有可核实/);
+});
+
+test('one through seven days keep unique verified stops and valid clock times', async () => {
+  for (let days = 1; days <= 7; days += 1) {
+    const plan = await runTravelAgent({ ...request, days }, { providers: stubProviders() });
+    assert.equal(plan.itinerary.length, days);
+    const stops = plan.itinerary.flatMap(day => day.stops);
+    assert.equal(stops.length, new Set(stops.map(stop => stop.id)).size);
+    assert.ok(stops.every(stop => Number(stop.start.slice(0, 2)) < 24));
+    assert.ok(stops.every(stop => stop.id !== 'sz-oct'));
+    assert.ok(plan.itinerary.every(day => day.stops.length > 0));
+  }
+});
+
+test('Step client retries a rate limit and uses the exact Step 5 model ID', async () => {
+  const bodies = [];
+  let attempts = 0;
+  const fetchImpl = async (_url, requestOptions) => {
+    bodies.push(JSON.parse(requestOptions.body));
+    attempts += 1;
+    if (attempts === 1) return { ok: false, status: 429, headers: { get: () => '0' } };
+    return { ok: true, json: async () => ({ choices: [{ finish_reason: 'stop', message: { role: 'assistant', content: '完成' } }], usage: { prompt_tokens: 1, completion_tokens: 1 } }) };
+  };
+  const client = createStepClient({ apiKey: 'test-only', fetchImpl, sleep: async () => {} });
+  const response = await client.complete([{ role: 'user', content: 'hi' }], [], { deadline: Date.now() + 3000 });
+  assert.equal(attempts, 2);
+  assert.ok(bodies.every(body => body.model === 'step-5-preview'));
+  assert.equal(response.message.content, '完成');
+});
+
+test('Step client rejects truncated completions', async () => {
+  const client = createStepClient({ apiKey: 'test-only', fetchImpl: async () => ({ ok: true, json: async () => ({ choices: [{ finish_reason: 'length', message: { role: 'assistant', content: '{' } }] }) }) });
+  await assert.rejects(client.complete([], [], { deadline: Date.now() + 3000 }), error => error.code === 'invalid_completion');
+});
+
+test('Step client opens a short circuit after repeated authentication failures', async () => {
+  let requests = 0;
+  const client = createStepClient({ apiKey: 'test-only', fetchImpl: async () => { requests += 1; return { ok: false, status: 401 }; } });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await assert.rejects(client.complete([], [], { deadline: Date.now() + 3000 }), error => error.code === 'http_401');
+  }
+  await assert.rejects(client.complete([], [], { deadline: Date.now() + 3000 }), error => error.code === 'circuit_open');
+  assert.equal(requests, 3);
+});
+
+test('HTTP-compatible Step client passes tool results back through the full agent loop', async () => {
+  const selected = ['sz-nantou', 'sz-baoanbay', 'sz-gankeng', 'sz-dafen', 'sz-huaqiangbei', 'sz-lianhuashan', 'sz-museum'];
+  let requests = 0;
+  const fetchImpl = async (_url, options) => {
+    const body = JSON.parse(options.body);
+    requests += 1;
+    if (requests === 2) {
+      assert.equal(body.model, 'step-5-preview');
+      assert.ok(body.messages.some(message => message.role === 'tool' && message.tool_call_id === 'draft'));
+    }
+    const choice = requests === 1
+      ? { finish_reason: 'tool_calls', message: tools(
+        call('set_trip_spec', { destination: '深圳', days: 3 }, 'spec'),
+        call('resolve_origin', {}, 'origin'),
+        call('discover_places', {}, 'places'),
+        call('search_transport', {}, 'transport'),
+        call('search_stays', {}, 'stays'),
+        call('draft_plan', { placeIds: selected }, 'draft'),
+      ).message }
+      : { finish_reason: 'stop', message: final.message };
+    return { ok: true, json: async () => ({ choices: [choice], usage: { prompt_tokens: 20, completion_tokens: 5 } }) };
+  };
+  const model = createStepClient({ apiKey: 'test-only', fetchImpl });
+  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  assert.equal(requests, 2);
+  assert.equal(plan.agentRun.status, 'completed');
+  assert.equal(plan.agentRun.modelTurns, 2);
+  assert.equal(plan.agentRun.usage.prompt_tokens, 40);
+});

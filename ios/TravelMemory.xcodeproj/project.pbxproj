@@ -1,0 +1,352 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0FACF5124E6B2FAD0D6C79C6 /* TravelMemoryApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */; };
+		143CA840400F3B9873DB68E0 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0788171660EBAFADD2351927 /* SourcesView.swift */; };
+		19712F39C5C23AEDBA28DC68 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23733C11F84B480A3C931DD4 /* LocationService.swift */; };
+		4C711B515BA46B1ECFB14DC6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */; };
+		8243AA65DDBAE12990E93D82 /* SwiftUIX in Frameworks */ = {isa = PBXBuildFile; productRef = F643F08A2FC367B87085C2CA /* SwiftUIX */; };
+		AACCD64300034BF76075B37F /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A4681C232ADCED0231449D /* MemoryView.swift */; };
+		F45EC7D51F5B00229DD38BB6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0806BC6280EF5656268365 /* Models.swift */; };
+		FB56A3FBA0B15EB0C38FD9B5 /* PlannerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		0788171660EBAFADD2351927 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
+		11A4681C232ADCED0231449D /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
+		23733C11F84B480A3C931DD4 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		6229C4596F02418389DDE795 /* TravelMemory.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TravelMemory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMemoryApp.swift; sourceTree = "<group>"; };
+		9C0806BC6280EF5656268365 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerStore.swift; sourceTree = "<group>"; };
+		D47F92A6E6E2774094C8247C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6977C754C70BA60FC662F292 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8243AA65DDBAE12990E93D82 /* SwiftUIX in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0C573D30AD5C32DF38C28572 = {
+			isa = PBXGroup;
+			children = (
+				7AF22D19A58EF34A0DA219E1 /* TravelMemory */,
+				6B3AA6A5EB24FAEBB5A4AE98 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6B3AA6A5EB24FAEBB5A4AE98 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6229C4596F02418389DDE795 /* TravelMemory.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7AF22D19A58EF34A0DA219E1 /* TravelMemory */ = {
+			isa = PBXGroup;
+			children = (
+				D47F92A6E6E2774094C8247C /* Info.plist */,
+				23733C11F84B480A3C931DD4 /* LocationService.swift */,
+				11A4681C232ADCED0231449D /* MemoryView.swift */,
+				9C0806BC6280EF5656268365 /* Models.swift */,
+				9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */,
+				8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */,
+				0788171660EBAFADD2351927 /* SourcesView.swift */,
+				98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */,
+			);
+			path = TravelMemory;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8CB0155B3384A1585E4B6DE5 /* TravelMemory */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 646BEE915C08D46F365830F5 /* Build configuration list for PBXNativeTarget "TravelMemory" */;
+			buildPhases = (
+				3FBFC16FB0AAB6E719E74062 /* Sources */,
+				6977C754C70BA60FC662F292 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TravelMemory;
+			packageProductDependencies = (
+				F643F08A2FC367B87085C2CA /* SwiftUIX */,
+			);
+			productName = TravelMemory;
+			productReference = 6229C4596F02418389DDE795 /* TravelMemory.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0FB340A52FE392EA697C949F /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					8CB0155B3384A1585E4B6DE5 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 56578343BFCB9FD640CD1406 /* Build configuration list for PBXProject "TravelMemory" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 0C573D30AD5C32DF38C28572;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				7BBCB9EDF49610C443782B1E /* XCRemoteSwiftPackageReference "SwiftUIX" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 6B3AA6A5EB24FAEBB5A4AE98 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8CB0155B3384A1585E4B6DE5 /* TravelMemory */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3FBFC16FB0AAB6E719E74062 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				19712F39C5C23AEDBA28DC68 /* LocationService.swift in Sources */,
+				AACCD64300034BF76075B37F /* MemoryView.swift in Sources */,
+				F45EC7D51F5B00229DD38BB6 /* Models.swift in Sources */,
+				FB56A3FBA0B15EB0C38FD9B5 /* PlannerStore.swift in Sources */,
+				4C711B515BA46B1ECFB14DC6 /* RootView.swift in Sources */,
+				143CA840400F3B9873DB68E0 /* SourcesView.swift in Sources */,
+				0FACF5124E6B2FAD0D6C79C6 /* TravelMemoryApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		075746375CF1A42EF44ABF21 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		3A70A55F2C208580796749BA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = TravelMemory/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.deepsleeptt.travelmemory;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		7AAA55B856999E98C54DEAD8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = TravelMemory/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = ai.deepsleeptt.travelmemory;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D5DD016E003558358175987A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		56578343BFCB9FD640CD1406 /* Build configuration list for PBXProject "TravelMemory" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				075746375CF1A42EF44ABF21 /* Debug */,
+				D5DD016E003558358175987A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		646BEE915C08D46F365830F5 /* Build configuration list for PBXNativeTarget "TravelMemory" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7AAA55B856999E98C54DEAD8 /* Debug */,
+				3A70A55F2C208580796749BA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		7BBCB9EDF49610C443782B1E /* XCRemoteSwiftPackageReference "SwiftUIX" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SwiftUIX/SwiftUIX.git";
+			requirement = {
+				kind = revision;
+				revision = 3a99044b7045fb5907a7df18c7fe323e5656c6ab;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F643F08A2FC367B87085C2CA /* SwiftUIX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7BBCB9EDF49610C443782B1E /* XCRemoteSwiftPackageReference "SwiftUIX" */;
+			productName = SwiftUIX;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 0FB340A52FE392EA697C949F /* Project object */;
+}

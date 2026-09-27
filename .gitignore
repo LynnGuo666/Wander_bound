@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.DS_Store
+ios/DerivedData/
+ios/SourcePackages/
+ios/*.xcuserstate
+ios/TravelMemory.xcodeproj/project.xcworkspace/xcuserdata/
