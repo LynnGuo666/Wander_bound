@@ -12,6 +12,7 @@ from pyserver.media import MediaStore
 from pyserver.trips import TripStore
 from pyserver.agent.spec import set_trip_spec
 from pyserver import providers
+from pyserver.providers import amap
 
 
 def call(name, args, call_id):
@@ -121,7 +122,7 @@ def test_preferences_are_merged_into_trip_memory():
 
 def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, monkeypatch):
     config = ConfigStore(tmp_path / "config.yml")
-    config.update({"credentials": {"stepfun": "test-secret"}})
+    config.update({"credentials": {"stepfun": "test-secret", "amap": "amap-test-key"}})
     trips = TripStore(tmp_path / "trips")
     app = create_app(config=config, trips=trips, media=MediaStore(tmp_path / "media"))
 
@@ -138,9 +139,18 @@ def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, mon
                 "outboundTrains": [{"id": "verified-train", "origin": origin, "destination": destination, "totalPrice": 100}],
                 "returnTrains": [], "providerStatus": {"rail12306": {"configured": True, "offers": 1}}}
 
+    async def fake_dining(city, anchors, key):
+        assert key == "amap-test-key"
+        return [{"id": "verified-meal", "name": "柳州螺蛳粉", "day": 1, "rating": 4.6, "averageCost": 28, "source": "高德餐饮 POI"}]
+
+    async def fake_routes(plan, key):
+        return {**plan, "groundJourneys": [{"day": 1, "from": "车站", "to": "柳州博物馆", "minutes": 15, "mode": "walk", "source": "高德步行路线"}]}
+
     monkeypatch.setattr(agent.step, "complete", fake_complete)
     monkeypatch.setattr(providers, "search_places", fake_places)
     monkeypatch.setattr(providers, "search_transport", fake_transport)
+    monkeypatch.setattr(amap, "search_dining", fake_dining)
+    monkeypatch.setattr(amap, "enrich_routes", fake_routes)
 
     async def scenario():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
@@ -151,6 +161,8 @@ def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, mon
             assert result["days"] == 3
             assert result["itinerary"][0]["stops"][0]["id"] == "verified-1"
             assert result["agentRun"]["status"] == "degraded"
+            assert result["dining"][0]["id"] == "verified-meal"
+            assert result["groundJourneys"][0]["minutes"] == 15
             fallback_events = [item for item in result["agentRun"]["events"] if item.get("source") == "server_fallback"]
             assert [item["type"] for item in fallback_events[:2]] == ["tool_start", "tool_end"]
             assert trips.get(result["tripId"])["plan"]["days"] == 3

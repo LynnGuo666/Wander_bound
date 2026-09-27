@@ -54,4 +54,5 @@ async def draft_plan(args: dict, state: dict) -> dict:
             "hotelBrands": [], "generatedAt": now(), "locationDetected": False, "requiredStays": state["requiredStays"],
             "totalBudgetCny": state["totalBudgetCny"], "recommendedOutboundTrainId": next((item["id"] for item in state["trains"] if item["totalPrice"] is not None), None)}
     state["plan"] = plan
+    state["enrichmentDone"] = False
     return {"ok": True, "days": itinerary, "selectedPlaceIds": ids}

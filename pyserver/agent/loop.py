@@ -9,6 +9,7 @@ from .catalog import MAX_TURNS, MAX_CALLS, available, SYSTEM
 from .handlers import execute
 from .state import initial_state, _error
 from .fallback import complete_with_tools
+from . import enrichment
 from ..trips import TripStore, now
 
 
@@ -49,6 +50,7 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
         state["placesDone"] = False
         state["transportDone"] = False
         state["staysDone"] = False
+        state["enrichmentDone"] = False
         messages.append({"role": "user", "content": f"在之前的会话和行程基础上修改：{revision[:2000]}"})
         yield event("revision_requested", instruction=revision[:2000])
     else:
@@ -134,6 +136,14 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
                             output=result, ok=result.get("ok", False), code=result.get("code", "ok"))
         if state.get("plan"):
             yield event("fallback_end", status="completed")
+    if state.get("plan") and not state.get("enrichmentDone"):
+        for name, operation in (("search_dining", enrichment.search_dining), ("explore_ground", enrichment.explore_ground)):
+            yield event("tool_start", turn=turns, source="server_enrichment", tool=name, input={"destination": state["destination"]})
+            result = await operation(state["plan"], credentials.get("amap"))
+            yield event("tool_end", turn=turns, source="server_enrichment", tool=name,
+                        input={"destination": state["destination"]}, output=result,
+                        ok=result.get("ok", False), code=result.get("code", "ok"))
+        state["enrichmentDone"] = True
     trip["events"] = events
     trip["continuation"] = {"state": state, "messages": messages, "modelTurns": turns, "toolCalls": calls, "usage": usage}
     agent_run = {"status": "waiting_for_user" if state.get("pendingQuestion") else "degraded" if used_fallback else "completed" if state.get("plan") else "degraded",

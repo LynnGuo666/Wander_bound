@@ -10,7 +10,8 @@ def initial_state(request: dict) -> dict:
             "preferences": memory.get("preferences") or {},
             "places": [], "trains": [], "returnTrains": [], "flights": [], "returnFlights": [],
             "providerStatus": {}, "hotels": [], "plan": None, "pendingQuestion": None,
-            "originDone": False, "placesDone": False, "transportDone": False, "staysDone": False, "answerNeedsCommit": False}
+            "originDone": False, "placesDone": False, "transportDone": False, "staysDone": False,
+            "enrichmentDone": False, "answerNeedsCommit": False}
 
 
 def _error(code: str, message: str) -> dict:
