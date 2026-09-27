@@ -1,8 +1,15 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 .DS_Store
+*.log
+coverage/
 ios/DerivedData/
 ios/SourcePackages/
 ios/*.xcuserstate
+ios/.build/
+ios/.swiftpm/
 ios/TravelMemory.xcodeproj/project.xcworkspace/xcuserdata/
+ios/TravelMemory.xcodeproj/xcuserdata/

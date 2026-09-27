@@ -4,7 +4,7 @@
 
 ## 本地启动
 
-需要 Node.js 22 或更新版本。网页与 API 在本机分别使用 `5173` 和 `4174` 端口。
+需要 Node.js 22.12 或更新版本；使用 nvm 时可运行 `nvm use` 读取 `.nvmrc`。网页与 API 在本机分别使用 `5173` 和 `4174` 端口。
 
 ```sh
 cd travel-agent
@@ -15,7 +15,9 @@ npm run dev
 
 打开 `http://localhost:5173`。直接输入“我想去深圳玩 3 天”，填写出发城市，或允许浏览器定位。无供应商密钥时仍可用内置的深圳地点资料规划；飞猪 CLI 可在受限体验模式查询机票、火车票和景区，遮蔽价格会记为空值，班次时刻仍可查看。酒店报价和评论在未获授权时显示为未获取。定位坐标只有配置高德 Web 服务 Key 后才能在服务端反查出发城市，因此也可以直接填城市。
 
-`npm test` 运行规划算法与 Agent loop 测试，`npm run build` 构建网页。API 健康检查为 `GET http://127.0.0.1:4174/api/health`，规划接口为 `POST /api/plan`。请求包含 `query`、`destination`、`originCity`、`days`、`startDate`、`memory`，可选 `location: {lat, lng}`。网页和 iOS 均只在设备本地保存记忆；规划时将记忆发送到你配置的 API 地址。
+`npm run check` 运行测试并构建网页，GitHub Actions 在推送和 Pull Request 时执行同样的检查，并构建 iOS 模拟器应用。API 健康检查为 `GET http://127.0.0.1:4174/api/health`，规划接口为 `POST /api/plan`，仅接受不超过 256 KiB 的 JSON 对象。请求包含 `query`、`destination`、`originCity`、`days`、`startDate`、`memory`，可选 `location: {lat, lng}`。网页和 iOS 均只在设备本地保存记忆；规划时将记忆发送到你配置的 API 地址。
+
+代码按用途分为 `src/`（网页）、`ios/TravelMemory/`（iOS）、`server/`（HTTP 入口、Agent loop、供应商适配器）、`shared/`（地点目录与规划规则）、`test/`（算法、供应商和 HTTP 契约测试）。`server/index.mjs` 只负责启动，`server/http.mjs` 可以独立测试请求处理。网页开发服务器通过 Vite 将 `/api` 代理到后端，因此本地不需要跨域配置。
 
 直接调试后端可运行 `npm run agent:cli -- "我想去深圳玩三天" --origin 上海 --date 2026-10-09`。加 `--require-model` 会要求本次由 Step 5 Preview 真正完成，否则以非零状态退出，适合密钥配置后的联调。
 
@@ -58,6 +60,7 @@ open TravelMemory.xcodeproj
 
 - 用户主动点击定位后才请求设备坐标。坐标和偏好用于本次规划；若配置高德 Key，坐标会发送至高德反查城市。
 - 记忆保存在浏览器 `localStorage` 或 iOS `UserDefaults`，服务端不落库。服务器默认只监听 `127.0.0.1`。
+- API 默认不向其他网页开放跨域访问。网页与 API 分域部署时，在服务端将 `CORS_ALLOWED_ORIGIN` 设为该网页的完整 Origin；同域部署无需设置。当前 API 没有用户认证或请求限流，不能直接作为公开服务暴露。
 - 深圳内置地点为编辑维护的起步目录，缺少实时营业时间、天气、门票和评论。餐饮建议依赖高德 Key，未知评分保持空白。
 - 当前分别查询去程和返程机票、火车票；无兼容行程的返程报价不会被推荐。途牛火车只保留有余票的席别参考价；门到门总费用尚未接入。行程起始时刻在没有真实航班时属于规划假设。餐饮建议尚未占用游玩时间。iOS Look Around 的实景入口尚未接入。
 - Spark 节点上现有 Laya 服务是另一个任务的模型部署；此项目不会把旅行记忆发送到现有的 BTC 模型。Step 5 Preview 通过阶跃星辰 API 或你配置的兼容网关调用，需单独评估数据传输与隐私要求。

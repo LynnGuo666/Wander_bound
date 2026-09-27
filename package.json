@@ -11,7 +11,11 @@
     "preview": "vite preview --host 127.0.0.1",
     "ios:generate": "cd ios && xcodegen generate",
     "ios:open": "open ios/TravelMemory.xcodeproj",
-    "test": "node --test"
+    "test": "node --test",
+    "check": "npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   },
   "dependencies": {
     "@fly-ai/flyai-cli": "1.0.16",
