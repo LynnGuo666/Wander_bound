@@ -5,6 +5,7 @@ After=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/home/Developer/travel-agent
+Environment=PATH=/home/Developer/.local/opt/node-v22.16.0/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=/home/Developer/.local/opt/node-v22.16.0/bin/node --env-file=/home/Developer/travel-agent/.env /home/Developer/travel-agent/server/index.mjs
 Restart=on-failure
 RestartSec=5
