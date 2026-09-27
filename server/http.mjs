@@ -49,6 +49,17 @@ function httpError(status, message) {
   return Object.assign(new Error(message), { status });
 }
 
+function transportRequest(input) {
+  const text = value => typeof value === 'string' && value.trim().length > 0 && value.length <= 100 ? value.trim() : null;
+  const originCity = text(input.originCity);
+  const destination = text(input.destination);
+  const startDate = text(input.startDate);
+  const days = input.days;
+  if (!originCity || !destination || !/^\d{4}-\d{2}-\d{2}$/.test(startDate || '')
+      || !Number.isInteger(days) || days < 1 || days > 21) throw httpError(400, '交通查询参数无效');
+  return { originCity, destination, startDate, days };
+}
+
 function respond(res, status, payload, origin) {
   const headers = {
     'Content-Type': 'application/json; charset=utf-8',
@@ -122,6 +133,24 @@ export function createRequestHandler({
         const credentials = { ...config.credentials, ...extractCredentials(input) };
         return respond(res, 200, await discoverCapabilities(credentials), origin);
       } catch (error) { return respond(res, error.status || 500, { error: error.status ? error.message : '能力发现失败' }, origin); }
+    }
+    if (req.method === 'POST' && req.url === '/api/data/transport') {
+      try {
+        const input = transportRequest(await readJson(req));
+        const config = await configStore.read();
+        const credentials = config.credentials;
+        const providers = createRequestProviders(credentials);
+        const providerStatus = availability(credentials);
+        const state = { ...input, originDone: true, flights: [], returnFlights: [], trains: [], returnTrains: [], providerStatus };
+        const warnings = [];
+        const { searchTransport } = await import('./agent/tool-handlers/transport.mjs');
+        const result = await searchTransport({ state, providers, providerPriority: config.priorities,
+          startDate: input.startDate, memory: {}, warnings });
+        return respond(res, 200, { ...result, outboundFlights: state.flights, returnFlights: state.returnFlights,
+          outboundTrains: state.trains, returnTrains: state.returnTrains, providerStatus, warnings }, origin);
+      } catch (error) {
+        return respond(res, error.status || 502, { error: error.status ? error.message : '交通数据服务失败' }, origin);
+      }
     }
     if (req.method === 'POST' && (req.url === '/api/plan' || req.url === '/api/plan/stream')) {
       const stream = req.url.endsWith('/stream');

@@ -48,10 +48,10 @@ async def draft_plan(args: dict, state: dict) -> dict:
     plan = {"destination": state["destination"], "originCity": state["originCity"], "startDate": state["startDate"],
             "endDate": (start + timedelta(days=state["days"] - 1)).isoformat(), "days": state["days"],
             "intro": "根据已确认的约束与已核实地点编排", "revisit": False, "skippedPlaces": [], "itinerary": itinerary,
-            "stayArea": None, "flights": [], "returnFlights": [], "trains": state["trains"], "returnTrains": [], "hotels": state["hotels"],
-            "attractionOffers": [], "dining": [], "groundJourneys": [], "providerStatus": {}, "transportPreference": "train",
+            "stayArea": None, "flights": state.get("flights") or [], "returnFlights": state.get("returnFlights") or [],
+            "trains": state["trains"], "returnTrains": state.get("returnTrains") or [], "hotels": state["hotels"],
+            "attractionOffers": [], "dining": [], "groundJourneys": [], "providerStatus": state.get("providerStatus") or {}, "transportPreference": "train",
             "hotelBrands": [], "generatedAt": now(), "locationDetected": False, "requiredStays": state["requiredStays"],
             "totalBudgetCny": state["totalBudgetCny"], "recommendedOutboundTrainId": next((item["id"] for item in state["trains"] if item["totalPrice"] is not None), None)}
     state["plan"] = plan
     return {"ok": True, "days": itinerary, "selectedPlaceIds": ids}
-

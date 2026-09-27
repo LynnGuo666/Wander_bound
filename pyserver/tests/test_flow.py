@@ -132,12 +132,14 @@ def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, mon
     async def fake_places(city, key):
         return [{"id": "verified-1", "name": "柳州博物馆", "city": city, "source": "test-provider"}]
 
-    async def fake_trains(origin, destination, departure):
-        return [{"id": "verified-train", "origin": origin, "destination": destination, "totalPrice": 100}]
+    async def fake_transport(origin, destination, departure, days):
+        return {"ok": True, "outboundFlights": [], "returnFlights": [],
+                "outboundTrains": [{"id": "verified-train", "origin": origin, "destination": destination, "totalPrice": 100}],
+                "returnTrains": [], "providerStatus": {"rail12306": {"configured": True, "offers": 1}}}
 
     monkeypatch.setattr(agent.step, "complete", fake_complete)
     monkeypatch.setattr(providers, "search_places", fake_places)
-    monkeypatch.setattr(providers, "search_trains", fake_trains)
+    monkeypatch.setattr(providers, "search_transport", fake_transport)
 
     async def scenario():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
