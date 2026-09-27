@@ -7,7 +7,7 @@ from PIL import Image
 
 from pyserver import agent
 from pyserver.app import create_app
-from pyserver.config import ConfigStore
+from pyserver.settings import ConfigStore
 from pyserver.media import MediaStore
 from pyserver.trips import TripStore
 

@@ -1,16 +1,15 @@
 """Private local photo storage with EXIF removal and trip association."""
 from __future__ import annotations
 
-import io
 import json
 import os
 import uuid
 from datetime import date
 from pathlib import Path
 
-from PIL import Image, ImageEnhance, ImageOps
 
-from .trips import now
+from ..trips import now
+from . import images
 
 
 class MediaStore:
@@ -41,16 +40,12 @@ class MediaStore:
             raise ValueError("图片不能超过 15 MB")
         if captured_day:
             date.fromisoformat(captured_day)
-        image = Image.open(io.BytesIO(image_bytes))
-        image = ImageOps.exif_transpose(image).convert("RGB")
-        image.thumbnail((2560, 2560))
-        output = io.BytesIO()
-        image.save(output, format="JPEG", quality=90, optimize=True)
+        normalized, width, height = images.normalize(image_bytes)
         photo_id = str(uuid.uuid4())
         self._dirs()
-        (self.photos_dir / f"{photo_id}.jpg").write_bytes(output.getvalue())
-        photo = {"id": photo_id, "tripId": trip_id, "capturedDay": captured_day, "width": image.width,
-                 "height": image.height, "analysis": {"width": image.width, "height": image.height},
+        (self.photos_dir / f"{photo_id}.jpg").write_bytes(normalized)
+        photo = {"id": photo_id, "tripId": trip_id, "capturedDay": captured_day, "width": width,
+                 "height": height, "analysis": {"width": width, "height": height},
                  "variants": [], "createdAt": now()}
         (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
         os.chmod(self.photos_dir / f"{photo_id}.jpg", 0o600)
@@ -72,13 +67,8 @@ class MediaStore:
             return None
         if preset not in {"natural", "cinematic"}:
             raise ValueError("不支持的修图风格")
-        image = Image.open(io.BytesIO(self.bytes(photo_id))).convert("RGB")
-        image = ImageEnhance.Contrast(image).enhance(1.08 if preset == "natural" else 1.22)
-        image = ImageEnhance.Color(image).enhance(1.08 if preset == "natural" else 0.88)
-        image = ImageEnhance.Sharpness(image).enhance(1.1)
-        output = io.BytesIO()
-        image.save(output, format="JPEG", quality=90, optimize=True)
-        (self.photos_dir / f"{photo_id}-{preset}.jpg").write_bytes(output.getvalue())
+        enhanced = images.enhance(self.bytes(photo_id), preset)
+        (self.photos_dir / f"{photo_id}-{preset}.jpg").write_bytes(enhanced)
         photo["variants"] = sorted(set([*photo["variants"], preset]))
         (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
         return photo
@@ -87,12 +77,9 @@ class MediaStore:
         photo = self.get(photo_id)
         if not photo or not variant.startswith("ai-"):
             raise ValueError("照片或版本不存在")
-        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        image.thumbnail((2560, 2560))
-        output = io.BytesIO()
-        image.save(output, format="JPEG", quality=90, optimize=True)
+        normalized, _, _ = images.normalize(image_bytes)
         filename = self.photos_dir / f"{photo_id}-{variant}.jpg"
-        filename.write_bytes(output.getvalue())
+        filename.write_bytes(normalized)
         os.chmod(filename, 0o600)
         photo["variants"] = sorted(set([*photo["variants"], variant]))
         (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))

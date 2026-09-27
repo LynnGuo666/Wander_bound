@@ -8,8 +8,8 @@ import uuid
 from pathlib import Path
 
 from .comfy import ComfyClient
-from .media import MediaStore
-from .trips import now
+from .store import MediaStore
+from ..trips import now
 
 
 class JobStore:

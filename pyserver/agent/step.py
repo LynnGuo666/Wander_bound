@@ -11,14 +11,14 @@ MODEL = "step-5-preview"
 BASE = "https://api.stepfun.com/step_plan/v1"
 
 
-async def complete(messages: list[dict], tools: list[dict], api_key: str, *, tool_choice: str = "required") -> AsyncIterator[dict]:
+async def complete(messages: list[dict], tools: list[dict], api_key: str) -> AsyncIterator[dict]:
     base = os.getenv("STEPFUN_BASE_URL", BASE).rstrip("/")
     if not base.startswith("https://") and not base.startswith("http://127.0.0.1:"):
         raise ValueError("StepFun 地址必须使用 HTTPS 或本机回环地址")
     async with httpx.AsyncClient(timeout=httpx.Timeout(125, connect=12)) as client:
         async with client.stream("POST", f"{base}/chat/completions", headers={"Authorization": f"Bearer {api_key}"},
-                                 json={"model": MODEL, "messages": messages, "tools": tools, "tool_choice": tool_choice,
-                                       "temperature": 0.2, "max_tokens": 4096, "stream": True}) as response:
+                                 json={"model": MODEL, "messages": messages, "tools": tools,
+                                       "temperature": 0.2, "stream": True}) as response:
             if response.status_code != 200:
                 raise RuntimeError(f"StepFun HTTP {response.status_code}")
             calls: dict[int, dict] = {}
