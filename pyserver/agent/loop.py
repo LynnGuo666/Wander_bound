@@ -8,6 +8,7 @@ from . import step
 from .catalog import MAX_TURNS, MAX_CALLS, available, SYSTEM
 from .handlers import execute
 from .state import initial_state, _error
+from .fallback import complete_with_tools
 from ..trips import TripStore, now
 
 
@@ -121,9 +122,21 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
             messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result, ensure_ascii=False)[:20000]})
             if state.get("pendingQuestion"):
                 break
+    used_fallback = False
+    if error and not state.get("plan") and not state.get("pendingQuestion"):
+        yield event("fallback_start", reason=error)
+        async for phase, name, args, result in complete_with_tools(state, credentials, request):
+            used_fallback = True
+            if phase == "start":
+                yield event("tool_start", turn=turns, source="server_fallback", tool=name, input=args)
+            else:
+                yield event("tool_end", turn=turns, source="server_fallback", tool=name, input=args,
+                            output=result, ok=result.get("ok", False), code=result.get("code", "ok"))
+        if state.get("plan"):
+            yield event("fallback_end", status="completed")
     trip["events"] = events
     trip["continuation"] = {"state": state, "messages": messages, "modelTurns": turns, "toolCalls": calls, "usage": usage}
-    agent_run = {"status": "waiting_for_user" if state.get("pendingQuestion") else "completed" if state.get("plan") else "degraded",
+    agent_run = {"status": "waiting_for_user" if state.get("pendingQuestion") else "degraded" if used_fallback else "completed" if state.get("plan") else "degraded",
                  "model": step.MODEL, "channel": "step-plan", "modelTurns": turns, "toolCalls": calls, "usage": usage, "events": events,
                  "trace": [{"tool": item["tool"], "ok": item["ok"], "code": item["code"]} for item in events if item["type"] == "tool_end"], "warnings": []}
     if state.get("pendingQuestion"):

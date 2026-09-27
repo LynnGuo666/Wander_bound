@@ -11,6 +11,7 @@ from pyserver.settings import ConfigStore
 from pyserver.media import MediaStore
 from pyserver.trips import TripStore
 from pyserver.agent.spec import set_trip_spec
+from pyserver import providers
 
 
 def call(name, args, call_id):
@@ -116,3 +117,39 @@ def test_preferences_are_merged_into_trip_memory():
     assert result["ok"] is True
     assert state["preferences"] == {"pace": "轻松", "transport": "高铁"}
     assert state["answerNeedsCommit"] is False
+
+
+def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, monkeypatch):
+    config = ConfigStore(tmp_path / "config.yml")
+    config.update({"credentials": {"stepfun": "test-secret"}})
+    trips = TripStore(tmp_path / "trips")
+    app = create_app(config=config, trips=trips, media=MediaStore(tmp_path / "media"))
+
+    async def fake_complete(messages, tools, key, **kwargs):
+        yield {"type": "completion", "message": {"role": "assistant", "content": "继续分析"},
+               "finishReason": "stop", "usage": {}, "publicNote": ""}
+
+    async def fake_places(city, key):
+        return [{"id": "verified-1", "name": "柳州博物馆", "city": city, "source": "test-provider"}]
+
+    async def fake_trains(origin, destination, departure):
+        return [{"id": "verified-train", "origin": origin, "destination": destination, "totalPrice": 100}]
+
+    monkeypatch.setattr(agent.step, "complete", fake_complete)
+    monkeypatch.setattr(providers, "search_places", fake_places)
+    monkeypatch.setattr(providers, "search_trains", fake_trains)
+
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post("/api/plan", json={"query": "长春到柳州三日游", "originCity": "长春",
+                                                    "destination": "柳州", "startDate": "2026-10-02", "days": 3})
+            result = response.json()
+            assert response.status_code == 200
+            assert result["days"] == 3
+            assert result["itinerary"][0]["stops"][0]["id"] == "verified-1"
+            assert result["agentRun"]["status"] == "degraded"
+            fallback_events = [item for item in result["agentRun"]["events"] if item.get("source") == "server_fallback"]
+            assert [item["type"] for item in fallback_events[:2]] == ["tool_start", "tool_end"]
+            assert trips.get(result["tripId"])["plan"]["days"] == 3
+
+    asyncio.run(scenario())
