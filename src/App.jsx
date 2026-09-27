@@ -8,6 +8,7 @@ import AgentTimeline from './workbench/AgentTimeline.jsx';
 import QuestionPanel from './workbench/QuestionPanel.jsx';
 import { useAgentRun } from './workbench/useAgentRun.js';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
