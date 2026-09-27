@@ -1,6 +1,6 @@
 # 旅忆 · 旅行规划 Agent
 
-网页端与原生 iOS 客户端共享同一个规划 API。服务端使用 Step 5 Preview 的函数调用 Agent loop：解析需求、查询位置和供应商、提出地点组合、校验行程。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。根据出发城市、位置、交通和酒店偏好、已到访记录生成深圳 1–7 天行程。相册与回忆视频属于后续阶段。
+网页端与原生 iOS 客户端共享同一个规划 API。服务端使用 Step 5 Preview 的函数调用 Agent loop：解析需求、查询位置和供应商、提出地点组合、校验行程。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。根据出发城市、位置、交通和酒店偏好、已到访记录生成深圳 1–7 天行程。iOS 相册、私有图片处理和 DGX Spark 本地 MiniMax H3 回忆短片的架构见[媒体说明](MEDIA_ARCHITECTURE.md)。
 
 ## 本地启动
 
@@ -21,7 +21,7 @@ cd travel-agent
 
 直接调试后端可运行 `npm run agent:cli -- "我想去深圳玩三天" --origin 上海 --date 2026-10-09`。加 `--require-model` 会要求本次由 Step 5 Preview 真正完成，否则以非零状态退出，适合密钥配置后的联调。
 
-API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。服务端始终补齐景区产品、餐饮和地面交通三步。`trace` 只记录工具名、成功状态和耗时，不记录用户坐标或密钥。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次行程草拟；模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤，发送给模型的是可选新地点及排除数量。当前环境未提供 StepFun Key，真实模型调用尚待密钥配置后联调。
+API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草拟，`degraded` 表示模型失败后由确定性流程完成，`unconfigured` 表示未配置 StepFun Key。服务端始终补齐景区产品、餐饮和地面交通三步。`trace` 只记录工具名、成功状态和耗时，不记录用户坐标或密钥。每次请求最多 7 轮模型响应、14 次模型工具调用、2 次行程草拟；模型超时、限流和格式错误不会让服务端无限循环。模型只能提交地点 ID，价格、评分和地点内容必须来自供应商或本地目录。详细到访记录在服务端过滤；外部 Step 模型收到结构化行程条件与可选地点，不收到原始自由文本和相册图片。当前环境未提供 StepFun Key，真实模型调用尚待密钥配置后联调。
 
 模型接入依据为[阶跃星辰官方 Chat Completions API 文档](https://platform.stepfun.com/docs/zh/api-reference/chat/chat-completion-create)：模型 ID 固定为 `step-5-preview`，使用函数工具调用。单次模型调用最多重试两次限流或服务端错误；连续失败三次后冷却 30 秒，本次规划改走有标记的规则流程。无密钥时 `--require-model` 会立即失败，避免把规则规划误报为模型规划。
 
@@ -35,7 +35,7 @@ xcodegen generate
 open TravelMemory.xcodeproj
 ```
 
-选择 `TravelMemory` scheme 和 iPhone 模拟器运行。模拟器默认访问 Mac 的 `http://127.0.0.1:4174`；真机请在“来源”页填写你自己部署的 HTTPS API 地址。当前没有发布签名和 App Store 包。SwiftUIX 在 `project.yml` 中固定了已验证的提交，生成的 Xcode 工程也纳入仓库。
+选择 `TravelMemory` scheme 和 iPhone 模拟器运行。模拟器默认访问 Mac 的 `http://127.0.0.1:4174`；真机请在“来源”页填写你自己部署的 HTTPS API 地址。“相册”页按日期读取已授权照片，选中后才上传到私有媒体 API；媒体令牌保存在 iOS Keychain。当前没有发布签名和 App Store 包。SwiftUIX 在 `project.yml` 中固定了已验证的提交，生成的 Xcode 工程也纳入仓库。
 
 ## 供应商接入
 
@@ -63,4 +63,4 @@ open TravelMemory.xcodeproj
 - API 默认不向其他网页开放跨域访问。网页与 API 分域部署时，在服务端将 `CORS_ALLOWED_ORIGIN` 设为该网页的完整 Origin；同域部署无需设置。当前 API 没有用户认证或请求限流，不能直接作为公开服务暴露。
 - 深圳内置地点为编辑维护的起步目录，缺少实时营业时间、天气、门票和评论。餐饮建议依赖高德 Key，未知评分保持空白。
 - 当前分别查询去程和返程机票、火车票；无兼容行程的返程报价不会被推荐。途牛火车只保留有余票的席别参考价；门到门总费用尚未接入。行程起始时刻在没有真实航班时属于规划假设。餐饮建议尚未占用游玩时间。iOS Look Around 的实景入口尚未接入。
-- Spark 节点上现有 Laya 服务是另一个任务的模型部署；此项目不会把旅行记忆发送到现有的 BTC 模型。Step 5 Preview 通过阶跃星辰 API 或你配置的兼容网关调用，需单独评估数据传输与隐私要求。
+- Spark 节点上现有 Laya 服务是另一个任务的模型部署；此项目不会把旅行记忆发送到现有的 BTC 模型。相册图片与回忆视频只在私有媒体服务及本地 MiniMax H3 工作流处理；Step 5 Preview 通过阶跃星辰 API 或你配置的兼容网关调用，只接收规划所需的结构化条件。

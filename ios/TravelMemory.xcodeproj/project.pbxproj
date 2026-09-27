@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0132B68925B76B1C36AFD6F8 /* MediaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49D164341E0B745EA1F30174 /* MediaView.swift */; };
 		0FACF5124E6B2FAD0D6C79C6 /* TravelMemoryApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */; };
 		143CA840400F3B9873DB68E0 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0788171660EBAFADD2351927 /* SourcesView.swift */; };
 		19712F39C5C23AEDBA28DC68 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23733C11F84B480A3C931DD4 /* LocationService.swift */; };
+		3EB7F95D51323AC7F46B80A1 /* MediaClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D86353E535036B8509D3E09 /* MediaClient.swift */; };
 		4C711B515BA46B1ECFB14DC6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */; };
 		6B8F2E92A6CFF84D65C6F6B4 /* RouteMapPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75C18B7FAC6D42FD0559475F /* RouteMapPanel.swift */; };
 		70BEEB1ED70DD4391E4C9B84 /* StayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C37EEBA502155C5D578BD88A /* StayPanel.swift */; };
@@ -20,6 +22,7 @@
 		AACCD64300034BF76075B37F /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A4681C232ADCED0231449D /* MemoryView.swift */; };
 		B0B239FACF89C1A311EF95DE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFFDA0E1F84A79C1E9E93A77 /* DesignSystem.swift */; };
 		C09A22303ABFC8AF53653244 /* PlanOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 993EC018CEDE4F987077A9AF /* PlanOverview.swift */; };
+		D4BB4D4F5AD7767C11A11645 /* TripPhotoLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17BD24B10AA7BF989E81215F /* TripPhotoLibrary.swift */; };
 		F45EC7D51F5B00229DD38BB6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0806BC6280EF5656268365 /* Models.swift */; };
 		FB56A3FBA0B15EB0C38FD9B5 /* PlannerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */; };
 /* End PBXBuildFile section */
@@ -27,8 +30,11 @@
 /* Begin PBXFileReference section */
 		0788171660EBAFADD2351927 /* SourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourcesView.swift; sourceTree = "<group>"; };
 		11A4681C232ADCED0231449D /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
+		17BD24B10AA7BF989E81215F /* TripPhotoLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TripPhotoLibrary.swift; sourceTree = "<group>"; };
 		23733C11F84B480A3C931DD4 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
+		49D164341E0B745EA1F30174 /* MediaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaView.swift; sourceTree = "<group>"; };
 		6229C4596F02418389DDE795 /* TravelMemory.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TravelMemory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		6D86353E535036B8509D3E09 /* MediaClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaClient.swift; sourceTree = "<group>"; };
 		75C18B7FAC6D42FD0559475F /* RouteMapPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapPanel.swift; sourceTree = "<group>"; };
 		8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMemoryApp.swift; sourceTree = "<group>"; };
@@ -78,6 +84,8 @@
 				AFFDA0E1F84A79C1E9E93A77 /* DesignSystem.swift */,
 				D47F92A6E6E2774094C8247C /* Info.plist */,
 				23733C11F84B480A3C931DD4 /* LocationService.swift */,
+				6D86353E535036B8509D3E09 /* MediaClient.swift */,
+				49D164341E0B745EA1F30174 /* MediaView.swift */,
 				11A4681C232ADCED0231449D /* MemoryView.swift */,
 				9C0806BC6280EF5656268365 /* Models.swift */,
 				9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */,
@@ -89,6 +97,7 @@
 				C37EEBA502155C5D578BD88A /* StayPanel.swift */,
 				F388EEE9C371AB8C8BE7BF20 /* TransportPanel.swift */,
 				98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */,
+				17BD24B10AA7BF989E81215F /* TripPhotoLibrary.swift */,
 			);
 			path = TravelMemory;
 			sourceTree = "<group>";
@@ -160,6 +169,8 @@
 				84D6D0B193A4719C7C0784A1 /* DayPanel.swift in Sources */,
 				B0B239FACF89C1A311EF95DE /* DesignSystem.swift in Sources */,
 				19712F39C5C23AEDBA28DC68 /* LocationService.swift in Sources */,
+				3EB7F95D51323AC7F46B80A1 /* MediaClient.swift in Sources */,
+				0132B68925B76B1C36AFD6F8 /* MediaView.swift in Sources */,
 				AACCD64300034BF76075B37F /* MemoryView.swift in Sources */,
 				F45EC7D51F5B00229DD38BB6 /* Models.swift in Sources */,
 				C09A22303ABFC8AF53653244 /* PlanOverview.swift in Sources */,
@@ -171,6 +182,7 @@
 				70BEEB1ED70DD4391E4C9B84 /* StayPanel.swift in Sources */,
 				85ACF5B4FA0DB8C11F85B20E /* TransportPanel.swift in Sources */,
 				0FACF5124E6B2FAD0D6C79C6 /* TravelMemoryApp.swift in Sources */,
+				D4BB4D4F5AD7767C11A11645 /* TripPhotoLibrary.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

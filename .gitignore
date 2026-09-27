@@ -6,6 +6,7 @@ dist/
 .DS_Store
 *.log
 coverage/
+data/
 ios/DerivedData/
 ios/SourcePackages/
 ios/*.xcuserstate

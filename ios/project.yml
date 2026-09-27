@@ -18,6 +18,7 @@ targets:
       properties:
         CFBundleDisplayName: 旅忆
         NSLocationWhenInUseUsageDescription: 用于识别你的出发城市，规划前往目的地的路线。
+        NSPhotoLibraryUsageDescription: 按你选择的旅程日期读取照片；仅在你确认后将所选照片上传到私有旅行服务器。
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
         UILaunchScreen: {}

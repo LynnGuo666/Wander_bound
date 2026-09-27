@@ -313,9 +313,20 @@ test('HTTP-compatible Step client passes tool results back through the full agen
     const body = JSON.parse(options.body);
     requests += 1;
     const advertised = body.tools.map(tool => tool.function.name);
-    if (requests === 1) assert.deepEqual(advertised, ['set_trip_spec', 'discover_places', 'resolve_origin']);
-    if (requests === 2) assert.deepEqual(advertised, ['search_transport', 'search_stays']);
-    if (requests === 3) assert.deepEqual(advertised, ['draft_plan']);
+    if (requests === 1) {
+      assert.deepEqual(advertised, ['set_trip_spec', 'discover_places', 'resolve_origin']);
+      assert.ok(!JSON.stringify(body.messages).includes(request.query));
+    }
+    if (requests === 2) {
+      assert.deepEqual(advertised, ['search_transport', 'search_stays']);
+      const results = body.messages.filter(message => message.role === 'tool').map(message => JSON.parse(message.content));
+      assert.ok(results.every(result => !Object.hasOwn(result, 'locationDetected') && !Object.hasOwn(result, 'excludedVisitedCount')));
+    }
+    if (requests === 3) {
+      assert.deepEqual(advertised, ['draft_plan']);
+      const stayResult = JSON.parse(body.messages.find(message => message.tool_call_id === 'stays').content);
+      assert.ok(!Object.hasOwn(stayResult, 'brands') && !Object.hasOwn(stayResult, 'budget'));
+    }
     if (requests === 4) {
       assert.deepEqual(advertised, ['search_attractions', 'search_dining', 'explore_ground']);
       assert.equal(body.model, 'step-5-preview');

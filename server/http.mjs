@@ -48,9 +48,14 @@ export function createRequestHandler({
   model = null,
   runAgent = runTravelAgent,
   availability = providerAvailability,
+  mediaHandler = null,
   allowedOrigin = process.env.CORS_ALLOWED_ORIGIN || '',
 } = {}) {
   return async (req, res) => {
+    if (req.url?.startsWith('/api/media/')) {
+      const handle = mediaHandler || (await import('./media/routes.mjs')).handleMediaRequest;
+      return handle(req, res);
+    }
     const origin = allowedOrigin && req.headers.origin === allowedOrigin ? allowedOrigin : null;
     if (req.method === 'OPTIONS') return respond(res, 204, null, origin);
     if (req.method === 'GET' && req.url === '/api/health') {

@@ -27,6 +27,7 @@ export function createStepClient({
   let circuitOpenUntil = 0;
   return {
     model: STEP_MODEL,
+    backend: 'external-stepfun',
     async complete(messages, tools, { deadline = Date.now() + 60000 } = {}) {
       if (Date.now() < circuitOpenUntil) throw new ModelCallError('circuit_open', 'StepFun 暂时不可用，等待冷却后重试');
       try {
