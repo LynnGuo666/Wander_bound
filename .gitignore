@@ -18,4 +18,6 @@ ios/TravelMemory.xcodeproj/project.xcworkspace/xcuserdata/
 ios/TravelMemory.xcodeproj/xcuserdata/
 .venv/
 __pycache__/
+.pytest_cache/
+__pycache__/
 .mypy_cache/
