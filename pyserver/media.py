@@ -15,7 +15,7 @@ from .trips import now
 
 class MediaStore:
     def __init__(self, root: str | Path | None = None):
-        self.root = Path(root or os.getenv("MEDIA_STORAGE_DIR", "data/media"))
+        self.root = Path(root or os.getenv("MEDIA_STORAGE_DIR") or "data/media")
         self.photos_dir = self.root / "photos"
         self.meta_dir = self.root / "metadata"
 
@@ -80,5 +80,20 @@ class MediaStore:
         image.save(output, format="JPEG", quality=90, optimize=True)
         (self.photos_dir / f"{photo_id}-{preset}.jpg").write_bytes(output.getvalue())
         photo["variants"] = sorted(set([*photo["variants"], preset]))
+        (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
+        return photo
+
+    def save_variant(self, photo_id: str, variant: str, image_bytes: bytes) -> dict:
+        photo = self.get(photo_id)
+        if not photo or not variant.startswith("ai-"):
+            raise ValueError("照片或版本不存在")
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image.thumbnail((2560, 2560))
+        output = io.BytesIO()
+        image.save(output, format="JPEG", quality=90, optimize=True)
+        filename = self.photos_dir / f"{photo_id}-{variant}.jpg"
+        filename.write_bytes(output.getvalue())
+        os.chmod(filename, 0o600)
+        photo["variants"] = sorted(set([*photo["variants"], variant]))
         (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
         return photo

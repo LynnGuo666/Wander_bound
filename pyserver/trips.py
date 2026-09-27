@@ -23,12 +23,14 @@ def public_trip(trip: dict, detail: bool = False) -> dict:
     plan = trip.get("plan") or {}
     today = datetime.now(ZoneInfo("Asia/Shanghai")).date().isoformat()
     result["status"] = "ended" if plan.get("endDate") and today > plan["endDate"] else "in_progress" if plan.get("startDate") and today >= plan["startDate"] else "not_started"
+    if detail:
+        result["pendingQuestion"] = (trip.get("continuation") or {}).get("state", {}).get("pendingQuestion")
     return result
 
 
 class TripStore:
     def __init__(self, root: str | Path | None = None):
-        self.root = Path(root or os.getenv("TRIP_STORAGE_DIR", "data/trips"))
+        self.root = Path(root or os.getenv("TRIP_STORAGE_DIR") or "data/trips")
         self.lock = RLock()
 
     def get(self, trip_id: str) -> dict | None:

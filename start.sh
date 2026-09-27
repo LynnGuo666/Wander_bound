@@ -3,26 +3,29 @@ set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 
-if ! command -v node >/dev/null 2>&1 || ! command -v npm >/dev/null 2>&1; then
-  echo '需要 Node.js 22.12.0 或更新版本，以及 npm。' >&2
-  exit 1
+if [[ ! -d .venv ]]; then
+  python3 -m venv .venv
 fi
-
-if ! node -e 'const [major, minor] = process.versions.node.split(".").map(Number); process.exit(major > 22 || (major === 22 && minor >= 12) ? 0 : 1)'; then
-  echo "当前 Node.js 版本为 $(node --version)，需要 22.12.0 或更新版本；使用 nvm 时请先运行 nvm use。" >&2
-  exit 1
+if ! .venv/bin/python -c 'import fastapi, uvicorn, httpx, yaml, PIL' >/dev/null 2>&1; then
+  .venv/bin/python -m pip install -r requirements.txt
 fi
-
-if ! npm ls --depth=0 --silent >/dev/null 2>&1; then
-  echo '安装项目依赖…'
+if [[ ! -d node_modules ]]; then
   npm ci --include=dev
 fi
-
-if [[ ! -f .env ]]; then
-  cp .env.example .env
-  echo '已创建 .env；如需模型和实时供应商数据，请在其中填写对应密钥。'
+if [[ ! -f dist/index.html ]]; then
+  npm run build
+fi
+if [[ -f .env ]]; then
+  set -a
+  source .env
+  set +a
 fi
 
-echo '网页：http://127.0.0.1:5173'
-echo 'API：http://127.0.0.1:4174'
-exec npm run dev
+export SPARK_COMFY_URL="${SPARK_COMFY_URL:-http://127.0.0.1:18188}"
+export SPARK_QWEN_COMFY_URL="${SPARK_QWEN_COMFY_URL:-http://127.0.0.1:18191}"
+export SPARK_H3_WORKFLOW_FILE="${SPARK_H3_WORKFLOW_FILE:-workflows/minimax-h3-i2v-api.json}"
+export SPARK_QWEN_IMAGE_WORKFLOW_FILE="${SPARK_QWEN_IMAGE_WORKFLOW_FILE:-workflows/qwen-image-2.1-edit-api.json}"
+
+echo "FastAPI + 前端：http://127.0.0.1:${PY_PORT:-4176}"
+echo 'Spark 工作流经本机 18188 / 18191 API 隧道调用。'
+exec .venv/bin/uvicorn pyserver.app:app --host 127.0.0.1 --port "${PY_PORT:-4176}"

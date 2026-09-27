@@ -4,23 +4,34 @@ from __future__ import annotations
 import hmac
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 
 from .agent import run_agent
+from .comfy import configured_clients
 from .config import ConfigStore
 from .media import MediaStore
+from .jobs import JobStore
 from .providers import list_mcp_tools
 from .trips import TripStore, public_trip
 
 
 def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = None, media: MediaStore | None = None) -> FastAPI:
-    app = FastAPI(title="行驿 Travel Agent", version="2.0.0")
     config = config or ConfigStore()
     trips = trips or TripStore()
     media = media or MediaStore()
+    image_client, video_client = configured_clients()
+    jobs = JobStore(media, image_client, video_client)
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        await jobs.resume()
+        yield
+
+    app = FastAPI(title="行驿 Travel Agent", version="2.0.0", lifespan=lifespan)
 
     def media_auth(request: Request):
         token = os.getenv("MEDIA_API_TOKEN", "")
@@ -133,7 +144,8 @@ def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = N
     async def media_health(request: Request):
         media_auth(request)
         return {"ok": True, "storage": "private-local", "imageProcessor": "Pillow",
-                "imageEditBackend": "unconfigured", "videoBackend": "unconfigured"}
+                "imageEditBackend": "dgx-spark-qwen-image-2.1" if image_client and await image_client.probe() else "unconfigured",
+                "videoBackend": "dgx-spark-minimax-h3" if video_client and await video_client.probe() else "unconfigured"}
 
     @app.post("/api/media/photos")
     async def upload_photo(request: Request):
@@ -176,14 +188,75 @@ def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = N
         return photo
 
     @app.post("/api/media/memories")
-    async def memory_unavailable(request: Request):
+    async def create_memory(request: Request, payload: dict):
         media_auth(request)
-        return JSONResponse({"error": "本地未配置 MiniMax H3 工作流"}, status_code=503)
+        trip_id = payload.get("tripId")
+        photo_ids = payload.get("photoIds")
+        if not trips.get(trip_id) or not isinstance(photo_ids, list) or not 1 <= len(photo_ids) <= 8 or len(set(photo_ids)) != len(photo_ids) or any((media.get(item) or {}).get("tripId") != trip_id for item in photo_ids):
+            raise HTTPException(400, "请选择该行程的 1–8 张不重复照片")
+        try:
+            job = jobs.submit("memory", {"tripId": trip_id, "photoIds": photo_ids,
+                                         "title": str(payload.get("title") or "旅行回忆")[:80]})
+        except ValueError as exc:
+            raise HTTPException(503, str(exc)) from exc
+        return JSONResponse({key: job[key] for key in ("id", "status", "backend")}, status_code=202)
 
     @app.post("/api/media/photos/{photo_id}/redraw")
-    async def redraw_unavailable(photo_id: str, request: Request):
+    async def redraw(photo_id: str, request: Request, payload: dict):
         media_auth(request)
-        return JSONResponse({"error": "本地未配置 Qwen Image 工作流"}, status_code=503)
+        if not media.get(photo_id):
+            raise HTTPException(404, "照片不存在")
+        prompt = str(payload.get("prompt") or "").strip()[:500]
+        if not prompt:
+            raise HTTPException(400, "请描述重绘效果")
+        import secrets
+        try:
+            job = jobs.submit("edit", {"photoId": photo_id, "prompt": prompt,
+                                       "seed": int(payload.get("seed")) if payload.get("seed") is not None else secrets.randbits(32)})
+        except ValueError as exc:
+            raise HTTPException(503, str(exc)) from exc
+        return JSONResponse({key: job[key] for key in ("id", "status", "backend", "seed")}, status_code=202)
+
+    @app.get("/api/media/edits/{job_id}")
+    async def edit_status(job_id: str, request: Request):
+        media_auth(request)
+        job = jobs.get(job_id)
+        if not job or job["kind"] != "edit":
+            raise HTTPException(404, "任务不存在")
+        return {key: job.get(key) for key in ("id", "photoId", "status", "backend", "variant", "error", "createdAt", "startedAt", "completedAt", "attempt")}
+
+    @app.post("/api/media/edits/{job_id}/retry")
+    async def retry_edit(job_id: str, request: Request):
+        media_auth(request)
+        job = jobs.retry(job_id)
+        if not job or job["kind"] != "edit":
+            raise HTTPException(404, "无法重试")
+        return JSONResponse({"id": job_id, "status": job["status"], "attempt": job["attempt"]}, status_code=202)
+
+    @app.get("/api/media/memories/{job_id}")
+    async def memory_status(job_id: str, request: Request):
+        media_auth(request)
+        job = jobs.get(job_id)
+        if not job or job["kind"] != "memory":
+            raise HTTPException(404, "任务不存在")
+        return {key: job.get(key) for key in ("id", "status", "backend", "error", "createdAt", "startedAt", "completedAt", "attempt", "completedClips")}
+
+    @app.post("/api/media/memories/{job_id}/retry")
+    async def retry_memory(job_id: str, request: Request):
+        media_auth(request)
+        job = jobs.retry(job_id)
+        if not job or job["kind"] != "memory":
+            raise HTTPException(404, "无法重试")
+        return JSONResponse({"id": job_id, "status": job["status"], "attempt": job["attempt"]}, status_code=202)
+
+    @app.get("/api/media/memories/{job_id}/video")
+    async def memory_video(job_id: str, request: Request):
+        media_auth(request)
+        job = jobs.get(job_id)
+        file = jobs.root / job_id / "memory.mp4"
+        if not job or job["kind"] != "memory" or job["status"] != "succeeded" or not file.is_file():
+            raise HTTPException(404, "视频尚未生成")
+        return FileResponse(file, media_type="video/mp4")
 
     @app.get("/")
     async def index():

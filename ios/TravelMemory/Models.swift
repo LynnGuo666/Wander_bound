@@ -124,6 +124,7 @@ struct AgentRun: Codable {
 }
 
 struct TravelPlan: Codable {
+    let tripId: String?
     let destination: String
     let originCity: String
     let startDate: String

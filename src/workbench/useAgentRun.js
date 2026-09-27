@@ -12,13 +12,14 @@ export function useAgentRun() {
   const [events, setEvents] = useState([]);
   const [plan, setPlan] = useState(null);
   const [question, setQuestion] = useState(null);
+  const [tripId, setTripId] = useState(null);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
   const controller = useRef(null);
   const sessionId = useRef(null);
 
   const run = useCallback(async (payload, continuing = false) => {
-    if (!continuing) sessionId.current = null;
+    if (!continuing) { sessionId.current = null; setTripId(null); }
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
@@ -49,6 +50,7 @@ export function useAgentRun() {
           if (frame?.event === 'progress') progress.push(frame.data);
           if (frame?.event === 'result') {
             receivedResult = true;
+            if (frame.data.tripId) setTripId(frame.data.tripId);
             if (frame.data.question && frame.data.needsInput) {
               sessionId.current = frame.data.sessionId || null;
               setQuestion(frame.data.question);
@@ -71,6 +73,16 @@ export function useAgentRun() {
     if (!option || !sessionId.current) return;
     run({ sessionId: sessionId.current, answer: { questionId: question.id, optionId, customText: customText.trim() } }, true);
   }, [question, run]);
+  const openTrip = useCallback(trip => {
+    controller.current?.abort();
+    sessionId.current = trip.pendingQuestion ? trip.id : null;
+    setTripId(trip.id);
+    setEvents(trip.events || []);
+    setPlan(trip.plan || null);
+    setQuestion(trip.pendingQuestion || null);
+    setError('');
+  }, []);
+  const reviseTrip = useCallback((id, instruction) => run({ tripId: id, query: instruction }, true), [run]);
   const cancel = useCallback(() => controller.current?.abort(), []);
-  return { events, plan, question, error, running, run, answerQuestion, cancel };
+  return { events, plan, question, tripId, error, running, run, answerQuestion, openTrip, reviseTrip, cancel };
 }

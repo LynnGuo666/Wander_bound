@@ -61,19 +61,15 @@ struct MediaView: View {
     @State private var status = ""
 
     private let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
-    private var tripId: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        return MediaClient.tripId(destination: tripName.trimmingCharacters(in: .whitespacesAndNewlines),
-                                  startDate: "\(formatter.string(from: startDate))..\(formatter.string(from: endDate))")
-    }
+    private var tripId: String { store.plan?.tripId ?? "" }
     private var client: MediaClient { MediaClient(serverURL: store.serverURL, token: token) }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 SectionTitle(number: "PRIVATE MEDIA", title: "把旅程留在自己的 Spark", detail: "按日期扫描设备相册。只有你选中的照片会上传到私有服务器；原始定位和 EXIF 不上传。")
+                if tripId.isEmpty { Text("请先在行程页创建并保存行程，再上传照片；照片会自动关联到该行程。")
+                    .font(.caption).foregroundStyle(Palette.coral) }
 
                 Surface {
                     VStack(alignment: .leading, spacing: 10) {
@@ -114,7 +110,7 @@ struct MediaView: View {
                                 Task { await uploadSelected() }
                             }
                             .buttonStyle(.borderedProminent)
-                            .disabled(busy || token.isEmpty || selectedLocal.isEmpty)
+                            .disabled(busy || token.isEmpty || tripId.isEmpty || selectedLocal.isEmpty)
                         }
                     }
                 }
@@ -167,7 +163,7 @@ struct MediaView: View {
                         TextField("短片标题", text: $memoryTitle).textFieldStyle(.roundedBorder)
                         Button("用所选 \(selectedForVideo.count) 张照片生成") { Task { await createMemory() } }
                             .buttonStyle(.borderedProminent)
-                            .disabled(busy || selectedForVideo.isEmpty || selectedForVideo.count > 8 || token.isEmpty)
+                            .disabled(busy || selectedForVideo.isEmpty || selectedForVideo.count > 8 || token.isEmpty || tripId.isEmpty)
                         if selectedForVideo.count > 8 { Text("一次最多选择 8 张照片。")
                                 .font(.caption).foregroundStyle(Palette.coral) }
                         if let job {

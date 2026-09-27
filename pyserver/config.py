@@ -17,7 +17,7 @@ PRIORITY_OPTIONS = {"flights": ["duffel", "flyai", "tuniu"],
 
 class ConfigStore:
     def __init__(self, path: str | Path | None = None):
-        self.path = Path(path or os.getenv("TRAVEL_CONFIG_PATH", "config.yml"))
+        self.path = Path(path or os.getenv("TRAVEL_CONFIG_PATH") or "config.yml")
         self.lock = RLock()
 
     def read(self) -> dict:
