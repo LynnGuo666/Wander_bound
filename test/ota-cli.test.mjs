@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeFlyaiAttractions, normalizeFlyaiTransport, normalizeTuniuTrains, searchFlyai, searchFlyaiAttractions, searchTuniu, searchTuniuTickets, unwrapTuniu } from '../server/ota-cli.mjs';
+import { normalizeFlyaiAttractions, normalizeFlyaiTransport, normalizeTuniuFlights, normalizeTuniuTrains, searchFlyai, searchFlyaiAttractions, searchTuniu, searchTuniuTickets, unwrapTuniu } from '../server/ota-cli.mjs';
 
 test('official CLI commands use documented read-only tool names and arguments', async () => {
   const calls = [];
@@ -28,6 +28,28 @@ test('MCP envelope is decoded; redacted trial prices remain unknown schedules', 
   const rows = [{ adultPrice: '¥2xx', journeys: [{ segments: [{ depDateTime: '2026-10-09 09:00:00', arrDateTime: '2026-10-09 11:00:00' }] }] }];
   assert.equal(normalizeFlyaiTransport(rows, 'flight')[0].totalPrice, null);
   assert.equal(normalizeFlyaiAttractions([{ id: '72', name: '深圳世界之窗', ticketInfo: { price: '¥2xx' } }])[0].price, null);
+});
+
+test('real Tuniu CLI triple-nested envelope unwraps to business data (captured 2026-09-28)', () => {
+  const business = { successCode: true, queryId: 'q-1', totalPageNum: 1, data: [{
+    airlineCompany: '春秋', flightNumber: '9C8956', craftType: 'A321',
+    departureTime: '2026-10-15 07:15', arrivalTime: '2026-10-15 09:35',
+    departureAirport: '宝安', arrivalAirport: '虹桥', departureTerminal: 'T3', arrivalTerminal: 'T1',
+    cabinClass: '经济舱', remainingSeats: '9', type: '直飞', basePrice: '390', totalTax: '120',
+  }] };
+  // 途牛 CLI 的 structuredContent.result 与 content 文本承载同一业务 JSON；两种载体都必须解出。
+  const envelope = object => ({ success: true, result: { content: [{ type: 'text', text: JSON.stringify(object) }], structuredContent: { result: object }, isError: false } });
+  const asObject = unwrapTuniu(envelope(business));
+  assert.deepEqual(asObject, business);
+  const [flight] = normalizeTuniuFlights(asObject, '2026-10-15');
+  assert.equal(flight.flightNumber, '9C8956');
+  assert.equal(flight.departureAt, '2026-10-15T07:15:00');
+  assert.equal(flight.totalPrice, 510);
+  assert.equal(flight.basePrice, 390);
+  assert.equal(flight.taxAmount, 120);
+  assert.equal(flight.priceComplete, true);
+  const asString = unwrapTuniu({ success: true, result: { structuredContent: { result: JSON.stringify(business) } } });
+  assert.deepEqual(asString, business);
 });
 
 test('complete FlyAI flight and train results preserve source, date, price and deep link', () => {

@@ -1,11 +1,23 @@
 import { runCli } from './run-cli.mjs';
 import { isoLocal, price } from './normalize.mjs';
 
+// 真实链路（2026-09-28 用正式 Key 实测）是三层嵌套：
+// MCP result.content[].text → 途牛 CLI 信封 { success, result: { structuredContent: { result: 业务JSON } } }。
+// 逐层剥离，任一层缺省时回退到 content 文本解析。
+function maybeParse(value) {
+  if (typeof value !== 'string') return value;
+  try { return JSON.parse(value); } catch { return value; }
+}
+
 export function unwrapTuniu(payload) {
   if (payload?.success === false) throw new Error(`途牛调用失败：${payload.error?.message || '未知错误'}`);
   let value = payload?.result ?? payload;
   if (value?.isError) throw new Error('途牛 MCP 返回工具错误');
   if (value?.structuredContent && typeof value.structuredContent === 'object') value = value.structuredContent;
+  if (value && typeof value === 'object' && !Array.isArray(value) && value.result != null) {
+    const nested = maybeParse(value.result);
+    if (nested && typeof nested === 'object') value = nested;
+  }
   if (Array.isArray(value?.content)) {
     const text = value.content.find(item => item?.type === 'text')?.text;
     if (!text) throw new Error('途牛 MCP 没有文本结果');

@@ -39,3 +39,31 @@ test('Amap transit route returns boarding details without claiming street imager
   assert.equal(route.fare, 5);
   assert.equal(route.imagery, undefined);
 });
+
+test('Dida hotels use the real searchHotels schema captured on 2026-09-28', async t => {
+  const { normalizeDidaHotels } = await import('../server/providers/dida.mjs');
+  const realRecord = {
+    hotelId: 2307050,
+    bookingUrl: 'https://rollinggo.cn/pages/hotel/detail/index?id=2307050&checkInDate=2026-10-15&checkOutDate=2026-10-16',
+    name: '深圳南山万象青华酒店(万象天地店)',
+    address: '科技园高新南六道10号朗科大厦1楼',
+    latitude: 22.535646, longitude: 113.953154,
+    starRating: 4.0,
+    price: { message: '查价成功。1晚总价：566CNY（约566CNY/晚）', hasPrice: true, currency: 'CNY', lowestPrice: 566.0 },
+    imageUrl: 'https://image-cdn.rollinggo.cn/v2/2307050/hotel/default/14/image/1mc6u12000q7eh9zx194A_R_960_660_R5_D.jpg-t',
+  };
+  const [priced] = normalizeDidaHotels([realRecord, { hotelId: 2, name: '无价酒店', price: { hasPrice: false, message: '暂无报价' } }], 1);
+  assert.equal(priced.id, '2307050');
+  assert.equal(priced.provider, '道旅');
+  assert.equal(priced.totalPrice, 566);
+  assert.equal(priced.displayPrice, 566);
+  assert.equal(priced.currency, 'CNY');
+  assert.equal(priced.rating, 4);
+  assert.equal(priced.priceBasis, '查询时1晚总价，预订前验价');
+  assert.equal(priced.lat, 22.535646);
+  assert.ok(priced.bookingUrl.startsWith('https://'));
+  const [, unpriced] = normalizeDidaHotels([realRecord, { hotelId: 2, name: '无价酒店', price: { hasPrice: false, message: '暂无报价' } }]);
+  assert.equal(unpriced.totalPrice, null);
+  assert.equal(unpriced.displayPrice, null);
+  assert.equal(unpriced.priceBasis, '未取得价格');
+});

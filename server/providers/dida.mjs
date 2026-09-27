@@ -17,6 +17,33 @@ function unpackMcp(body) {
   throw new Error('酒店服务没有返回可解析的数据');
 }
 
+// 响应 schema 于 2026-09-28 用正式 token 实测（searchHotels）：
+// { success, code, message, hotelInformationList: [{ hotelId, name, address, latitude, longitude,
+//   starRating, price: { hasPrice, currency, lowestPrice, message }, bookingUrl, imageUrl, ... }] }
+export function normalizeDidaHotels(items, stayNights = 1) {
+  return (Array.isArray(items) ? items : []).map((hotel, index) => {
+    const price = hotel.price && typeof hotel.price === 'object' ? hotel.price : {};
+    const amount = Number(price.lowestPrice);
+    const priced = price.hasPrice === true && Number.isFinite(amount) && amount >= 0;
+    return {
+      id: String(hotel.hotelId ?? `dida-${index}`),
+      provider: '道旅',
+      name: String(hotel.name || '未命名酒店'),
+      address: String(hotel.address || ''),
+      lat: Number(hotel.latitude) || null,
+      lng: Number(hotel.longitude) || null,
+      starRating: Number(hotel.starRating) || null,
+      displayPrice: priced ? amount : null,
+      totalPrice: priced ? amount : null,
+      priceBasis: priced ? `查询时${stayNights}晚总价，预订前验价` : '未取得价格',
+      currency: priced ? String(price.currency || 'CNY') : null,
+      rating: Number(hotel.starRating) || null,
+      bookingUrl: /^https:\/\//.test(hotel.bookingUrl || '') ? hotel.bookingUrl : null,
+      imageUrl: /^https:\/\//.test(hotel.imageUrl || '') ? hotel.imageUrl : null,
+    };
+  });
+}
+
 export async function searchDidaHotels(city, area, startDate, stayNights, budget, key = process.env.DIDA_API_KEY) {
   if (!key) return [];
   const response = await fetch('https://mcp.rollinggo.cn/mcp', {
@@ -42,21 +69,6 @@ export async function searchDidaHotels(city, area, startDate, stayNights, budget
   });
   if (!response.ok) throw new Error(`道旅 HTTP ${response.status}`);
   const payload = unpackMcp(await response.text());
-  const items = Array.isArray(payload) ? payload : payload.hotels || payload.data?.hotels || payload.data?.list || payload.list || [];
-  return items.map((hotel, index) => {
-    const location = hotel.location || hotel.coordinates || {};
-    const rawPrice = hotel.totalPrice || hotel.price?.total || hotel.price || hotel.minPrice || hotel.displayPrice;
-    const amount = typeof rawPrice === 'object' ? rawPrice.amount || rawPrice.value : rawPrice;
-    return {
-      id: String(hotel.hotelId || hotel.id || `dida-${index}`), provider: '道旅', name: hotel.hotelName || hotel.name || '未命名酒店',
-      address: hotel.address || hotel.hotelAddress || '',
-      lat: Number(hotel.latitude || location.lat) || null, lng: Number(hotel.longitude || location.lng) || null,
-      displayPrice: Number(amount) || null,
-      priceBasis: hotel.totalPrice ? '总价' : '展示价，预订前验价',
-      totalPrice: Number(hotel.totalPrice) || null,
-      currency: hotel.currency || 'CNY',
-      rating: Number(hotel.rating || hotel.score) || null,
-      bookingUrl: hotel.bookingUrl || hotel.bookUrl || hotel.url || null,
-    };
-  });
+  if (payload?.success === false) throw new Error(`道旅查询失败：${String(payload.message || '未知错误').slice(0, 120)}`);
+  return normalizeDidaHotels(payload?.hotelInformationList, stayNights);
 }

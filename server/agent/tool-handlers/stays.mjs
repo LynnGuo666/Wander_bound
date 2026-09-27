@@ -9,7 +9,7 @@ export async function searchStays(ctx, args = {}) {
   try {
     const found = state.providerStatus.dida?.configured
       ? await providers.searchDidaHotels(state.destination, area, startDate, Math.max(1, state.days - 1), memory.hotelNightBudget) : [];
-    state.hotels = Array.isArray(found) ? found.filter(hotel => hotel?.id && hotel.name && hotel.currency) : [];
+    state.hotels = Array.isArray(found) ? found.filter(hotel => hotel?.id && hotel.name) : [];
     state.providerStatus.dida.result = state.providerStatus.dida.configured ? (state.hotels.length ? 'ok' : '本次无酒店报价') : '未配置';
   } catch (error) { state.hotels = []; state.providerStatus.dida.result = error.message; state.providerStatus.dida.error = true; warnings.push('酒店查询失败'); }
   state.staysDone = true;
