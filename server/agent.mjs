@@ -11,9 +11,9 @@ import { createToolExecutor } from './agent/tools.mjs';
 export { AGENT_TOOLS };
 
 export async function runTravelAgent(input, {
-  model = null, providers = defaultProviders, providerPriority = {}, now = new Date(), maxDurationMs = 300000, onEvent = null, signal = null,
+  model = null, providers = defaultProviders, providerPriority = {}, now = new Date(), maxDurationMs = 300000, onEvent = null, signal = null, resume = null,
 } = {}) {
-  const events = [];
+  const events = resume?.events || [];
   const emit = event => {
     const entry = { sequence: events.length + 1, at: new Date().toISOString(), ...event };
     events.push(entry);
@@ -24,8 +24,8 @@ export async function runTravelAgent(input, {
   const explicitDestination = cleanCity(input.destination);
   const explicitDays = input.days == null || input.days === '' ? null : Number(input.days);
   const startDate = String(input.startDate || nextFriday(now));
-  const memory = safeMemory(input.memory || {});
-  const state = {
+  const memory = resume?.memory || safeMemory(input.memory || {});
+  const state = resume?.state || {
     destination: explicitDestination || (model ? '' : cleanCity(parsed.destination)),
     days: explicitDays ?? (model ? null : parsed.days ?? 3),
     startDate,
@@ -41,18 +41,24 @@ export async function runTravelAgent(input, {
     drafts: 0,
     providerStatus: providers.providerAvailability(),
   };
-  emit({ type: 'run_start', model: STEP_MODEL, channel, mode: model ? 'model' : 'deterministic' });
+  if (resume) {
+    state.pendingQuestion = null;
+    state.answerNeedsCommit = true;
+    emit({ type: 'user_answer', questionId: resume.answer.questionId, question: resume.answer.question, answer: resume.answer.value });
+  } else emit({ type: 'run_start', model: STEP_MODEL, channel, mode: model ? 'model' : 'deterministic' });
   if (!validDate(startDate) || (explicitDays !== null && (!Number.isInteger(explicitDays) || explicitDays < 1 || explicitDays > 21))) {
     return { status: 400, error: '请填写有效出发日期和 1–21 天的天数。' };
   }
   const deadline = Date.now() + maxDurationMs;
-  const trace = [];
-  const warnings = [];
-  const execute = createToolExecutor({ input, state, providers, providerPriority, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace, onEvent: emit });
-  const { mode, modelError, modelTurns, toolCalls, usage } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent: emit, signal });
+  const trace = resume?.trace || [];
+  const warnings = resume?.warnings || [];
+  const cache = resume?.cache || new Map();
+  const execute = createToolExecutor({ input, state, providers, providerPriority, memory, startDate, explicitDestination, explicitDays, deadline, warnings, trace, cache, onEvent: emit });
+  const { mode, modelError, modelTurns, toolCalls, usage, messages } = await runModelLoop({ model, input, state, memory, startDate, deadline, execute, warnings, onEvent: emit, signal, resume });
 
   if (state.pendingQuestion) return { status: 409, needsInput: true, question: state.pendingQuestion,
-    agentRun: { status: 'waiting_for_user', model: STEP_MODEL, channel, modelTurns, toolCalls, trace, events, warnings, usage } };
+    agentRun: { status: 'waiting_for_user', model: STEP_MODEL, channel, modelTurns, toolCalls, trace, events, warnings, usage },
+    continuation: { state, memory, trace, events, warnings, cache, messages, modelTurns, toolCalls, usage } };
 
   if (!state.plan) {
     if (model) {

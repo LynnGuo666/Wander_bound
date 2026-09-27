@@ -8,26 +8,40 @@ function compactPlaces(places) {
 
 export async function setTripSpec(ctx, args = {}) {
   const { state, explicitDestination, explicitDays, input } = ctx;
-  if (state.placesDone) { return toolError('spec_locked', '地点查询后不能修改目的地'); }
-  const destination = explicitDestination || cleanCity(args.destination || state.destination);
-  const days = explicitDays ?? Number(args.days || state.days);
-  const startDate = input.startDate || args.startDate || state.startDate;
-  const budget = args.totalBudgetCny == null ? null : Number(args.totalBudgetCny);
-  if (!destination || !Number.isInteger(days) || days < 1 || days > 21 || !validDate(startDate)) { return toolError('invalid_trip', '目的地、日期或 1–21 天的天数无效'); }
+  const fields = ['destination', 'originCity', 'days', 'startDate', 'totalBudgetCny', 'requiredStays', 'interests'];
+  if (!fields.some(field => Object.hasOwn(args, field))) return toolError('empty_spec', '请提交本次确认的行程字段');
+  const destination = explicitDestination || (Object.hasOwn(args, 'destination') ? cleanCity(args.destination) : state.destination);
+  const originCity = cleanCity(input.originCity || (Object.hasOwn(args, 'originCity') ? args.originCity : state.originCity));
+  const days = explicitDays ?? (Object.hasOwn(args, 'days') ? Number(args.days) : state.days);
+  const startDate = input.startDate || (Object.hasOwn(args, 'startDate') ? String(args.startDate) : state.startDate);
+  const budget = Object.hasOwn(args, 'totalBudgetCny') ? Number(args.totalBudgetCny) : state.totalBudgetCny;
+  if (Object.hasOwn(args, 'destination') && !destination) return toolError('invalid_destination', '目的地无效');
+  if (Object.hasOwn(args, 'originCity') && !originCity) return toolError('invalid_origin', '出发城市无效');
+  if (days !== null && (!Number.isInteger(days) || days < 1 || days > 21)) return toolError('invalid_days', '旅行总天数须为 1–21 天');
+  if (!validDate(startDate)) return toolError('invalid_date', '出发日期无效');
   if (budget !== null && (!Number.isFinite(budget) || budget < 0 || budget > 1_000_000)) return toolError('invalid_budget', '总预算无效');
-  const requiredStays = Array.isArray(args.requiredStays) ? args.requiredStays.slice(0, 8).map(item => ({ city: cleanCity(item.city), from: String(item.from || ''), to: String(item.to || '') })) : [];
-  const endDate = addDays(startDate, days - 1);
-  if (requiredStays.some(stay => !validDate(stay.from) || !validDate(stay.to) || stay.from > stay.to || stay.from < startDate || stay.to > endDate)) {
+  if (Object.hasOwn(args, 'requiredStays') && !Array.isArray(args.requiredStays)) return toolError('invalid_stay', '停留日期必须是数组');
+  const requiredStays = Array.isArray(args.requiredStays) ? args.requiredStays.slice(0, 8).map(item => ({ city: cleanCity(item.city), from: String(item.from || ''), to: String(item.to || '') })) : state.requiredStays;
+  const endDate = days === null ? null : addDays(startDate, days - 1);
+  if (requiredStays.some(stay => !stay.city || !validDate(stay.from) || !validDate(stay.to) || stay.from > stay.to || (endDate && (stay.from < startDate || stay.to > endDate)))) {
     return toolError('invalid_stay', '必须停留的日期不在旅行起止日期内');
   }
-  if (requiredStays.some(stay => stay.city !== destination)) return toolError('multi_city_stay', '当前需要逐城指定旅行日期后才能编排多个停留城市');
+  if (destination && requiredStays.some(stay => stay.city !== destination)) return toolError('multi_city_stay', '当前需要逐城指定旅行日期后才能编排多个停留城市');
+  const changed = destination !== state.destination || originCity !== state.originCity || days !== state.days || startDate !== state.startDate;
+  if (changed && (state.placesDone || state.originDone)) {
+    state.places = []; state.flights = []; state.returnFlights = []; state.trains = []; state.returnTrains = []; state.hotels = []; state.plan = null;
+    state.originDone = false; state.placesDone = false; state.transportDone = false; state.staysDone = false;
+    state.attractionsDone = false; state.diningDone = false; state.groundDone = false; state.drafts = 0;
+    ctx.cache.clear();
+  }
   state.destination = destination;
   state.days = days;
   state.startDate = startDate;
-  state.originCity = cleanCity(input.originCity || args.originCity || state.originCity);
+  state.originCity = originCity;
   state.totalBudgetCny = budget;
   state.requiredStays = requiredStays;
-  state.desiredInterests = cleanInterests(args.interests).length ? cleanInterests(args.interests) : state.desiredInterests;
+  if (Object.hasOwn(args, 'interests')) state.desiredInterests = cleanInterests(args.interests);
+  state.answerNeedsCommit = false;
   return { ok: true, destination, originCity: state.originCity, days, startDate, endDate, totalBudgetCny: budget, requiredStays, interests: state.desiredInterests };
 }
 

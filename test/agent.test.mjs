@@ -96,6 +96,47 @@ test('Step 5 receives the complete natural-language request and can pause for a 
   assert.deepEqual(result.question.options.map(option => option.id), ['liuzhou', 'nearby', 'other']);
 });
 
+test('answers continue one loop and commit each answer before the next question', async () => {
+  const seen = [];
+  const script = [
+    tools(call('ask_question', { question: '从哪个城市出发？', options: [{ id: 'cc', label: '长春' }, { id: 'sh', label: '上海' }] }, 'q-city')),
+    tools(call('set_trip_spec', { originCity: '长春' }, 'save-city')),
+    tools(call('ask_question', { question: '哪天出发？', options: [{ id: 'd1', label: '2026-09-30' }, { id: 'd2', label: '2026-10-01' }] }, 'q-date')),
+    tools(call('set_trip_spec', { startDate: '2026-09-30' }, 'save-date')),
+    tools(call('ask_question', { question: '总共旅行几天？', options: [{ id: 'n13', label: '13 天' }, { id: 'n7', label: '7 天' }] }, 'q-days')),
+  ];
+  const model = { complete: async (messages, available) => {
+    seen.push({ messages: structuredClone(messages), tools: available.map(tool => tool.function.name) });
+    return script[seen.length - 1];
+  } };
+  const input = { query: '帮我规划旅行' };
+  const first = await runTravelAgent(input, { model, providers: stubProviders() });
+  assert.equal(first.status, 409);
+  assert.equal(first.agentRun.modelTurns, 1);
+  const second = await runTravelAgent(input, { model, providers: stubProviders(), resume: {
+    ...first.continuation,
+    answer: { questionId: first.question.id, question: first.question.question, value: '长春' },
+  } });
+  assert.equal(second.status, 409);
+  assert.equal(second.agentRun.modelTurns, 3);
+  assert.equal(second.agentRun.toolCalls, 3);
+  assert.equal(second.continuation.state.originCity, '长春');
+  assert.deepEqual(seen[1].tools, ['set_trip_spec']);
+  assert.ok(JSON.stringify(seen[1].messages).includes('从哪个城市出发？'));
+  assert.ok(seen[2].messages.some(message => message.role === 'tool' && message.content.includes('"originCity":"长春"')));
+  const third = await runTravelAgent(input, { model, providers: stubProviders(), resume: {
+    ...second.continuation,
+    answer: { questionId: second.question.id, question: second.question.question, value: '2026-09-30' },
+  } });
+  assert.equal(third.status, 409);
+  assert.equal(third.agentRun.modelTurns, 5);
+  assert.equal(third.continuation.state.originCity, '长春');
+  assert.equal(third.continuation.state.startDate, '2026-09-30');
+  assert.deepEqual(seen[3].tools, ['set_trip_spec']);
+  assert.deepEqual(third.agentRun.events.filter(event => event.type === 'trip_memory_updated').map(event => Object.keys(event.fields)), [['originCity'], ['startDate']]);
+  assert.deepEqual(third.agentRun.events.map(event => event.sequence), third.agentRun.events.map((_, index) => index + 1));
+});
+
 test('Step 5 structured 13-day stay preserves fixed dates and budget without invented places', async () => {
   const script = [
     tools(call('set_trip_spec', { destination: '柳州', originCity: '长春', days: 13, startDate: '2026-09-30', totalBudgetCny: 4000,

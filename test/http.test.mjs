@@ -56,6 +56,31 @@ test('plan accepts a JSON object and rejects invalid request bodies before runni
   assert.equal(calls, initialCalls + 1);
 });
 
+test('answer requests resume the saved session without resubmitting the original prompt', async () => {
+  let resumed;
+  const instance = createApiServer({
+    runAgent: async (input, options) => {
+      if (options.resume) { resumed = { input, resume: options.resume }; return { status: 200, done: true }; }
+      return { status: 409, needsInput: true, question: { id: 'q1', question: '出发地？', options: [{ id: 'cc', label: '长春' }, { id: 'other', label: '其他' }] },
+        continuation: { state: { pendingQuestion: { id: 'q1', question: '出发地？', options: [{ id: 'cc', label: '长春' }, { id: 'other', label: '其他' }] } }, events: [] } };
+    },
+  });
+  await new Promise(resolve => instance.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${instance.address().port}/api/plan`;
+  const post = body => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  try {
+    const first = await (await post({ query: '规划十三天旅行' })).json();
+    assert.ok(first.sessionId);
+    assert.equal(first.continuation, undefined);
+    assert.equal((await post({ sessionId: first.sessionId, answer: { questionId: 'wrong', optionId: 'cc' } })).status, 400);
+    const second = await (await post({ sessionId: first.sessionId, answer: { questionId: 'q1', optionId: 'cc' } })).json();
+    assert.deepEqual(second, { status: 200, done: true });
+    assert.equal(resumed.input.query, '规划十三天旅行');
+    assert.equal(resumed.resume.answer.value, '长春');
+    assert.equal((await post({ sessionId: first.sessionId, answer: { questionId: 'q1', optionId: 'cc' } })).status, 410);
+  } finally { await new Promise(resolve => instance.close(resolve)); }
+});
+
 test('settings API saves keys privately and applies saved priorities to later planning requests', async () => {
   const directory = await mkdtemp(path.join(tmpdir(), 'travel-http-config-'));
   const configStore = createConfigStore({ filename: path.join(directory, 'config.yml'), env: {} });

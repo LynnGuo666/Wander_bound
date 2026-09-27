@@ -55,7 +55,7 @@ export function debugInput(name, args) {
 }
 
 export function createToolExecutor(context) {
-  const cache = new Map();
+  const cache = context.cache || new Map();
   return async (name, args = {}, internal = false, turn = null) => {
     const started = Date.now();
     if (Date.now() >= context.deadline) return toolError('deadline', '规划超时');
@@ -76,6 +76,7 @@ export function createToolExecutor(context) {
     const entry = { tool: name, ok: result.ok === true, code: result.ok ? 'ok' : String(result.code || 'failed'), durationMs: Date.now() - started, summary: resultSummary(name, result) };
     context.trace.push(entry);
     context.onEvent?.({ type: 'tool_end', turn, source: internal ? 'agent' : 'model', output: debugOutput(name, result), ...entry });
+    if (name === 'set_trip_spec' && result.ok) context.onEvent?.({ type: 'trip_memory_updated', turn, fields: debugInput(name, args), memory: debugOutput(name, result) });
     if (name !== 'draft_plan' && name !== 'set_trip_spec' && name !== 'ask_question' && (result.ok || result.code === 'no_new_places')) cache.set(name, result);
     return result;
   };

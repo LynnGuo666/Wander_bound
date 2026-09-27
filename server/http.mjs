@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
@@ -92,6 +93,7 @@ export function createRequestHandler({
   mediaHandler = null,
   allowedOrigin = process.env.CORS_ALLOWED_ORIGIN || '',
 } = {}) {
+  const sessions = new Map();
   return async (req, res) => {
     if (req.url?.startsWith('/api/media/')) {
       const handle = mediaHandler || (await import('./media/routes.mjs')).handleMediaRequest;
@@ -123,11 +125,28 @@ export function createRequestHandler({
     }
     if (req.method === 'POST' && (req.url === '/api/plan' || req.url === '/api/plan/stream')) {
       const stream = req.url.endsWith('/stream');
+      let session = null;
       try {
         const input = await readJson(req);
+        const now = Date.now();
+        for (const [id, item] of sessions) if (item.expiresAt < now) sessions.delete(id);
+        if (input.sessionId) {
+          session = sessions.get(input.sessionId);
+          if (!session) throw httpError(410, '问答会话已过期，请重新开始规划');
+          if (session.busy) throw httpError(409, '上一轮回答正在处理，请稍候');
+          const question = session.continuation.state.pendingQuestion;
+          const answer = input.answer;
+          const option = question?.options.find(item => item.id === answer?.optionId);
+          if (!option || answer.questionId !== question.id) throw httpError(400, '回答与当前问题不匹配');
+          const customText = String(answer.customText || '').trim().slice(0, 500);
+          if (option.id === 'other' && !customText) throw httpError(400, '请填写其他答案');
+          session.busy = true;
+          session.continuation.answer = { questionId: question.id, question: question.question, value: option.id === 'other' ? customText : option.label };
+        }
         const config = await configStore.read();
         const credentials = { ...config.credentials, ...extractCredentials(input) };
-        const { credentials: _removed, ...request } = input;
+        const { credentials: _removed, ...newRequest } = input;
+        const request = session ? session.request : newRequest;
         const requestModel = credentials.stepfun ? modelFactory({ apiKey: credentials.stepfun }) : model;
         const providers = createRequestProviders(credentials);
         const controller = stream ? new AbortController() : null;
@@ -139,10 +158,19 @@ export function createRequestHandler({
           res.on('close', () => controller.abort());
         }
         const emit = event => { if (stream && !res.writableEnded && !res.destroyed) res.write(`event: progress\ndata: ${JSON.stringify(event)}\n\n`); };
-        const result = await runAgent(request, { model: requestModel, providers, providerPriority: config.priorities, onEvent: emit, signal: controller?.signal });
-        if (stream) { res.end(`event: result\ndata: ${JSON.stringify(result)}\n\n`); return; }
-        return respond(res, result.status || 200, result, origin);
+        const result = await runAgent(request, { model: requestModel, providers, providerPriority: config.priorities, onEvent: emit, signal: controller?.signal, resume: session?.continuation || null });
+        if (session) sessions.delete(input.sessionId);
+        const { continuation, ...publicResult } = result;
+        if (result.needsInput && continuation) {
+          const id = randomUUID();
+          sessions.set(id, { request, continuation, expiresAt: Date.now() + 30 * 60_000, busy: false });
+          publicResult.sessionId = id;
+          if (sessions.size > 100) sessions.delete(sessions.keys().next().value);
+        }
+        if (stream) { res.end(`event: result\ndata: ${JSON.stringify(publicResult)}\n\n`); return; }
+        return respond(res, result.status || 200, publicResult, origin);
       } catch (error) {
+        if (session) session.busy = false;
         if (stream && res.destroyed) return;
         if (stream && res.headersSent) { res.end(`event: result\ndata: ${JSON.stringify({ error: error.status ? error.message : '规划服务发生内部错误' })}\n\n`); return; }
         return respond(res, error.status || 500, { error: error.status ? error.message : '规划服务发生内部错误' }, origin);

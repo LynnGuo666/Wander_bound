@@ -15,14 +15,16 @@ export function useAgentRun() {
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
   const controller = useRef(null);
-  const lastPayload = useRef(null);
+  const sessionId = useRef(null);
 
-  const run = useCallback(async payload => {
-    lastPayload.current = payload;
+  const run = useCallback(async (payload, continuing = false) => {
+    if (!continuing) sessionId.current = null;
     controller.current?.abort();
     const current = new AbortController();
     controller.current = current;
-    setRunning(true); setError(''); setEvents([]); setPlan(null); setQuestion(null);
+    setRunning(true); setError('');
+    if (!continuing) { setEvents([]); setPlan(null); }
+    setQuestion(null);
     let receivedResult = false;
     try {
       const response = await fetch('/api/plan/stream', {
@@ -47,9 +49,11 @@ export function useAgentRun() {
           if (frame?.event === 'progress') progress.push(frame.data);
           if (frame?.event === 'result') {
             receivedResult = true;
-            if (frame.data.question && frame.data.needsInput) setQuestion(frame.data.question);
-            else if (frame.data.error) setError(frame.data.error);
-            else setPlan(frame.data);
+            if (frame.data.question && frame.data.needsInput) {
+              sessionId.current = frame.data.sessionId || null;
+              setQuestion(frame.data.question);
+            } else if (frame.data.error) { sessionId.current = null; setError(frame.data.error); }
+            else { sessionId.current = null; setPlan(frame.data); }
           }
         }
         if (progress.length) setEvents(previous => [...previous, ...progress]);
@@ -64,8 +68,8 @@ export function useAgentRun() {
   }, []);
   const answerQuestion = useCallback((optionId, customText = '') => {
     const option = question?.options?.find(item => item.id === optionId);
-    if (!option || !lastPayload.current) return;
-    run({ ...lastPayload.current, answer: { questionId: question.id, optionId, label: option.label, customText: customText.trim() } });
+    if (!option || !sessionId.current) return;
+    run({ sessionId: sessionId.current, answer: { questionId: question.id, optionId, customText: customText.trim() } }, true);
   }, [question, run]);
   const cancel = useCallback(() => controller.current?.abort(), []);
   return { events, plan, question, error, running, run, answerQuestion, cancel };

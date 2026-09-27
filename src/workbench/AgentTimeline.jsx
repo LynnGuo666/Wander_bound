@@ -55,7 +55,7 @@ function DebugLog({ events }) {
 
 function SystemEvent({ event }) {
   if (event.type === 'result_assembled') return <Card size="sm"><CardHeader><CardTitle>结果计算与来源</CardTitle><CardDescription>{event.output?.calculation}</CardDescription></CardHeader><CardContent><Collapsible><CollapsibleTrigger render={<Button variant="outline" size="sm" />}>展开行程、结果数量与来源 <ChevronDown data-icon="inline-end" /></CollapsibleTrigger><CollapsibleContent className="mt-3"><CodeBlock value={event.output} /></CollapsibleContent></Collapsible></CardContent></Card>;
-  const text = event.type === 'run_start' ? `Agent 启动 · ${event.mode === 'model' ? '模型循环' : '规则模式'}` : event.type === 'fallback_start' ? `进入规则补全 · ${event.reason}` : event.type === 'validation' ? `行程校验${event.ok ? '通过' : '失败'}` : event.type === 'model_error' ? `模型失败 · ${event.message || event.code}` : event.type === 'run_failed' ? `本次规划未完成 · ${event.reason}` : null;
+  const text = event.type === 'run_start' ? `Agent 启动 · ${event.mode === 'model' ? '模型循环' : '规则模式'}` : event.type === 'user_answer' ? `用户回答 · ${event.answer}` : event.type === 'trip_memory_updated' ? `行程记忆已更新 · ${Object.keys(event.fields || {}).join('、')}` : event.type === 'fallback_start' ? `进入规则补全 · ${event.reason}` : event.type === 'validation' ? `行程校验${event.ok ? '通过' : '失败'}` : event.type === 'model_error' ? `模型失败 · ${event.message || event.code}` : event.type === 'run_failed' ? `本次规划未完成 · ${event.reason}` : null;
   return text ? <Marker variant="separator"><MarkerContent>{text}</MarkerContent></Marker> : null;
 }
 
