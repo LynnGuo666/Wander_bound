@@ -74,6 +74,25 @@ export async function runTravelAgent(input, {
     state.providerStatus.amap.result = enriched.itinerary.some(day => day.stops.some(stop => stop.travelSource?.startsWith('高德'))) ? 'ok' : '本次未取到路线';
   }
   const capabilityStatus = buildCapabilityStatus(enriched, state);
+  emit({ type: 'result_assembled', output: {
+    selectionMethod: mode === 'completed' ? '模型提交已查询的地点 ID；服务端排程与校验' : '服务端按兴趣、距离与已到访记录筛选地点',
+    days: enriched.itinerary.length,
+    stops: enriched.itinerary.reduce((sum, day) => sum + day.stops.length, 0),
+    itinerary: enriched.itinerary.map(day => ({ day: day.day, date: day.date, stops: day.stops.map(stop => ({ id: stop.id, name: stop.name, start: stop.start, travelSource: stop.travelSource })) })),
+    selectedTransportMode: enriched.selectedTransportMode,
+    recommendedOutboundFlightId: enriched.recommendedOutboundFlightId,
+    recommendedOutboundTrainId: enriched.recommendedOutboundTrainId,
+    recommendedReturnFlightId: enriched.recommendedReturnFlightId,
+    recommendedReturnTrainId: enriched.recommendedReturnTrainId,
+    flights: enriched.flights.length + enriched.returnFlights.length,
+    trains: enriched.trains.length + enriched.returnTrains.length,
+    hotels: enriched.hotels.length,
+    attractionProducts: enriched.attractionOffers?.length || 0,
+    diningSuggestions: enriched.dining.length,
+    verifiedGroundLegs: enriched.groundJourneys.length,
+    capabilities: Object.fromEntries(Object.entries(capabilityStatus).map(([key, value]) => [key, { status: value.status, source: value.source }])),
+    calculation: '已核实地点 ID → 按兴趣与距离分配到每天、估算转场时间 → 根据价格、红眼和到达时间排序交通 → 按价格、品牌与距离排序酒店 → 叠加供应商结果 → 校验地点唯一性、到访记录和时间约束',
+  } });
   return {
     ...enriched,
     locationDetected: state.locationDetected,

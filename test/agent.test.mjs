@@ -62,6 +62,12 @@ test('Step 5 agent runs tools, rejects an invented place, then validates a corre
   assert.ok(plan.itinerary.flatMap(day => day.stops).every(stop => stop.id !== 'sz-oct'));
   assert.deepEqual(plan.flights, []);
   assert.ok(!transcript.includes('华侨城创意文化园'));
+  const events = plan.agentRun.events;
+  assert.equal(events.filter(event => event.type === 'model_turn_end').length, 5);
+  assert.equal(events.filter(event => event.type === 'model_turn_end').reduce((sum, event) => sum + event.usage.prompt_tokens, 0), plan.agentRun.usage.prompt_tokens);
+  assert.ok(events.some(event => event.type === 'tool_start' && event.tool === 'draft_plan' && event.input.placeIds.includes('made-up-place')));
+  assert.ok(events.some(event => event.type === 'tool_end' && event.tool === 'draft_plan' && event.output.code === 'unverified_place'));
+  assert.ok(events.some(event => event.type === 'result_assembled' && event.output.stops > 0 && event.output.capabilities.attractions.source));
 });
 
 test('early model answer triggers one reminder, then deterministic completion', async () => {
@@ -101,9 +107,11 @@ test('a tool that has not been exposed cannot run ahead of its stage', async () 
     assert.equal(JSON.parse(response.content).code, 'tool_not_loaded');
     return final;
   } };
-  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  const progress = [];
+  const plan = await runTravelAgent(request, { model, providers: stubProviders(), onEvent: event => progress.push(event) });
   assert.equal(plan.agentRun.status, 'degraded');
   assert.equal(plan.agentRun.trace.filter(item => item.tool === 'search_transport').length, 1);
+  assert.ok(progress.some(event => event.type === 'tool_rejected' && event.tool === 'search_transport' && event.output.code === 'tool_not_loaded'));
 });
 
 test('model outage falls back without inventing supplier offers', async () => {
@@ -143,6 +151,7 @@ test('repeated model tool calls are bounded and cached within one request', asyn
   assert.equal(locationCalls, 1);
   assert.equal(plan.agentRun.status, 'degraded');
   assert.equal(plan.originCity, '上海');
+  assert.ok(plan.agentRun.events.some(event => event.type === 'tool_cache_hit' && event.tool === 'resolve_origin' && event.output.ok));
 });
 
 test('malformed supplier data is discarded before it reaches clients', async () => {
