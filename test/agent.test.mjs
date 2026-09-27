@@ -38,12 +38,24 @@ test('Step 5 agent runs tools, rejects an invented place, then validates a corre
   ];
   let calls = 0;
   let transcript = '';
-  const model = { complete: async messages => { transcript = JSON.stringify(messages); return script[calls++]; } };
+  const toolLists = [];
+  const model = { complete: async (messages, advertised) => {
+    transcript = JSON.stringify(messages);
+    toolLists.push(advertised.map(tool => tool.function.name));
+    return script[calls++];
+  } };
   const plan = await runTravelAgent(request, { model, providers: stubProviders() });
   assert.equal(plan.agentRun.status, 'completed');
   assert.equal(plan.agentRun.model, STEP_MODEL);
   assert.equal(plan.agentRun.modelTurns, 5);
   assert.equal(plan.agentRun.toolCalls, 7);
+  assert.deepEqual(toolLists, [
+    ['set_trip_spec', 'discover_places', 'resolve_origin'],
+    ['search_transport', 'search_stays'],
+    ['draft_plan'],
+    ['draft_plan'],
+    ['search_attractions', 'search_dining', 'explore_ground'],
+  ]);
   assert.equal(plan.agentRun.trace.filter(item => item.tool === 'draft_plan').length, 2);
   assert.equal(plan.agentRun.trace.find(item => item.tool === 'draft_plan').ok, false);
   assert.ok(plan.itinerary.flatMap(day => day.stops).every(stop => selected.includes(stop.id)));
@@ -64,13 +76,34 @@ test('early model answer triggers one reminder, then deterministic completion', 
 
 test('an empty model draft is not reported as model-completed planning', async () => {
   let turn = 0;
-  const model = { complete: async () => turn++ === 0
-    ? tools(call('resolve_origin'), call('discover_places'), call('search_transport'), call('search_stays'), call('draft_plan', { placeIds: [] }))
-    : final };
+  const script = [
+    tools(call('resolve_origin'), call('discover_places')),
+    tools(call('search_transport'), call('search_stays')),
+    tools(call('draft_plan', { placeIds: [] })),
+    final,
+  ];
+  const model = { complete: async () => script[turn++] };
   const plan = await runTravelAgent(request, { model, providers: stubProviders() });
   assert.equal(plan.agentRun.status, 'degraded');
   assert.ok(plan.agentRun.trace.some(item => item.tool === 'draft_plan' && !item.ok));
   assert.equal(plan.itinerary.length, 3);
+});
+
+test('a tool that has not been exposed cannot run ahead of its stage', async () => {
+  let turn = 0;
+  const model = { complete: async (messages, advertised) => {
+    turn += 1;
+    if (turn === 1) {
+      assert.ok(!advertised.some(tool => tool.function.name === 'search_transport'));
+      return tools(call('search_transport', {}, 'early-transport'));
+    }
+    const response = messages.find(message => message.role === 'tool' && message.tool_call_id === 'early-transport');
+    assert.equal(JSON.parse(response.content).code, 'tool_not_loaded');
+    return final;
+  } };
+  const plan = await runTravelAgent(request, { model, providers: stubProviders() });
+  assert.equal(plan.agentRun.status, 'degraded');
+  assert.equal(plan.agentRun.trace.filter(item => item.tool === 'search_transport').length, 1);
 });
 
 test('model outage falls back without inventing supplier offers', async () => {
@@ -279,7 +312,12 @@ test('HTTP-compatible Step client passes tool results back through the full agen
   const fetchImpl = async (_url, options) => {
     const body = JSON.parse(options.body);
     requests += 1;
-    if (requests === 2) {
+    const advertised = body.tools.map(tool => tool.function.name);
+    if (requests === 1) assert.deepEqual(advertised, ['set_trip_spec', 'discover_places', 'resolve_origin']);
+    if (requests === 2) assert.deepEqual(advertised, ['search_transport', 'search_stays']);
+    if (requests === 3) assert.deepEqual(advertised, ['draft_plan']);
+    if (requests === 4) {
+      assert.deepEqual(advertised, ['search_attractions', 'search_dining', 'explore_ground']);
       assert.equal(body.model, 'step-5-preview');
       assert.ok(body.messages.some(message => message.role === 'tool' && message.tool_call_id === 'draft'));
     }
@@ -288,17 +326,19 @@ test('HTTP-compatible Step client passes tool results back through the full agen
         call('set_trip_spec', { destination: '深圳', days: 3 }, 'spec'),
         call('resolve_origin', {}, 'origin'),
         call('discover_places', {}, 'places'),
+      ).message }
+      : requests === 2 ? { finish_reason: 'tool_calls', message: tools(
         call('search_transport', {}, 'transport'),
         call('search_stays', {}, 'stays'),
-        call('draft_plan', { placeIds: selected }, 'draft'),
       ).message }
+      : requests === 3 ? { finish_reason: 'tool_calls', message: tools(call('draft_plan', { placeIds: selected }, 'draft')).message }
       : { finish_reason: 'stop', message: final.message };
     return { ok: true, json: async () => ({ choices: [choice], usage: { prompt_tokens: 20, completion_tokens: 5 } }) };
   };
   const model = createStepClient({ apiKey: 'test-only', fetchImpl });
   const plan = await runTravelAgent(request, { model, providers: stubProviders() });
-  assert.equal(requests, 2);
+  assert.equal(requests, 4);
   assert.equal(plan.agentRun.status, 'completed');
-  assert.equal(plan.agentRun.modelTurns, 2);
-  assert.equal(plan.agentRun.usage.prompt_tokens, 40);
+  assert.equal(plan.agentRun.modelTurns, 4);
+  assert.equal(plan.agentRun.usage.prompt_tokens, 80);
 });

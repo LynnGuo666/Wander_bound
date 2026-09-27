@@ -11,8 +11,15 @@
 		143CA840400F3B9873DB68E0 /* SourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0788171660EBAFADD2351927 /* SourcesView.swift */; };
 		19712F39C5C23AEDBA28DC68 /* LocationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23733C11F84B480A3C931DD4 /* LocationService.swift */; };
 		4C711B515BA46B1ECFB14DC6 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */; };
+		6B8F2E92A6CFF84D65C6F6B4 /* RouteMapPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75C18B7FAC6D42FD0559475F /* RouteMapPanel.swift */; };
+		70BEEB1ED70DD4391E4C9B84 /* StayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C37EEBA502155C5D578BD88A /* StayPanel.swift */; };
 		8243AA65DDBAE12990E93D82 /* SwiftUIX in Frameworks */ = {isa = PBXBuildFile; productRef = F643F08A2FC367B87085C2CA /* SwiftUIX */; };
+		84D6D0B193A4719C7C0784A1 /* DayPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0DF415CF4D55247D4616D78 /* DayPanel.swift */; };
+		8516494EB0F3629277376A1B /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9212CBBA33FC8F03AD168E1 /* PlanView.swift */; };
+		85ACF5B4FA0DB8C11F85B20E /* TransportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F388EEE9C371AB8C8BE7BF20 /* TransportPanel.swift */; };
 		AACCD64300034BF76075B37F /* MemoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11A4681C232ADCED0231449D /* MemoryView.swift */; };
+		B0B239FACF89C1A311EF95DE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFFDA0E1F84A79C1E9E93A77 /* DesignSystem.swift */; };
+		C09A22303ABFC8AF53653244 /* PlanOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 993EC018CEDE4F987077A9AF /* PlanOverview.swift */; };
 		F45EC7D51F5B00229DD38BB6 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C0806BC6280EF5656268365 /* Models.swift */; };
 		FB56A3FBA0B15EB0C38FD9B5 /* PlannerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */; };
 /* End PBXBuildFile section */
@@ -22,11 +29,18 @@
 		11A4681C232ADCED0231449D /* MemoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryView.swift; sourceTree = "<group>"; };
 		23733C11F84B480A3C931DD4 /* LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationService.swift; sourceTree = "<group>"; };
 		6229C4596F02418389DDE795 /* TravelMemory.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TravelMemory.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		75C18B7FAC6D42FD0559475F /* RouteMapPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapPanel.swift; sourceTree = "<group>"; };
 		8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TravelMemoryApp.swift; sourceTree = "<group>"; };
+		993EC018CEDE4F987077A9AF /* PlanOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanOverview.swift; sourceTree = "<group>"; };
 		9C0806BC6280EF5656268365 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlannerStore.swift; sourceTree = "<group>"; };
+		AFFDA0E1F84A79C1E9E93A77 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
+		C37EEBA502155C5D578BD88A /* StayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StayPanel.swift; sourceTree = "<group>"; };
 		D47F92A6E6E2774094C8247C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E9212CBBA33FC8F03AD168E1 /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanView.swift; sourceTree = "<group>"; };
+		F0DF415CF4D55247D4616D78 /* DayPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayPanel.swift; sourceTree = "<group>"; };
+		F388EEE9C371AB8C8BE7BF20 /* TransportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,13 +74,20 @@
 		7AF22D19A58EF34A0DA219E1 /* TravelMemory */ = {
 			isa = PBXGroup;
 			children = (
+				F0DF415CF4D55247D4616D78 /* DayPanel.swift */,
+				AFFDA0E1F84A79C1E9E93A77 /* DesignSystem.swift */,
 				D47F92A6E6E2774094C8247C /* Info.plist */,
 				23733C11F84B480A3C931DD4 /* LocationService.swift */,
 				11A4681C232ADCED0231449D /* MemoryView.swift */,
 				9C0806BC6280EF5656268365 /* Models.swift */,
 				9F1EBA046D8332CE5716DAF5 /* PlannerStore.swift */,
+				993EC018CEDE4F987077A9AF /* PlanOverview.swift */,
+				E9212CBBA33FC8F03AD168E1 /* PlanView.swift */,
 				8AA9F2B77CFDA841CF1A7E1E /* RootView.swift */,
+				75C18B7FAC6D42FD0559475F /* RouteMapPanel.swift */,
 				0788171660EBAFADD2351927 /* SourcesView.swift */,
+				C37EEBA502155C5D578BD88A /* StayPanel.swift */,
+				F388EEE9C371AB8C8BE7BF20 /* TransportPanel.swift */,
 				98F11B4D7EEC6DC21A7713CA /* TravelMemoryApp.swift */,
 			);
 			path = TravelMemory;
@@ -136,12 +157,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				84D6D0B193A4719C7C0784A1 /* DayPanel.swift in Sources */,
+				B0B239FACF89C1A311EF95DE /* DesignSystem.swift in Sources */,
 				19712F39C5C23AEDBA28DC68 /* LocationService.swift in Sources */,
 				AACCD64300034BF76075B37F /* MemoryView.swift in Sources */,
 				F45EC7D51F5B00229DD38BB6 /* Models.swift in Sources */,
+				C09A22303ABFC8AF53653244 /* PlanOverview.swift in Sources */,
+				8516494EB0F3629277376A1B /* PlanView.swift in Sources */,
 				FB56A3FBA0B15EB0C38FD9B5 /* PlannerStore.swift in Sources */,
 				4C711B515BA46B1ECFB14DC6 /* RootView.swift in Sources */,
+				6B8F2E92A6CFF84D65C6F6B4 /* RouteMapPanel.swift in Sources */,
 				143CA840400F3B9873DB68E0 /* SourcesView.swift in Sources */,
+				70BEEB1ED70DD4391E4C9B84 /* StayPanel.swift in Sources */,
+				85ACF5B4FA0DB8C11F85B20E /* TransportPanel.swift in Sources */,
 				0FACF5124E6B2FAD0D6C79C6 /* TravelMemoryApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
