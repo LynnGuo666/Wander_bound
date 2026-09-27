@@ -31,6 +31,12 @@ API 返回 `agentRun.status`：`completed` 表示 Step 5 Preview 完成行程草
 
 模型接入依据为[阶跃星辰官方 Chat Completions API 文档](https://platform.stepfun.com/docs/zh/api-reference/chat/chat-completion-create)：模型 ID 固定为 `step-5-preview`，使用函数工具调用。单次模型调用最多重试两次限流或服务端错误；连续失败三次后冷却 30 秒，本次规划改走有标记的规则流程。无密钥时 `--require-model` 会立即失败，避免把规则规划误报为模型规划。
 
+## Spark 快速调试入口
+
+在已经安装本机公钥的 Mac 上，项目根目录执行 `./spark-tunnel.sh`，打开 `http://127.0.0.1:4175/`。隧道通过组委会分配的公网 SSH `106.13.186.155:6082`，把本机 4175 转发到 Spark 上仅监听回环地址的 Agent `127.0.0.1:4174`；浏览器和 API 使用同源地址。保持终端运行，按 `Ctrl+C` 关闭；如果 4175 被占用，可运行 `SPARK_LOCAL_PORT=4176 ./spark-tunnel.sh`。私钥路径默认 `~/.ssh/id_ed25519`，可用 `SPARK_SSH_KEY` 覆盖。
+
+此入口适合填写调试密钥。组委会的 7082 公网映射通向节点 7000 端口，目前没有在该端口开放无鉴权 HTTP 服务。队伍 Tailscale 地址 `http://spark-82.tailb7a50b.ts.net:7000/` 仍可供已加入 tailnet 的设备使用。
+
 ## 原生 iOS
 
 客户端使用 SwiftUI、[SwiftUIX](https://github.com/SwiftUIX/SwiftUIX) 组件库、MapKit 和 CoreLocation，部署目标 iOS 17。需要 Xcode 和 XcodeGen：
