@@ -6,6 +6,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { createApiServer } from '../server/http.mjs';
 import { createComfyClient } from '../server/media/comfy.mjs';
+import { createQwenImageClient } from '../server/media/qwen-image.mjs';
 import { createMediaHandler } from '../server/media/routes.mjs';
 import { createMediaStore } from '../server/media/store.mjs';
 
@@ -17,7 +18,11 @@ const token = 'test-media-token';
 before(async () => {
   directory = await mkdtemp(path.join(os.tmpdir(), 'travel-media-'));
   const store = createMediaStore(directory);
-  server = createApiServer({ mediaHandler: createMediaHandler({ token, store, memory: {
+  server = createApiServer({ mediaHandler: createMediaHandler({ token, store, edits: {
+    configured: true,
+    create: async input => ({ id: 'edit-test', status: 'running', backend: 'dgx-spark-qwen-image-2.1', seed: input.seed ?? 42 }),
+    get: async () => ({ id: 'edit-test', photoId: 'photo-test', status: 'succeeded', backend: 'dgx-spark-qwen-image-2.1', variant: 'ai-edit-test' }),
+  }, memory: {
     configured: true,
     create: async input => ({ id: 'job-test', status: 'running', backend: 'dgx-spark-minimax-h3', photoIds: input.photoIds }),
     get: async () => ({ id: 'job-test', status: 'running', backend: 'dgx-spark-minimax-h3' }),
@@ -58,6 +63,42 @@ test('private photo upload strips metadata, analyzes locally, and produces a sep
   assert.equal(result.headers.get('content-type'), 'image/jpeg');
   const listing = await fetch(`${root}/api/media/photos?tripId=shenzhen-2026`, { headers: { Authorization: `Bearer ${token}` } });
   assert.equal((await listing.json()).photos.length, 1);
+  const redraw = await fetch(`${root}/api/media/photos/${photo.id}/redraw`, { method: 'POST', headers: {
+    Authorization: `Bearer ${token}`, 'Content-Type': 'application/json',
+  }, body: JSON.stringify({ prompt: '把照片绘制成旅行明信片', seed: 17 }) });
+  assert.equal(redraw.status, 202);
+  assert.equal((await redraw.json()).seed, 17);
+  const edit = await fetch(`${root}/api/media/edits/edit-test`, { headers: { Authorization: `Bearer ${token}` } });
+  assert.equal((await edit.json()).variant, 'ai-edit-test');
+});
+
+test('Qwen image adapter fills prompt, photo and seed without exposing ComfyUI publicly', async () => {
+  const workflowPath = path.join(directory, 'qwen-workflow.json');
+  await writeFile(workflowPath, JSON.stringify({ '1': { inputs: {
+    image: '__TRAVEL_IMAGE__', text: '__TRAVEL_PROMPT__', seed: '__TRAVEL_SEED__',
+  } } }));
+  const calls = [];
+  const client = createQwenImageClient({ baseUrl: 'http://127.0.0.1:8191', workflowPath,
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.endsWith('/upload/image')) return { ok: true, json: async () => ({ name: 'travel-test.jpg' }) };
+      if (url.endsWith('/prompt')) return { ok: true, json: async () => ({ prompt_id: 'qwen-prompt' }) };
+      return { ok: true, json: async () => ({ 'qwen-prompt': { status: { completed: true },
+        outputs: { '9': { images: [{ filename: 'edited.png', type: 'output' }] } } } }) };
+    } });
+  assert.equal(await client.queueEdit(Buffer.from('jpeg'), '绘制成明信片', 17), 'qwen-prompt');
+  assert.deepEqual(JSON.parse(calls[1].options.body).prompt['1'].inputs,
+    { image: 'travel-test.jpg', text: '<image1> 绘制成明信片', seed: 17 });
+  assert.equal((await client.editStatus('qwen-prompt')).file.filename, 'edited.png');
+  assert.throws(() => createQwenImageClient({ baseUrl: 'https://public.example', workflowPath }), /私网/);
+});
+
+test('a prompt lost after a ComfyUI restart is reported as missing instead of running forever', async () => {
+  const workflowPath = path.join(directory, 'qwen-workflow.json');
+  const client = createQwenImageClient({ baseUrl: 'http://127.0.0.1:8191', workflowPath,
+    fetchImpl: async url => ({ ok: true, json: async () => url.includes('/queue')
+      ? { queue_running: [], queue_pending: [] } : {} }) });
+  assert.equal((await client.editStatus('lost-prompt')).status, 'missing');
 });
 
 test('MiniMax H3 ComfyUI adapter sends sanitized image to private endpoint and uses explicit workflow placeholders', async () => {

@@ -1,6 +1,6 @@
 # 旅忆 · 旅行规划 Agent
 
-网页端与原生 iOS 客户端共享同一个规划 API。服务端把用户自然语言原文交给 Step 5 Preview，由模型理解日期、跨城路线、预算和必须停留时段，并通过函数调用提交行程约束或追问用户。服务端校验约束并查询供应商。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](AGENT_CAPABILITIES.md)。行程支持 1–21 天；火车票接入社区 12306 MCP 查询直达与中转。iOS 相册、私有图片处理、DGX Spark 本地 Qwen-Image-2.1 创意重绘和 MiniMax H3 回忆短片的架构见[媒体说明](MEDIA_ARCHITECTURE.md)，模型选型与下一步模块化设计见[媒体模型调研](MEDIA_MODEL_RESEARCH.md)。
+网页端与原生 iOS 客户端共享同一个规划 API。服务端把用户自然语言原文交给 Step 5 Preview，由模型理解日期、跨城路线、预算和必须停留时段，并通过函数调用提交行程约束或追问用户。服务端校验约束并查询供应商。工具定义与供应商适配器按规划阶段和实际调用按需加载，结构见[架构说明](docs/ARCHITECTURE.md)。五类能力是航班、景点、住宿、美食、地面交通探索；数据契约与当前边界见 [五类能力设计](docs/AGENT_CAPABILITIES.md)。行程支持 1–21 天；火车票接入社区 12306 MCP 查询直达与中转。iOS 相册、私有图片处理、DGX Spark 本地 Qwen-Image-2.1 创意重绘和 MiniMax H3 回忆短片的架构见[媒体说明](docs/MEDIA_ARCHITECTURE.md)，模型选型与下一步模块化设计见[媒体模型调研](docs/MEDIA_MODEL_RESEARCH.md)。
 
 ## 本地启动
 
@@ -47,7 +47,7 @@ xcodegen generate
 open TravelMemory.xcodeproj
 ```
 
-选择 `TravelMemory` scheme 和 iPhone 模拟器运行。模拟器默认访问 Mac 的 `http://127.0.0.1:4174`；已加入本队 Tailscale 的真机在“来源”页填写 `http://spark-82.tailb7a50b.ts.net:7000`。其他部署使用 HTTPS。“相册”页按日期读取已授权照片，选中后才上传到私有媒体 API；媒体令牌保存在 iOS Keychain。Spark 部署和本地 MiniMax H3 工作流见[媒体说明](MEDIA_ARCHITECTURE.md)。当前没有发布签名和 App Store 包。SwiftUIX 在 `project.yml` 中固定了已验证的提交，生成的 Xcode 工程也纳入仓库。
+选择 `TravelMemory` scheme 和 iPhone 模拟器运行。模拟器默认访问 Mac 的 `http://127.0.0.1:4174`；已加入本队 Tailscale 的真机在“来源”页填写 `http://spark-82.tailb7a50b.ts.net:7000`。其他部署使用 HTTPS。“相册”页按日期读取已授权照片，选中后才上传到私有媒体 API；媒体令牌保存在 iOS Keychain。Spark 部署和本地 MiniMax H3 工作流见[媒体说明](docs/MEDIA_ARCHITECTURE.md)。当前没有发布签名和 App Store 包。SwiftUIX 在 `project.yml` 中固定了已验证的提交，生成的 Xcode 工程也纳入仓库。
 
 ## 供应商接入
 
@@ -76,7 +76,7 @@ curl http://127.0.0.1:4176/health
 
 社区 12306 MCP 的车次、席别和中转结果仅作规划参考；余票与票价在预订前须到铁路官方核对。航班表格展示供应商实际返回的航司、航班号、机型、餐食、行李、税费与退改字段；供应商未提供的字段明确显示未知，不推断或编造。
 
-携程景区合作方、12306 官方接口和美团/大众点评评论 MCP 尚未取得面向本项目的只读权限。携程开放平台公开的是合作方 API，没有找到可直接供个人项目使用的官方景区 MCP；评论也不能把第三方爬虫当成官方数据源。途牛门票仅展示文档定义的「起价」及其对应团期，绝不当作出游日成交价。餐饮需要把位置、口碑和优惠分开处理；接入选择与许可问题见 [美食数据策略](FOOD_DATA_STRATEGY.md)。正式“货比三家”必须先取得多家授权并统一含税价格、房型、早餐、退改与库存条件；当前不会把不同条件的结果声称为可比的最低价。各平台开放资格、公开费用和计算口径见 [数据接入调查](travel_agent_data_sources.md)。
+携程景区合作方、12306 官方接口和美团/大众点评评论 MCP 尚未取得面向本项目的只读权限。携程开放平台公开的是合作方 API，没有找到可直接供个人项目使用的官方景区 MCP；评论也不能把第三方爬虫当成官方数据源。途牛门票仅展示文档定义的「起价」及其对应团期，绝不当作出游日成交价。餐饮需要把位置、口碑和优惠分开处理；接入选择与许可问题见 [美食数据策略](docs/FOOD_DATA_STRATEGY.md)。正式“货比三家”必须先取得多家授权并统一含税价格、房型、早餐、退改与库存条件；当前不会把不同条件的结果声称为可比的最低价。各平台开放资格、公开费用和计算口径见 [数据接入调查](docs/travel_agent_data_sources.md)。
 
 ## 隐私与运行边界
 

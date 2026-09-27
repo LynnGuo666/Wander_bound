@@ -1,0 +1,15 @@
+[Unit]
+Description=Qwen Image 2.1 ComfyUI on DGX Spark
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/Developer/qwen21-comfy
+ExecStart=/home/Developer/miniconda3/envs/qwen21-comfy/bin/python main.py --listen 127.0.0.1 --port 8191 --preview-method auto
+Restart=on-failure
+RestartSec=5
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

@@ -1,6 +1,6 @@
 # 旅行 Agent 数据接入与“货比三家”预算
 
-核对日期：2026-09-28。以下价格和资格以链接所指官方公开页面为准；没有公开单价的项目记为“待询价”，不能按免费预算。首版旅行应用代码位于 `travel-agent/`。飞猪官方 CLI 在无 Key 的受限体验模式可查询，途牛 MCP 查询需要 Key 或 OAuth；合作方 API 仍需分别授权。
+调研日期：2026-09-28。本轮资料核对结束时间：2026-09-28 06:43 CST。以下价格和资格以链接所指官方公开页面为准；没有公开单价的项目记为“待询价”，不能按免费预算。首版旅行应用代码位于 `travel-agent/`。飞猪官方 CLI 在无 Key 的受限体验模式可查询，途牛 MCP 查询需要 Key 或 OAuth；合作方 API 仍需分别授权。
 
 ## 当前代码接入状态
 
@@ -23,7 +23,7 @@
 | [高德地图](https://developer.amap.com/api/mcp-server/summary) | POI、路线、天气 | 个人认证可用于非商业研究；对外商业运营应按[协议](https://developer.amap.com/pages/terms/)确认许可 | [定价页](https://developer.amap.com/upgrade)：个人非商业月配额 POI 搜索 5,000、基础 LBS 150,000；超额各 ¥30/万次。页面注明免费配额期限为注册认证起一年 | 国内路线与地点基础源 |
 | [Apple Maps Server API / MapKit JS](https://developer.apple.com/maps/web/) | POI、路线、网页地图 | 个人可加入 Apple Developer Program | [会员](https://developer.apple.com/support/compare-memberships/) $99/年；会员内地图视图 250,000/日、服务调用 25,000/日，超限需申请提额 | 可作为网页地图选项，非商品报价源 |
 | [Tripadvisor Content API](https://www.tripadvisor.com/business/solutions/hotels/content-api) | 地点、评论、照片、评分 | 自助注册，需信用卡和每日预算；酒店价格 API 另需申请 | 每月前 5,000 次免费；超额价格在结算页显示，未公开具体单价 | 境外地点与评论；不当作酒店价格源 |
-| [美团生态开放平台](https://openapi.meituan.com/guide) / [企业版到餐 API](https://h5.dianping.com/app/bep-docs/sky-doc/canyinopenapi/daocan_api.html) | 餐饮商户、星级、人均、营业时间；旧企业文档列有评论与优惠接口 | 企业/第三方渠道需要分配凭据与权限；个人消费者应用能否获取点评内容待确认 | 未查到公开调用价格 | 高德发现候选；获授权后用美团/点评核实口碑、营业与优惠，见 [美食数据策略](travel-agent/FOOD_DATA_STRATEGY.md) |
+| [美团生态开放平台](https://openapi.meituan.com/guide) / [企业版到餐 API](https://h5.dianping.com/app/bep-docs/sky-doc/canyinopenapi/daocan_api.html) | 餐饮商户、星级、人均、营业时间；旧企业文档列有评论与优惠接口 | 企业/第三方渠道需要分配凭据与权限；个人消费者应用能否获取点评内容待确认 | 未查到公开调用价格 | 高德发现候选；获授权后用美团/点评核实口碑、营业与优惠，见 [美食数据策略](FOOD_DATA_STRATEGY.md) |
 | [美团技术服务合作中心](https://developer.meituan.com/en-US/docs/biz) | 官网称个人开发者可免费接入 MCP/Skills | 个人入驻入口存在；是否提供餐厅搜索、评论与价格需登录核实 | 首页称 MCP/Skills 免费接入，未公开具体餐饮接口价格 | 先做只读能力核验，不能把领券或导购 Skill 当作点评 API |
 | [Booking.com Demand API](https://developers.booking.com/demand/docs/getting-started/prerequisites) | 酒店等库存与报价 | 必须先成为 Managed Affiliate Partner，签约后获得 Key 和 Affiliate ID | 未查到公开调用单价 | 获批后增加境外报价 |
 | [Expedia Rapid](https://developers.expediagroup.com/docs/products/rapid/setup/getting-started) | 酒店报价及预订 | 合作伙伴接入 | 未查到公开调用单价 | 境外后续接入 |

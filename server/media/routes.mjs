@@ -3,6 +3,8 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createMediaStore } from './store.mjs';
 import { createMemoryService } from './memories.mjs';
+import { createImageEditService } from './image-edits.mjs';
+import { createMediaJobRunner } from './job-runner.mjs';
 
 const MAX_UPLOAD = 15 * 1024 * 1024;
 
@@ -40,7 +42,9 @@ function authorized(provided, expected) {
 export function createMediaHandler({
   token = process.env.MEDIA_API_TOKEN || '',
   store = createMediaStore(),
-  memory = createMemoryService({ store }),
+  runner = createMediaJobRunner({ store }),
+  memory = createMemoryService({ store, runner }),
+  edits = createImageEditService({ store, runner }),
 } = {}) {
   return async (req, res) => {
     if (!token) return reply(res, 503, { error: '媒体服务尚未配置访问令牌' });
@@ -49,7 +53,9 @@ export function createMediaHandler({
     const parts = url.pathname.split('/').filter(Boolean);
     try {
       if (req.method === 'GET' && url.pathname === '/api/media/health') {
-        return reply(res, 200, { ok: true, storage: 'private-local', imageProcessor: 'sharp', videoBackend: memory.configured ? 'dgx-spark-minimax-h3' : 'unconfigured' });
+        return reply(res, 200, { ok: true, storage: 'private-local', imageProcessor: 'sharp',
+          imageEditBackend: edits.configured ? 'dgx-spark-qwen-image-2.1' : 'unconfigured',
+          videoBackend: memory.configured ? 'dgx-spark-minimax-h3' : 'unconfigured' });
       }
       if (req.method === 'POST' && url.pathname === '/api/media/photos') {
         if (req.headers['content-type'] !== 'image/jpeg') return reply(res, 415, { error: '仅接收已在设备上导出的 JPEG 图片' });
@@ -70,10 +76,34 @@ export function createMediaHandler({
         const photo = await store.enhance(parts[3], input?.preset);
         return photo ? reply(res, 200, photo) : reply(res, 404, { error: '照片不存在' });
       }
+      if (parts.length === 5 && parts[0] === 'api' && parts[1] === 'media' && parts[2] === 'photos' && parts[4] === 'redraw' && req.method === 'POST') {
+        const input = await jsonBody(req);
+        const job = await edits.create({ photoId: parts[3], prompt: input?.prompt, seed: input?.seed });
+        return reply(res, 202, { id: job.id, status: job.status, backend: job.backend, seed: job.seed });
+      }
+      if (parts.length === 4 && parts[0] === 'api' && parts[1] === 'media' && parts[2] === 'edits' && req.method === 'GET') {
+        const job = await edits.get(parts[3]);
+        return job ? reply(res, 200, { id: job.id, photoId: job.photoId, status: job.status, backend: job.backend,
+          variant: job.variant || null, error: job.error || null, createdAt: job.createdAt,
+          startedAt: job.startedAt || null, completedAt: job.completedAt || null, attempt: job.attempt || 1 })
+          : reply(res, 404, { error: '任务不存在' });
+      }
+      if (parts.length === 5 && parts[0] === 'api' && parts[1] === 'media' && parts[2] === 'edits'
+        && parts[4] === 'retry' && req.method === 'POST') {
+        const job = await edits.retry(parts[3]);
+        return job ? reply(res, 202, { id: job.id, status: job.status, attempt: job.attempt })
+          : reply(res, 404, { error: '任务不存在' });
+      }
       if (req.method === 'POST' && url.pathname === '/api/media/memories') {
         const input = await jsonBody(req);
         const job = await memory.create(input || {});
         return reply(res, 202, { id: job.id, status: job.status, backend: job.backend });
+      }
+      if (parts.length === 5 && parts[0] === 'api' && parts[1] === 'media' && parts[2] === 'memories'
+        && parts[4] === 'retry' && req.method === 'POST') {
+        const job = await memory.retry(parts[3]);
+        return job ? reply(res, 202, { id: job.id, status: job.status, attempt: job.attempt })
+          : reply(res, 404, { error: '任务不存在' });
       }
       if (parts.length >= 4 && parts[0] === 'api' && parts[1] === 'media' && parts[2] === 'memories' && req.method === 'GET') {
         if (parts.length === 5 && parts[4] === 'video') {
@@ -86,7 +116,10 @@ export function createMediaHandler({
         }
         if (parts.length === 4) {
           const job = await memory.get(parts[3]);
-          return job ? reply(res, 200, { id: job.id, status: job.status, backend: job.backend, error: job.error || null })
+          return job ? reply(res, 200, { id: job.id, status: job.status, backend: job.backend, error: job.error || null,
+            completedClips: job.completedClips || 0, totalClips: job.photoIds?.length || 0,
+            createdAt: job.createdAt, startedAt: job.startedAt || null, completedAt: job.completedAt || null,
+            attempt: job.attempt || 1 })
             : reply(res, 404, { error: '任务不存在' });
         }
       }

@@ -51,6 +51,9 @@ struct MediaView: View {
     @State private var selectedForVideo: Set<String> = []
     @State private var tripName = "我的旅程"
     @State private var memoryTitle = "旅行回忆"
+    @State private var redrawPrompt = "保留原照片中的人物和景点，将画面绘制成有质感的旅行明信片。不要添加文字。"
+    @State private var editJob: ImageEditJob?
+    @State private var editPhotoId: String?
     @State private var job: MemoryJob?
     @State private var player: AVPlayer?
     @State private var preview: PhotoPreview?
@@ -120,6 +123,17 @@ struct MediaView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         Label("私有照片与修图", systemImage: "camera.filters").font(.headline)
                         Button("刷新服务器照片") { Task { await refreshPhotos() } }.font(.caption)
+                        TextField("用自然语言描述创意重绘效果", text: $redrawPrompt, axis: .vertical)
+                            .lineLimit(2...4).textFieldStyle(.roundedBorder)
+                        Text("AI 创意重绘会生成新画面。原图保留，结果可预览；明信片文字可在后续视频排版中添加。")
+                            .font(.caption2).foregroundStyle(Palette.muted)
+                        if let editJob {
+                            Text("创意重绘：\(editJob.status) · \(editJob.backend)").font(.caption)
+                            Button("刷新重绘状态") { Task { await refreshEditJob() } }.font(.caption)
+                            if editJob.status == "failed" {
+                                Button("重试创意重绘") { Task { await retryEdit() } }.font(.caption)
+                            }
+                        }
                         if uploaded.isEmpty { Text("上传后可查看本地分析和生成大片色调。")
                                 .font(.caption).foregroundStyle(Palette.muted) }
                         ForEach(uploaded) { photo in
@@ -128,10 +142,17 @@ struct MediaView: View {
                                     if selected { selectedForVideo.insert(photo.id) } else { selectedForVideo.remove(photo.id) }
                                 })) { Text(photo.capturedDay ?? "未记录日期").font(.subheadline) }
                                 HStack {
+                                    Button("原图") { Task { await showImage(photo.id) } }
                                     Button("自然优化") { Task { await enhance(photo, preset: "natural") } }
                                     Button("大片色调") { Task { await enhance(photo, preset: "cinematic") } }
+                                    Button("AI 创意重绘") { Task { await redraw(photo) } }
+                                        .disabled(editJob?.status == "queued" || editJob?.status == "running" || redrawPrompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                 }
                                 .font(.caption).disabled(busy)
+                                ForEach(Array(photo.variants.filter { $0.hasPrefix("ai-") }.enumerated()), id: \.element) { index, variant in
+                                    Button("查看创意版 \(index + 1)") { Task { await showImage(photo.id, variant: variant) } }
+                                        .font(.caption)
+                                }
                             }
                             Divider()
                         }
@@ -152,6 +173,9 @@ struct MediaView: View {
                         if let job {
                             Text("任务：\(job.status) · \(job.backend)").font(.caption)
                             Button("刷新任务状态") { Task { await refreshJob() } }.font(.caption)
+                            if job.status == "failed" {
+                                Button("重试短片生成") { Task { await retryMemory() } }.font(.caption)
+                            }
                         }
                         if let player { VideoPlayer(player: player).frame(height: 230) }
                     }
@@ -181,10 +205,16 @@ struct MediaView: View {
             }
             if !token.isEmpty { Task { await refreshPhotos() } }
         }
-        .task(id: job?.id) {
-            while !Task.isCancelled && job?.status == "running" {
+        .task(id: "\(job?.id ?? ""): \(job?.status ?? "")") {
+            while !Task.isCancelled && (job?.status == "queued" || job?.status == "running") {
                 try? await Task.sleep(for: .seconds(10))
                 if !Task.isCancelled { await refreshJob() }
+            }
+        }
+        .task(id: "\(editJob?.id ?? ""): \(editJob?.status ?? "")") {
+            while !Task.isCancelled && (editJob?.status == "queued" || editJob?.status == "running") {
+                try? await Task.sleep(for: .seconds(8))
+                if !Task.isCancelled { await refreshEditJob() }
             }
         }
     }
@@ -222,6 +252,44 @@ struct MediaView: View {
         } catch { status = "修图失败：\(error.localizedDescription)" }
     }
 
+    @MainActor private func showImage(_ photoId: String, variant: String = "original") async {
+        do {
+            let bytes = try await client.image(photoId, variant: variant)
+            if let image = UIImage(data: bytes) { preview = PhotoPreview(image: image) }
+        } catch { status = "预览失败：\(error.localizedDescription)" }
+    }
+
+    @MainActor private func redraw(_ photo: ServerPhoto) async {
+        busy = true
+        defer { busy = false }
+        do {
+            editPhotoId = photo.id
+            editJob = try await client.redraw(photo.id, prompt: redrawPrompt)
+            status = "Qwen-Image-2.1 已接收创意重绘任务。"
+        } catch { status = "创意重绘未开始：\(error.localizedDescription)" }
+    }
+
+    @MainActor private func refreshEditJob() async {
+        guard let id = editJob?.id, let photoId = editPhotoId else { return }
+        do {
+            editJob = try await client.editStatus(id)
+            if editJob?.status == "succeeded", let variant = editJob?.variant {
+                let bytes = try await client.image(photoId, variant: variant)
+                if let image = UIImage(data: bytes) { preview = PhotoPreview(image: image) }
+                await refreshPhotos()
+                status = "创意重绘已完成，可与原图对比；原图仍保留。"
+            } else if editJob?.status == "failed" {
+                status = editJob?.error ?? "创意重绘失败。"
+            }
+        } catch { status = "查询重绘任务失败：\(error.localizedDescription)" }
+    }
+
+    @MainActor private func retryEdit() async {
+        guard let id = editJob?.id else { return }
+        do { editJob = try await client.retryEdit(id); status = "创意重绘已重新排队。" }
+        catch { status = "重试失败：\(error.localizedDescription)" }
+    }
+
     @MainActor private func createMemory() async {
         busy = true
         defer { busy = false }
@@ -243,5 +311,11 @@ struct MediaView: View {
                 status = job?.error ?? "本地视频生成失败。"
             }
         } catch { status = "查询短片任务失败：\(error.localizedDescription)" }
+    }
+
+    @MainActor private func retryMemory() async {
+        guard let id = job?.id else { return }
+        do { job = try await client.retryMemory(id); status = "短片任务已重新排队。" }
+        catch { status = "重试失败：\(error.localizedDescription)" }
     }
 }

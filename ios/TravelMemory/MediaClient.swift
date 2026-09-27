@@ -16,6 +16,15 @@ struct MemoryJob: Decodable {
     let error: String?
 }
 
+struct ImageEditJob: Decodable {
+    let id: String
+    let status: String
+    let backend: String
+    let seed: Int?
+    let variant: String?
+    let error: String?
+}
+
 private struct MediaError: Decodable {
     let error: String
 }
@@ -95,6 +104,21 @@ struct MediaClient {
             body: body, contentType: "application/json"))
     }
 
+    func redraw(_ id: String, prompt: String) async throws -> ImageEditJob {
+        let body = try JSONSerialization.data(withJSONObject: ["prompt": prompt])
+        return try JSONDecoder().decode(ImageEditJob.self, from: await send("/api/media/photos/\(id)/redraw", method: "POST",
+            body: body, contentType: "application/json"))
+    }
+
+    func editStatus(_ id: String) async throws -> ImageEditJob {
+        try JSONDecoder().decode(ImageEditJob.self, from: await send("/api/media/edits/\(id)"))
+    }
+
+    func retryEdit(_ id: String) async throws -> ImageEditJob {
+        _ = try await send("/api/media/edits/\(id)/retry", method: "POST")
+        return try await editStatus(id)
+    }
+
     func image(_ id: String, variant: String = "original") async throws -> Data {
         try await send("/api/media/photos/\(id)?variant=\(variant)")
     }
@@ -112,6 +136,11 @@ struct MediaClient {
 
     func memoryStatus(_ id: String) async throws -> MemoryJob {
         try JSONDecoder().decode(MemoryJob.self, from: await send("/api/media/memories/\(id)"))
+    }
+
+    func retryMemory(_ id: String) async throws -> MemoryJob {
+        _ = try await send("/api/media/memories/\(id)/retry", method: "POST")
+        return try await memoryStatus(id)
     }
 
     func memoryVideo(_ id: String) async throws -> URL {

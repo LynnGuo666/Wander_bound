@@ -16,3 +16,4 @@ ios/.build/
 ios/.swiftpm/
 ios/TravelMemory.xcodeproj/project.xcworkspace/xcuserdata/
 ios/TravelMemory.xcodeproj/xcuserdata/
+.venv/

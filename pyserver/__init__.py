@@ -1,0 +1,1 @@
+"""FastAPI travel agent service."""

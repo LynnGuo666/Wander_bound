@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
-function privateUrl(value) {
+export function privateUrl(value) {
   let url;
-  try { url = new URL(value); } catch { throw new Error('SPARK_COMFY_URL 不是有效 URL'); }
+  try { url = new URL(value); } catch { throw new Error('ComfyUI 服务地址不是有效 URL'); }
   const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
   const tailnet = url.hostname.endsWith('.ts.net');
   if (!['http:', 'https:'].includes(url.protocol) || (!local && !tailnet)
@@ -13,7 +13,7 @@ function privateUrl(value) {
   return url.toString().replace(/\/$/, '');
 }
 
-function fillWorkflow(value, replacements, seen) {
+export function fillWorkflow(value, replacements, seen) {
   if (typeof value === 'string') {
     if (Object.hasOwn(replacements, value)) { seen.add(value); return replacements[value]; }
     return value;
@@ -56,7 +56,12 @@ export function createComfyClient({
       if (!/^[\w-]{1,100}$/.test(promptId)) throw new Error('ComfyUI 任务标识无效');
       const history = await (await request(`/history/${encodeURIComponent(promptId)}`)).json();
       const record = history[promptId];
-      if (!record) return { status: 'running' };
+      if (!record) {
+        const queue = await (await request('/queue')).json();
+        const pending = [...(queue.queue_running || []), ...(queue.queue_pending || [])]
+          .some(item => item[1] === promptId);
+        return { status: pending ? 'running' : 'missing' };
+      }
       if (record.status?.status_str === 'error' || record.status?.completed === false) return { status: 'failed' };
       const files = Object.values(record.outputs || {}).flatMap(output => [
         ...(output.videos || []), ...(output.gifs || []), ...(output.images || []),
