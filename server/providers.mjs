@@ -18,8 +18,8 @@ export function createRequestProviders(credentials = {}) {
     searchDidaHotels: async (...args) => key('dida', 'DIDA_API_KEY') ? (await import('./providers/dida.mjs')).searchDidaHotels(...args, key('dida', 'DIDA_API_KEY')) : [],
     searchDuffelFlights: async (...args) => key('duffel', 'DUFFEL_API_KEY') ? (await import('./providers/duffel.mjs')).searchDuffelFlights(...args, key('duffel', 'DUFFEL_API_KEY')) : [],
     searchFlyaiTransport: async (...args) => (await import('./providers/ota.mjs')).searchFlyaiTransport(...args, runner),
-    searchTuniuTransport: async (...args) => (await import('./providers/ota.mjs')).searchTuniuTransport(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY') || process.env.TUNIU_USE_OAUTH === '1')),
-    searchAttractionProducts: async (...args) => (await import('./providers/ota.mjs')).searchAttractionProducts(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY') || process.env.TUNIU_USE_OAUTH === '1')),
+    searchTuniuTransport: async (...args) => (await import('./providers/ota.mjs')).searchTuniuTransport(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY'))),
+    searchAttractionProducts: async (...args) => (await import('./providers/ota.mjs')).searchAttractionProducts(...args, runner, Boolean(key('tuniu', 'TUNIU_API_KEY'))),
   };
 }
 
@@ -72,7 +72,7 @@ export async function searchFlyaiTransport(...args) {
 }
 
 export async function searchTuniuTransport(...args) {
-  if (!process.env.TUNIU_API_KEY && process.env.TUNIU_USE_OAUTH !== '1') return [];
+  if (!process.env.TUNIU_API_KEY) return [];
   const { searchTuniuTransport: search } = await import('./providers/ota.mjs');
   return search(...args);
 }

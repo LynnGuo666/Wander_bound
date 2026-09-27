@@ -1,0 +1,15 @@
+services:
+  ota-mcp:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4176:4176"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      PORT: "4176"
