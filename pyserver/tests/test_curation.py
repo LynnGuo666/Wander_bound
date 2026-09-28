@@ -1,7 +1,7 @@
-"""选优对外契约的 mock 自测：commit_selection、build_reel_assets 与 set_tags。
+"""选优对外契约的自测：commit_selection、build_reel_assets 与 set_tags。
 
-set_selected/selected 属于下游分支的共享 store，这里用 FakeMedia 鸭子 stub，不依赖它的
-真实实现；set_tags 是本分支自己的方法，用真实 MediaStore 落在 pytest 临时目录验证。
+commit_selection 只测"选优产出 → 下游契约"的翻译，用 FakeMedia 隔离掉 store 的真实
+落库；set_tags 是本分支自己的方法，用真实 MediaStore 落在 pytest 临时目录验证。
 """
 import io
 
@@ -10,7 +10,7 @@ from pyserver.media.store import MediaStore
 
 
 class FakeMedia:
-    """只实现选优编排用到的方法；set_selected/selected 模拟下游共享 store 的契约。"""
+    """只实现选优编排用到的方法；set_selected/selected 模拟共享 store 的契约。"""
 
     def __init__(self, photos):
         self._photos = {photo["id"]: photo for photo in photos}
