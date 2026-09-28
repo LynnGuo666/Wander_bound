@@ -1,4 +1,4 @@
-# 本地 Qwen / H3 工作流（M01 准备阶段）
+# 本地 Qwen / H3 工作流
 
 ## 版本与文件
 
@@ -34,3 +34,13 @@ UI 的 KSampler 与 RandomNoise 在 seed 后保存 `control_after_generate=fixed
 ## 后续真实验证
 
 在 contract 与本准备节点集成后，经共享 controller 单 worker 分别运行 Qwen 3:2 图片和 H3 16:9 动态单镜头。记录 ComfyUI `/object_info`、UI 导入/APP mode、实际输出宽高和编码、seed 请求图、耗时、峰值内存及产物。若 `1024×576` 超出预算或节点实际不接受，先更新计划和版本，不将源码支持等同生成通过。
+
+## 2026-09-28 实测追加
+
+Spark API 验证分支 `codex/m01-validation-20260928` 部署 `37ecdc75`。主会话通过正式 selected-photos 和 original 接口独立复核了四张公共照片的批次与哈希。测试集合跨不同日期，不代表同一次真实旅行。
+
+- Qwen 作业 `1c800b6b-2dfe-45c6-93a2-4166c1a22ad6` 成功，实际输出 **1248×832，严格 3:2**。Comfy history 中 seed 为 `2026092801`；作业运行约 40.38 秒。原始引擎输出为 PNG，MediaStore 交付规范化 JPEG。主审看到了秋景水彩重绘、同场景树/山/云贴纸与纸底。[收据](generated-evidence/m01/qwen-probe.json)和[实际样图](generated-evidence/m01/qwen-watercolor-probe.jpg)仅作为公共基础探针，五风格业务验收仍由 M02 完成。
+- 实际 Qwen 前端导入 UI 图后，主会话核对了 seed、25 steps、cfg=1、1024 resolution 及首张图连线；导出 API 参数一致。APP 构建器成功配置图片、prompt、seed 输入及 SaveImage 输出，并展示表单预览。导出的 `workflows/qwen-image-2.1-edit-app.json` 可用于内部调参；[预览截图](generated-evidence/m01/qwen-app-preview.png)为实际运行界面。没有从 UI 另行提交推理。
+- 前端提示 workflow-templates `0.11.54` 低于建议的 `0.11.70`。自定义图导入和 APP 构建已运行；未据此升级环境，也不保证模板库全部兼容。
+- 七份实际权重的 SHA-256 见[模型哈希](validation-assets/m01-model-hashes.json)。Qwen 此次未采集全程峰值，生成后的可用内存不能冒充峰值。
+- H3 探针和恢复验证仍在进行，未以服务 ready 代替视频生成验收。
