@@ -9,6 +9,7 @@ from .catalog import MAX_TURNS, MAX_CALLS, available, SYSTEM
 from .handlers import execute
 from .state import initial_state, _error
 from .fallback import complete_with_tools
+from .model_context import result_for_model
 from . import enrichment
 from ..trips import TripStore, now
 
@@ -112,7 +113,7 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
                 result = _error("invalid_arguments", "工具参数不是有效 JSON 对象")
             else:
                 yield event("tool_start", turn=turns, source="model", tool=name, input=args)
-                if name not in names:
+                if name not in [tool["function"]["name"] for tool in available(state)]:
                     result = _error("tool_not_loaded", "当前阶段未加载该工具")
                 else:
                     try:
@@ -122,7 +123,8 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
             yield event("tool_end", turn=turns, source="model", tool=name, input=args, output=result, ok=result.get("ok", False), code=result.get("code", "ok"))
             if name == "set_trip_spec" and result.get("ok"):
                 yield event("trip_memory_updated", turn=turns, fields=args, memory=result)
-            messages.append({"role": "tool", "tool_call_id": call["id"], "content": json.dumps(result, ensure_ascii=False)[:20000]})
+            messages.append({"role": "tool", "tool_call_id": call["id"],
+                             "content": json.dumps(result_for_model(name, result), ensure_ascii=False)[:12000]})
             if state.get("pendingQuestion"):
                 break
     used_fallback = False

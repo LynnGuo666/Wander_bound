@@ -14,6 +14,7 @@ from pyserver.agent.spec import set_trip_spec
 from pyserver.agent.state import initial_state
 from pyserver.agent.discovery import discover_places
 from pyserver.agent.catalog import available
+from pyserver.agent.model_context import result_for_model
 from pyserver import providers
 from pyserver.providers import amap
 
@@ -139,7 +140,21 @@ def test_confirmed_origin_and_places_advance_to_transport_without_repeat_search(
     assert state["placesDone"] is True
     assert "discover_places" not in names()
     assert "search_transport" in names()
+    state["transportDone"] = True
+    assert "search_transport" not in names() and "search_stays" in names()
     assert asyncio.run(discover_places({"city": "深圳龙岗区"}, state, {}))["code"] == "unplanned_city"
+
+
+def test_model_receives_compact_transport_facts_while_trace_can_keep_full_results():
+    full = {"ok": True, "outboundFlights": [], "returnFlights": [], "returnTrains": [],
+            "outboundTrains": [{"id": f"train-{number}", "departureAt": "2026-10-03T10:00:00",
+                                 "arrivalAt": "2026-10-03T11:00:00", "totalPrice": 80,
+                                 "trainSegments": [{"privateVerboseField": "x" * 1000}]} for number in range(12)]}
+    compact = result_for_model("search_transport", full)
+    assert compact["counts"]["outboundTrains"] == 12
+    assert len(compact["outboundTrains"]) == 8
+    assert "trainSegments" not in compact["outboundTrains"][0]
+    assert len(full["outboundTrains"]) == 12
 
 
 def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, monkeypatch):

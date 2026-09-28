@@ -11,8 +11,12 @@ async def draft_plan(args: dict, state: dict) -> dict:
         return _error("incomplete_spec", "先确定目的地、日期和总天数")
     ids = args.get("placeIds")
     catalog = {item["id"]: item for item in state["places"]}
-    if not isinstance(ids, list) or len(set(ids)) != len(ids) or any(item not in catalog for item in ids):
-        return _error("unverified_place", "只能使用 discover_places 返回的地点 ID")
+    if not isinstance(ids, list) or any(not isinstance(item, str) for item in ids) or len(set(ids)) != len(ids):
+        return _error("unverified_place", "地点 ID 必须是没有重复的列表")
+    unknown = [item for item in ids if item not in catalog]
+    if unknown:
+        valid = ", ".join(f"{item['id']}={item['name']}" for item in state["places"][:30])
+        return _error("unverified_place", f"未核实的地点 ID：{', '.join(str(item) for item in unknown[:8])}。可用 ID：{valid}")
     start = date.fromisoformat(state["startDate"])
     dates = [(start + timedelta(days=index)).isoformat() for index in range(state["days"])]
     windows = day_windows(state)

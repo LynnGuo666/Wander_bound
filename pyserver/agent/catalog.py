@@ -48,7 +48,10 @@ def available(state: dict) -> list[dict]:
     if not state.get("placesDone"):
         names.append("discover_places")
     if state.get("placesDone") and state.get("originDone"):
-        names += ["search_transport", "search_stays"]
+        if not state.get("transportDone"):
+            names.append("search_transport")
+        if not state.get("staysDone"):
+            names.append("search_stays")
     if state.get("placesDone") and state.get("transportDone") and state.get("staysDone"):
         names.append("draft_plan")
     return [TOOLS[name] for name in names]
