@@ -236,6 +236,10 @@ class JobStore:
             return
         try:
             self._validate_job_inputs(job)
+            # A previous resource wait is historical; it is no longer the
+            # current outcome once this run has acquired the controller.
+            job["error"] = None
+            job.pop("errorCode", None)
             if job["kind"] == "edit":
                 variant = f"ai-{job['id']}"
                 photo = self.media.get(job["photoId"]) or {}
