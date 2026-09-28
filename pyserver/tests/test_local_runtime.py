@@ -19,13 +19,20 @@ class TrackingAdapter:
         self.workflow_file = Path(workflow_file)
         self.calls = []
         self.states = {}
+        self.next_state = None
+        self.response_lost = False
 
     def freeze_workflow(self):
         return workflow_versions.freeze_workflow(self.workflow_file, self.kind)
 
-    async def queue(self, image, prompt, seed, *, workflow_snapshot, parameters):
-        self.calls.append((image, prompt, seed, copy.deepcopy(workflow_snapshot), copy.deepcopy(parameters)))
-        return f"prompt-{len(self.calls)}"
+    async def queue(self, image, prompt, seed, *, prompt_id, workflow_snapshot, parameters):
+        self.calls.append((image, prompt, seed, copy.deepcopy(workflow_snapshot), copy.deepcopy(parameters), prompt_id))
+        if self.next_state is not None:
+            self.states[prompt_id] = self.next_state
+            self.next_state = None
+        if self.response_lost:
+            raise httpx.ReadTimeout("response lost after acceptance")
+        return prompt_id
 
     async def result(self, prompt_id):
         return self.states.get(prompt_id, ("completed", {"filename": "output.mp4" if self.kind == "video" else "output.jpg"}))
@@ -123,27 +130,73 @@ def test_old_job_without_workflow_snapshot_fails_before_model(tmp_path, monkeypa
     assert controller.maximum == 0 and image.calls == []
 
 
+def test_response_lost_reconciles_precommitted_prompt_without_resubmission(tmp_path, monkeypatch):
+    jobs, image, video, controller, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
+    job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
+    image.response_lost = True
+    asyncio.run(jobs._run(job["id"]))
+    saved = jobs.get(job["id"])
+    assert saved["status"] == "succeeded" and saved["submissionState"] == "completed"
+    assert saved["promptId"] == image.calls[0][5] and len(image.calls) == 1
+
+    another = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
+    image.response_lost = False
+    original_queue = image.queue
+    async def accepted_then_interrupted(*args, **kwargs):
+        await original_queue(*args, **kwargs)
+        raise asyncio.CancelledError()
+    image.queue = accepted_then_interrupted
+    try:
+        asyncio.run(jobs._run(another["id"]))
+    except asyncio.CancelledError:
+        pass
+    interrupted = jobs.get(another["id"])
+    assert interrupted["submissionState"] == "intent_recorded"
+    assert interrupted["promptId"] == image.calls[-1][5]
+    image.queue = original_queue
+    restarted = JobStore(jobs.media, image, video, controller)
+    asyncio.run(restarted._run(another["id"]))
+    assert restarted.get(another["id"])["status"] == "succeeded"
+    assert len(image.calls) == 2
+
+
+def test_response_lost_and_missing_prompt_fails_without_resubmission(tmp_path, monkeypatch):
+    jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
+    job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
+    image.response_lost = True
+    image.next_state = ("missing", None)
+    async def fast_sleep(_seconds):
+        return None
+    monkeypatch.setattr("pyserver.media.jobs.asyncio.sleep", fast_sleep)
+    asyncio.run(jobs._run(job["id"]))
+    saved = jobs.get(job["id"])
+    assert saved["status"] == "failed" and saved["promptId"] == image.calls[0][5]
+    assert len(image.calls) == 1
+
+
 def test_failed_prompt_is_terminal_then_explicit_retry_is_bounded(tmp_path, monkeypatch):
     jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
     job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel", "seed": 7})
-    image.states["prompt-1"] = ("failed", None)
+    image.next_state = ("failed", None)
     asyncio.run(jobs._run(job["id"]))
+    # Explicit retry must allocate another UUID after a terminal failure.
     assert jobs.get(job["id"])["status"] == "failed" and len(image.calls) == 1
     assert jobs.retry(job["id"], expected_kind="edit")["attempt"] == 2
     assert jobs.get(job["id"]).get("promptId") is None
-    image.states["prompt-2"] = ("failed", None)
+    image.next_state = ("failed", None)
     asyncio.run(jobs._run(job["id"]))
     assert jobs.retry(job["id"], expected_kind="edit")["attempt"] == 3
-    image.states["prompt-3"] = ("failed", None)
+    image.next_state = ("failed", None)
     asyncio.run(jobs._run(job["id"]))
     assert jobs.retry(job["id"], expected_kind="edit") is None
     assert len(image.calls) == 3
+    assert len({call[5] for call in image.calls}) == 3
 
 
 def test_missing_prompt_and_controller_resource_retries_are_bounded(tmp_path, monkeypatch):
     jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
     job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
-    image.states["prompt-1"] = ("missing", None)
+    image.next_state = ("missing", None)
     async def fast_sleep(_seconds):
         return None
     monkeypatch.setattr("pyserver.media.jobs.asyncio.sleep", fast_sleep)

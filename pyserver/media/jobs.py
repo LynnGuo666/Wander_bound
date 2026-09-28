@@ -255,14 +255,27 @@ class JobStore:
             if job["kind"] == "edit":
                 if not job.get("promptId"):
                     source = original_from_snapshot(self.media, job.get("selectionSnapshot"), job["photoId"])
-                    job["promptId"] = await self.image.queue(
-                        source, job["prompt"], job["seed"],
-                        workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
+                    job["promptId"] = str(uuid.uuid4())
+                    job["submissionState"] = "intent_recorded"
+                    self.save(job)
+                    try:
+                        accepted = await self.image.queue(
+                            source, job["prompt"], job["seed"], prompt_id=job["promptId"],
+                            workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
+                    except (httpx.HTTPError, OSError, RuntimeError):
+                        # The server may have queued this UUID before its HTTP response was lost.
+                        job["submissionState"] = "unknown"
+                    else:
+                        if accepted != job["promptId"]:
+                            raise RuntimeError("Spark 返回的 promptId 与已冻结提交 ID 不一致")
+                        job["submissionState"] = "accepted"
                     self.save(job)
                 job["progressLabel"] = "图片生成中"
                 job["progressPercent"] = None
                 self.save(job)
                 image = await self._wait(self.image, job["promptId"])
+                job["submissionState"] = "completed"
+                self.save(job)
                 job["progressLabel"] = "保存图片"
                 job["progressPercent"] = 95
                 self.save(job)
@@ -294,12 +307,24 @@ class JobStore:
                     if not clip.get("promptId"):
                         prompt = f"旅行回忆短片第 {index + 1} 个镜头。保留输入照片的主体与真实场景，缓慢平稳的电影感运镜，自然光影。画面里不要出现文字、字幕或标志，不要虚构人物。"
                         source = original_from_snapshot(self.media, job.get("selectionSnapshot"), clip["photoId"])
-                        clip["promptId"] = await self.video.queue(
-                            source, prompt, clip["seed"],
-                            workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
+                        clip["promptId"] = str(uuid.uuid4())
+                        clip["submissionState"] = "intent_recorded"
+                        self.save(job)
+                        try:
+                            accepted = await self.video.queue(
+                                source, prompt, clip["seed"], prompt_id=clip["promptId"],
+                                workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
+                        except (httpx.HTTPError, OSError, RuntimeError):
+                            clip["submissionState"] = "unknown"
+                        else:
+                            if accepted != clip["promptId"]:
+                                raise RuntimeError("Spark 返回的镜头 promptId 与已冻结提交 ID 不一致")
+                            clip["submissionState"] = "accepted"
                         self.save(job)
                     temporary_clip = job_dir / f"{index}.pending.mp4"
                     temporary_clip.write_bytes(await self._wait(self.video, clip["promptId"]))
+                    clip["submissionState"] = "completed"
+                    self.save(job)
                     os.replace(temporary_clip, output)
                     clip["done"] = True
                     job["completedClips"] = index + 1
@@ -339,10 +364,13 @@ class JobStore:
         job["progressPercent"] = 0
         job["attempt"] += 1
         job["resourceRetries"] = 0
-        job.pop("promptId", None)
+        if job.get("submissionState") != "completed":
+            job.pop("promptId", None)
+            job.pop("submissionState", None)
         for clip in job.get("clips", []):
-            if not clip.get("done"):
+            if not clip.get("done") and clip.get("submissionState") != "completed":
                 clip.pop("promptId", None)
+                clip.pop("submissionState", None)
         self.save(job)
         self._schedule()
         return job
