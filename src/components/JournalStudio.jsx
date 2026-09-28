@@ -249,7 +249,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       mediaRequest(`/api/media/trips/${trip.id}/selected-photos`, token),
     ]).then(([detail, selection]) => {
       if (alive) { setPreviewPhotos(detail.photos || []); setPreviewSelectedIds(selection.photoIds || []); setPreviewDataReady(true); }
-    }).catch(() => { if (alive) setPreviewDataReady(true); });
+    }).catch(() => { if (alive) setPreviewDataReady(false); });
     return () => { alive = false; };
   }, [previewOnly, trip.id, token]);
 
@@ -272,8 +272,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     if (!token) { setStickerJobs([]); return; }
     let alive = true;
     const refresh = () => mediaRequest(`/api/media/trips/${trip.id}/stickers`, token)
-      .then(result => { if (alive) setStickerJobs(result.stickers || []); })
-      .catch(reason => { if (alive) setError(reason.message); });
+      .then(result => { if (alive) { setStickerJobs(result.stickers || []); if (previewOnly) setPreviewAssetsReady(true); } })
+      .catch(reason => { if (alive) { setError(reason.message); if (previewOnly) setPreviewAssetsReady(false); } });
     async function seedTripAssets() {
       try {
         const result = await mediaRequest(`/api/media/trips/${trip.id}/stickers`, token);
@@ -295,7 +295,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     }
     if (previewOnly) {
       setPreviewAssetsReady(false);
-      refresh().then(() => { if (alive) setPreviewAssetsReady(true); });
+      refresh();
     }
     else seedTripAssets();
     const timer = setInterval(refresh, 5000);
