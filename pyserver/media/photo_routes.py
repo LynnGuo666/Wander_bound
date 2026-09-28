@@ -12,6 +12,7 @@ from .comfy import ComfyClient
 from .auth import require_media_auth
 from . import images
 from .develop import suggest as suggest_development, review as review_development
+from .vision import vision_base_url, vision_model
 from .mcp_images import MCPImagesClient
 
 async def _render_development(media: MediaStore, photo_id: str, settings: dict) -> bytes:
@@ -60,8 +61,8 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
         require_media_auth(request)
         return {"ok": True, "storage": "private-local", "imageProcessor": "Pillow",
                 "photoDevelopBackend": "mcp_images" if MCPImagesClient().configured else "unconfigured",
-                "visionModel": os.getenv("DGX_VISION_MODEL", "Qwen3-VL-8B-Instruct"),
-                "visionEndpoint": os.getenv("DGX_VISION_BASE_URL", "http://127.0.0.1:18192/v1"),
+                "visionModel": vision_model(),
+                "visionEndpoint": vision_base_url(),
                 "imageEditBackend": "dgx-spark-qwen-image-2.1" if image_client and await image_client.probe() else "unconfigured",
                 "videoBackend": "dgx-spark-minimax-h3" if video_client and await video_client.probe() else "unconfigured"}
 

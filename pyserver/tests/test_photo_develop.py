@@ -214,7 +214,7 @@ def test_dgx_suggest_and_review_are_injectable_without_spark(tmp_path, monkeypat
 
 def test_dgx_provider_contract_sends_only_private_jpeg_data_and_parses_responses(monkeypatch):
     monkeypatch.setenv("DGX_VISION_BASE_URL", "http://127.0.0.1:18192/v1")
-    monkeypatch.setenv("DGX_VISION_MODEL", "Qwen3-VL-8B-Instruct")
+    monkeypatch.setenv("DGX_VISION_MODEL", "qwen38-27b")
     requests = []
     def respond(request):
         assert str(request.url) == "http://127.0.0.1:18192/v1/chat/completions"
@@ -233,7 +233,7 @@ def test_dgx_provider_contract_sends_only_private_jpeg_data_and_parses_responses
     async def scenario():
         suggested = await develop_provider.suggest(jpeg())
         assert suggested["params"]["exposure"] == 0.2
-        assert suggested["model"] == "Qwen3-VL-8B-Instruct"
+        assert suggested["model"] == "qwen38-27b"
         assert isinstance(suggested["elapsedMs"], int)
         reviewed = await develop_provider.review(jpeg(), images.develop(jpeg(), suggested["params"]), suggested["params"])
         assert reviewed["approved"] is True
