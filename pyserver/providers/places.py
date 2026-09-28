@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import httpx
 from .mcp import data_endpoint, mcp_call
+from .amap_quota import consume as consume_quota
 
 async def search_places(city: str, key: str | None) -> list[dict]:
     if not city:
@@ -13,6 +14,8 @@ async def search_places(city: str, key: str | None) -> list[dict]:
         if not payload.get("ok") or not isinstance(payload.get("places"), list):
             raise RuntimeError("飞猪地点查询响应无效")
         return payload["places"]
+    # 高德 POI 搜索计费项，先记账再发起请求。
+    await consume_quota("poi")
     async with httpx.AsyncClient(timeout=15) as client:
         response = await client.get("https://restapi.amap.com/v3/place/text", params={"key": key, "keywords": "景点", "city": city,
                         "citylimit": "true", "offset": 20, "page": 1, "extensions": "all"})

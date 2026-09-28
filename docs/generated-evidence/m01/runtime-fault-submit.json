@@ -1,0 +1,44 @@
+{
+  "atUtc": "2026-09-28T13:03:52.785105+00:00",
+  "deploymentSha": "a25a09ffaafca790c0363bb041f99046189c47d8",
+  "apiPid": "1160143",
+  "queueBefore": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+  "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+  "selectionBatchId": "m01-public-yellowstone-20260928-v1",
+  "backupDir": "/tmp/travel-m01-fault-sol-b61lu45x",
+  "originalHashes": {
+    "qwen-image-2.1-edit-api.json": "60839fac6a38e81c9fe12d7ff0af16e2a95f0f8179603cdfdb035df33c3cc907",
+    "model-manifest.json": "9eeb8703b6a21e1b787719009d442cb6523c9c4903d547798c6055572539589d"
+  },
+  "faultSampler": "__invalid_sampler_fault_injection__",
+  "faultVersion": "1.0.1-fault-validation",
+  "submitHttp": 202,
+  "jobId": "bfc7977b-a31d-4edf-9814-dfb9f3126afd",
+  "matchingNewJobs": [
+    "bfc7977b-a31d-4edf-9814-dfb9f3126afd"
+  ],
+  "frozen": {
+    "seed": 2026092899,
+    "parameters": {
+      "aspect_ratio": "3:2"
+    },
+    "workflowVersion": "1.0.1-fault-validation",
+    "workflowHash": "360738283950d5f691920d630168623905eaeb973fca98a9f8dede9642e0150a",
+    "snapshotHash": "85d14cb9db9a072552e5c08026f5aa3b3b60634d2567a6a2bdf9f8f84ffe45a2",
+    "sampler": "__invalid_sampler_fault_injection__",
+    "selectionHash": null,
+    "photoId": "199b155d-0c14-4673-8d25-5de27f175676"
+  },
+  "restoredHashes": {
+    "qwen-image-2.1-edit-api.json": "60839fac6a38e81c9fe12d7ff0af16e2a95f0f8179603cdfdb035df33c3cc907",
+    "model-manifest.json": "9eeb8703b6a21e1b787719009d442cb6523c9c4903d547798c6055572539589d"
+  },
+  "restoredExact": true,
+  "gitCleanAfterRestore": true
+}

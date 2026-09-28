@@ -1,0 +1,86 @@
+{
+  "observedAtUtc": "2026-09-28T13:29:25.419090+00:00",
+  "head": "d055caed1c290b81baad1d57dcfab46cc25621db",
+  "clean": true,
+  "apiPid": "1163586",
+  "apiQwenUrl": "http://127.0.0.1:8191",
+  "queue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "models": [
+    {
+      "id": "image",
+      "label": "Qwen-Image-2.1",
+      "service": "qwen21-comfy.service",
+      "state": "ready",
+      "active": false,
+      "idleTimeoutSeconds": 600,
+      "idleSeconds": 37
+    },
+    {
+      "id": "video",
+      "label": "MiniMax H3",
+      "service": "minimax-h3-comfy.service",
+      "state": "stopped_on_demand",
+      "active": false,
+      "idleTimeoutSeconds": 600,
+      "idleSeconds": 37
+    },
+    {
+      "id": "chat",
+      "label": "Qwen3.8-27B",
+      "service": "qwen38.service",
+      "state": "ready",
+      "active": false,
+      "idleTimeoutSeconds": 1800,
+      "idleSeconds": 52
+    }
+  ],
+  "acceptedJobApi": {
+    "id": "377e9b50-1f05-44d6-a728-0e1043675468",
+    "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+    "status": "succeeded",
+    "backend": "dgx-spark-qwen-image-2.1",
+    "variant": "ai-377e9b50-1f05-44d6-a728-0e1043675468",
+    "error": null,
+    "errorCode": null,
+    "createdAt": "2026-09-28T21:26:50.912994+08:00",
+    "startedAt": "2026-09-28T21:26:51.003119+08:00",
+    "completedAt": "2026-09-28T21:27:26.361980+08:00",
+    "attempt": 1,
+    "progressLabel": "已完成",
+    "progressPercent": 100
+  },
+  "missingJobApi": {
+    "id": "87e0f8f9-04e2-4b8d-bdc8-998c4adbe0d4",
+    "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+    "status": "failed",
+    "backend": "dgx-spark-qwen-image-2.1",
+    "variant": null,
+    "error": "Spark 队列/历史中持续找不到 prompt",
+    "errorCode": "JOB_FAILED",
+    "createdAt": "2026-09-28T21:28:21.904257+08:00",
+    "startedAt": "2026-09-28T21:28:21.991350+08:00",
+    "completedAt": null,
+    "attempt": 1,
+    "progressLabel": "任务失败",
+    "progressPercent": null
+  },
+  "acceptedVariant": {
+    "apiHttp": 200,
+    "bytes": 342886,
+    "apiSha256": "9fef13f146438810f7a729cdb05c53cdc734882ad98b6ec8ddd1d791a66df245",
+    "diskSha256": "9fef13f146438810f7a729cdb05c53cdc734882ad98b6ec8ddd1d791a66df245"
+  },
+  "fileHashes": {
+    ".env": "010d04fdd3a7777c3f3cea75b6973ef6d399a26af5ece0b5886b70f34efaa012",
+    "deploy/spark/start-python.sh": "ae4423c88b79fc426added6ada1f29873a844e64101ca47361966cd01919d47e",
+    "workflows/qwen-image-2.1-edit-api.json": "60839fac6a38e81c9fe12d7ff0af16e2a95f0f8179603cdfdb035df33c3cc907",
+    "workflows/model-manifest.json": "9eeb8703b6a21e1b787719009d442cb6523c9c4903d547798c6055572539589d"
+  },
+  "proxyPortFree": true,
+  "watchdogTimerStateAfterCleanup": "inactive"
+}

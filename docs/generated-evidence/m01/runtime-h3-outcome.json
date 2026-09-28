@@ -1,0 +1,61 @@
+{
+  "observed_at_utc": "2026-09-28T12:41:33.237408+00:00",
+  "job_id": "90981311-bf42-47f5-b189-b7fcc62c5202",
+  "job_status": "failed",
+  "job_error_code": "JOB_FAILED",
+  "job_error": "视频合成失败：[concat @ 0xc369fe146180] Impossible to open 'data/media/jobs/90981311-bf42-47f5-b189-b7fcc62c5202/data/media/jobs/90981311-bf42-47f5-b189-b7fcc62c5202/0.mp4'\n[in#0 @ 0xc369fe146080] Error opening inp",
+  "attempt": 1,
+  "resourceRetries": 2,
+  "completedClips": 1,
+  "clips": [
+    {
+      "photoId": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+      "promptId": "4e38017b-4ff3-485c-9009-4063c1bcdc4d",
+      "submissionState": "completed",
+      "done": true,
+      "seed": 2026092802
+    }
+  ],
+  "files": {
+    "0.mp4": {
+      "exists": true,
+      "bytes": 1087931,
+      "sha256": "30c75a8a287b295fcaa925ac6adb477541a0cf1f0bb36403cd117a19a7dff773",
+      "ffprobe_returncode": 0,
+      "ffprobe": {
+        "format": {
+          "duration": "5.167000",
+          "size": "1087931"
+        },
+        "streams": [
+          {
+            "index": 0,
+            "codec_name": "h264",
+            "codec_type": "video",
+            "width": 1024,
+            "height": 576,
+            "r_frame_rate": "24/1"
+          },
+          {
+            "index": 1,
+            "codec_name": "aac",
+            "codec_type": "audio",
+            "r_frame_rate": "0/0"
+          }
+        ]
+      }
+    },
+    "0.pending.mp4": {
+      "exists": false
+    },
+    "memory.mp4": {
+      "exists": false
+    },
+    "memory.pending.mp4": {
+      "exists": false
+    },
+    "clips.txt": {
+      "exists": true
+    }
+  }
+}

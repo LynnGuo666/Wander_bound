@@ -1,0 +1,457 @@
+{
+  "notice": "只读交接快照，不是V3控制状态；不得导入为事件或据此直接激活节点。恢复执行前查询原控制根中的最新V3。",
+  "project_id": "project.travel-agent.c9c4dc1293865e91",
+  "task_id": "task.m01.931bf5bbc699",
+  "exported_at": "2026-09-29",
+  "revisions": {
+    "plan": "23aa92fe6a5a3edebfe983f819566f80b7aea122428c283c3e84829aac9135e5",
+    "criteria": "23aa92fe6a5a3edebfe983f819566f80b7aea122428c283c3e84829aac9135e5"
+  },
+  "plan": [
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c02",
+        "criterion.task.m01.931bf5bbc699.c03"
+      ],
+      "dependencies": [
+        "node.m01.contract",
+        "node.m01.workflow-preparation"
+      ],
+      "goal": "补响应丢失窗口所需适配器身份能力，为真实重启验收避免重复生成。",
+      "node_id": "node.m01.adapter-recovery",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "主审只读核对两套Spark server.py均支持canonical UUID prompt_id但不去重。comfy.queue新增可选prompt_id；jobs所有者提交前保存，未知结果先history/queue核对，不自动换ID重投。",
+        "主会话独占comfy.py、test_workflow_versions.py及UI工作流和local-workflows.md；runtime子会话仍独占jobs/job_routes。输入基线1f553ad；不改产品/模型或GPU并行规则。",
+        "确认后补UI seed控件固定值的序列化位置，实际导入仍留原workflows节点验证；运行适配器测试，真实模型/重启验收不以mock代替。"
+      ],
+      "state": "completed",
+      "title": "提交前固定Comfy请求身份并核查UI控件"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c01"
+      ],
+      "dependencies": [],
+      "goal": "消除创建期间新上游提交造成的基线歧义，核实实际部署后进入原计划。",
+      "node_id": "node.m01.baseline",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "优先级与原因：本节点补充并覆盖此task原节点中的历史基线0ee6531与文档过时判断，业务目标/原图资格/模型本地边界/验收范围不变。任务创建期间远端新增4c31149，已审diff并ff同步；保留旧节点为历史出处，执行必须同时读此补充。",
+        "当前基线：main=origin/main=4c31149990d01991b785d0a53944be4133df9c63（提交时间2026-09-28 18:45:06 +08:00）；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，9个独有提交仍未合入。任务执行前重新检查远端，若再变化先审影响、记risk/progress并更新计划，不能直接沿用旧假设。",
+        "新代码事实：延续0ee6531 ModelController/单worker/失败retry清prompt；4c31149新增begin_warm后台预热，warm API返回202，status含loadingModel，Web已有加载中和防重复控制，chat冷启动等待加长。复用这些能力，不另建冷启动控制器，也不把202当模型已可推理。",
+        "文档证据边界：SPARK_INFERENCE_SCHEDULING.md已补首版真实代码与Spark启停/健康探针结果，原节点说文档全部过时不适用；仍有历史分析段落须结合代码。上游记载服务启停成功不等于本任务真实图片/视频生成、峰值或恢复验收通过。本地Qwen3.8仍是独立部署/测试范围，不替换Step分镜。",
+        "输入：最新代码diff、实际部署版本、此task原计划及跨task入口依赖；输出：执行时基线记录、差异影响和是否可继续的结论。节点只要求核对，不重复开发业务。",
+        "验收与证据：执行者记录git SHA/部署版本/接口202与loadingModel行为相关性，核验本任务依赖交付仍兼容；任何未就绪项留blocked。此节点completed后原入口节点才可激活；原有criterion仍须按业务实证验证。",
+        "代码/资料：pyserver/inference/controller.py；pyserver/inference/routes.py；src/views/InferenceView.jsx；pyserver/tests/test_inference_controller.py；docs/SPARK_INFERENCE_SCHEDULING.md；父task task.vibehub.d7ea8e8ed4a5",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "completed",
+      "title": "执行前基线核对｜4c31149 补充优先"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c01",
+        "criterion.task.m01.931bf5bbc699.c03"
+      ],
+      "dependencies": [
+        "node.m01.baseline"
+      ],
+      "goal": "审查4c31149之后六个上游提交及实际Spark部署，在保留用户修改后以24aae84开展M01。",
+      "node_id": "node.m01.baseline-24aae84",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "本节点为本次新基线补充，优先于原baseline中4c31149及业务节点0ee6531历史快照。执行SHA=24aae844e252fe7cd8606a8f25ede45b66990dc0，实际Spark同SHA。选优分支c3ecbe1仍9独有提交未合，不自动合并。",
+        "差异：d4794c2/dea0350引入Qwen3.8优先驻留及媒体结束恢复，d715d72/fea4776增加加载与媒体进度，3f95ffb更新实测文档，24aae84补外部内存压力后退避恢复。图与视频仍共享controller单worker，Step分镜不替换。",
+        "输入：git diff、Spark实际status与服务路径、当前真实Session审计证据。输出：冻结基线、针对既有控制器/媒体接口的回归结果及M01实施交接。保护原有.gitignore、docs/STATUS_AUDIT_2026-09-28.md和参考图。",
+        "执行：仅ff到已审SHA，运行既有Python相关测试，必要时修复由本次集成引出的缺口；不宣称状态/替身测试是模型生成验收。node.m01.contract等待本节点完成。",
+        "旧Session历史缺口保留，控制面无合法修复接口，最终完成仍受门禁约束。本节点和后续使用新真实Session记录实际工作，绝不抵消/伪造旧事实。"
+      ],
+      "state": "completed",
+      "title": "冻结 24aae84 实施基线并验证兼容"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c01"
+      ],
+      "dependencies": [
+        "node.m01.baseline",
+        "node.m01.baseline-24aae84"
+      ],
+      "goal": "将已选优原图资格和生成任务可追溯性落实为后端公共契约。",
+      "node_id": "node.m01.contract",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：MediaStore.selected/is_selected、selected-photos API、最终产品决策；上游内容JSON接口可能尚未合入。",
+        "输出：共享验证器、选优快照、独立产物job/结果DTO、错误类型及最小API契约文档。",
+        "实现与理由：复用现有清单存储，显式校验membership+trip+original可读；以不可变快照固定batch/素材，分别定义scrapbook/storyboard/video而非泛化成手帐视频一条流水线。现有redraw prompt仅500字符，应为专用风格与分镜定义有界参数，不能静默截断。",
+        "边界与失败：空清单不可回退；生成时已删除原图应失败；原始上传已被normalize，不能声称使用手机字节原件。真实语义tags不在main时接受有来源的上游素材卡，缺字段标未知。",
+        "验收与证据：真实HTTP或集成测试覆盖合法/空/未入选/越行程/不存在/清单替换；记录请求响应与snapshot内容。",
+        "代码/资料：pyserver/media/store.py；photo_routes.py；job_routes.py；docs/photo-development.md",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "completed",
+      "title": "选优输入与独立任务契约"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c04"
+      ],
+      "dependencies": [
+        "node.m01.handoff"
+      ],
+      "goal": "主会话亲审M01公共交接、真实证据与完成提案门禁，不替代用户最终确认。",
+      "node_id": "node.m01.final-review",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：node.m01.handoff的已提交版本化交接文档、正式API只读回读、全量测试和CPU帧数对比；c01-c03既有主审证据。",
+        "只审查公共基础合同、c04及完成门禁，核对M02/M03仍需独立实现的业务runner；不实施业务、不部署或启动GPU。",
+        "若证据不足记录risk/blocked并交原负责人补证；所有criterion与节点须按V3真实状态审查，不能用旧Session缺口或桌面完成路径绕门禁。",
+        "只有合法完成提案及用户在受信交互中明确确认后，才由主会话处理最终归档；本节点不代替用户确认。"
+      ],
+      "state": "completed",
+      "title": "主会话最终交接审查与完成门禁"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c02",
+        "criterion.task.m01.931bf5bbc699.c03"
+      ],
+      "dependencies": [
+        "node.m01.integration-plan"
+      ],
+      "goal": "准备合法来源真实照片、独立验收行程和正式selected-photos批次及证据脚本。",
+      "node_id": "node.m01.fixture-preparation",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "用户授权核查Spark现有5张图；实查均合成smoke图且旧trip标签非UUID，不用作真实效果验收。改用公开且许可明确照片独立测试批次，保存来源作者许可和sha256，不混私人行程。",
+        "所有者Sol素材，独占scripts验收脚本与docs/validation-assets；允许通过现有TripStore建立专用UUID测试行程，再经正式upload及selected-photos API登记；不改后端、workflow、客户端，不启动GPU/部署服务。",
+        "输入/private/tmp/travel-public-fixture-candidates.json和已下载照片；可再选清晰风景共4张，使用ego现有TaskSpace7或HTTP公开元数据；输出可追溯素材卡、合法photoIds批次及HTTP证据，无实证不声明生成通过。"
+      ],
+      "state": "completed",
+      "title": "真实照片测试批次与可复跑探针准备"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c01",
+        "criterion.task.m01.931bf5bbc699.c02",
+        "criterion.task.m01.931bf5bbc699.c03",
+        "criterion.task.m01.931bf5bbc699.c04"
+      ],
+      "dependencies": [
+        "node.m01.contract",
+        "node.m01.runtime",
+        "node.m01.video-framing",
+        "node.m01.workflows"
+      ],
+      "goal": "以真实运行证据冻结M02/M03可依赖的公共契约。",
+      "node_id": "node.m01.handoff",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：前三节点产物、原有媒体/选优接口。",
+        "输出：版本化公共DTO与基础任务契约、合法选优fixture、本地模型探针、M02/M03交接清单及局限；完整业务API在M02/M03实现，避免循环前置。",
+        "实现与理由：分别核对输入资格、job状态、result id/下载、错误/重试、workflow版本；通过正式selected-photos提交测试清单并标明来源，不能将手工测试清单伪装成上游选优算法效果。",
+        "边界与失败：上游选优分支未合并不等于本task需要合并它；只消费已存在契约。真实服务不可用时对应criterion blocked，不用替身替代。",
+        "验收与证据：运行针对改动的Python测试及必要前端check；真实Qwen/H3探针、反例请求、控制器日志形成证据；review全部criterion。",
+        "代码/资料：pyserver/media；pyserver/inference；docs/photo-development.md",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "completed",
+      "title": "公共API与下游交接验收"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c04"
+      ],
+      "dependencies": [
+        "node.m01.contract",
+        "node.m01.workflow-preparation"
+      ],
+      "goal": "将探针前必需的队列快照接线和素材准备并行化，保留真实模型门禁。",
+      "node_id": "node.m01.integration-plan",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "基线24aae84加86e0d48/d6a3d88/1f553ad；新增runtime-preparation与fixture-preparation，两者依赖contract和workflow-preparation；workflows真实探针等待两者；runtime仍验证真实恢复与互斥。",
+        "主会话分配唯一文件责任、检查契约修复与测试；不能把准备节点当生成验收，也不改变旧Session缺口。"
+      ],
+      "state": "completed",
+      "title": "拆分运行时集成和真实验收素材准备"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c04"
+      ],
+      "dependencies": [
+        "node.m01.baseline-24aae84"
+      ],
+      "goal": "依据用户并行要求固定素材契约与工作流适配器两路边界，保留真实探针前置。",
+      "node_id": "node.m01.parallel-plan",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "基线24aae84；contract执行者独占store/contracts/job_routes/jobs及其tests；工作流执行者独占comfy/workflow_versions/workflows及其tests。",
+        "约定freeze_workflow返回JSON快照，queue(image,prompt,seed,*,workflow_snapshot=None,parameters=None)接收冻结图；runtime统一集成，避免两路同时改jobs。",
+        "原workflows继续等待contract与新prep完成后运行真实Qwen/H3探针；不提前启动M02/M03、不改产品范围或削弱验收。"
+      ],
+      "state": "completed",
+      "title": "拆分独立实现责任与集成接口"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c03"
+      ],
+      "dependencies": [
+        "node.m01.adapter-recovery",
+        "node.m01.contract",
+        "node.m01.fixture-preparation",
+        "node.m01.runtime-preparation",
+        "node.m01.workflow-preparation"
+      ],
+      "goal": "在现有按需推理和串行worker上接入新job类型，验证恢复和错误路径。",
+      "node_id": "node.m01.runtime",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：0ee6531 ModelController、JobStore及版本化参数。",
+        "输出：共用调度接入、状态/结果持久化、受限重试与重启对账、运行检查记录。",
+        "实现与理由：保留单worker与controller.use的image/video互斥；新job类型显式映射，避免现有kind不是edit就当video的分支误判。复用已实现retry清prompt逻辑，只修未覆盖恢复：引擎已有结果只保存一次、仍运行继续等待、历史丢失与输出缺失有界重试。",
+        "边界与失败：不另起绕过controller的重型任务；不能以GPU利用率0判断可停服。只管理本项目允许的服务，其他工作负载不擅自停。不能无限queued重试且无可见原因；只补生成闭环必要恢复，不扩成集群调度。",
+        "验收与证据：图片/视频并发提交实际串行，生成中释放被阻止；注入prompt失败和重启，检查不重复已完成镜头；API停启后能找回结果。测试新旧控制器行为而非重新实现测试镜像。",
+        "代码/资料：pyserver/inference/controller.py；routes.py；pyserver/media/jobs.py；pyserver/tests/test_inference_controller.py；docs/SPARK_INFERENCE_SCHEDULING.md（部分旧段落不能当当前实现）",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "completed",
+      "title": "复用控制器并补齐必要恢复验证"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c02",
+        "criterion.task.m01.931bf5bbc699.c03"
+      ],
+      "dependencies": [
+        "node.m01.integration-plan"
+      ],
+      "goal": "在真实探针前完成不可变工作流快照和有限重试、重启对账代码。",
+      "node_id": "node.m01.runtime-preparation",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入已完成contract及workflow-preparation；输出jobs提交时workflowSnapshot+参数+seed，执行/重试只使用保存版本，旧无快照作显式失败；通过单worker/controller执行，prepared DTO不冒充可执行业务。",
+        "所有者Sol运行时，独占jobs.py、job_routes.py、相关新增测试及运行文档；不改contracts/store/comfy/workflow_versions，不部署或启停GPU。",
+        "补现有controller等待无界重试、Comfy排队/历史对账及部分镜头恢复缺口，必要adapter接口报主会话协调；实际运行针对性Python测试。替身不代替原runtime节点真实故障恢复验收。"
+      ],
+      "state": "completed",
+      "title": "冻结工作流接入持久队列与恢复实现"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c02"
+      ],
+      "dependencies": [
+        "node.m01.adapter-recovery",
+        "node.m01.workflow-preparation"
+      ],
+      "goal": "以版本化contain/cover输入策略避免新视频探针白边，旧任务仍按原快照执行。",
+      "node_id": "node.m01.video-framing",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "实证：1920x1227选优original经contain-white-v1缩为901x576并白底填1024x576，H3输出继承白边。主审已看首尾帧并核对prepare_image代码。",
+        "所有者Sol工作流，独占workflow_versions.py、comfy.py、model-manifest.json、test_workflow_versions.py及local-workflows.md。新H3版本增加fit_mode enum contain/cover，默认cover；center crop损失边缘构图需文档明确；旧contain-white-v1快照行为不变，Qwen策略不变。",
+        "先实现并实际测试旧快照保持、非法参数拒绝、横竖图裁切及上传尺寸，再由主审集成；真实GPU通过共享controller排队，新H3探针须等runtime故障验证完成。不得改已排队快照或重做旧job；不添加视频业务/客户端或音频编排。",
+        "H3旧单镜头已有非静音AAC，未确认内容/来源，不作为合法配乐证据。M03须独立处理合法统一音乐。",
+        "完成需代码/测试/新版本真实H3无人工白边探针证据；主审亲查，失败不标完成。"
+      ],
+      "state": "completed",
+      "title": "修正H3输入白边并保留冻结版本"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c02"
+      ],
+      "dependencies": [
+        "node.m01.baseline-24aae84",
+        "node.m01.parallel-plan"
+      ],
+      "goal": "在素材契约实现期间独立完成本地工作流快照、seed/尺寸映射和适配器验证，真实探针留在原workflows节点。",
+      "node_id": "node.m01.workflow-preparation",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "用户2026-09-28明确要求至少两路并行执行。此节点从原node.m01.workflows拆出不依赖selected DTO的代码部分，不减少原验收，原节点保留contract准入与真实模型探针。",
+        "负责人独占pyserver/media/comfy.py、新workflow_versions.py、workflows/及新test_workflow_versions.py；不改store/contracts/jobs/job_routes、controller、Web/iOS。基线24aae84，分支feat/m01-local-generation-foundation，与契约作者按文件隔离。",
+        "公共约定：ComfyClient.freeze_workflow(...)返回JSON可持久化图/工作流id与版本/hash/schema版本/模型元信息；queue(image,prompt,seed,*,workflow_snapshot=None,parameters=None)支持冻结图并保留旧签名。runtime负责提交快照接入jobs。持有快照后改默认文件不能改变实际请求图。",
+        "以实际安装Qwen/H3源码确认尺寸、帧数和seed参数范围，服务端显式拒绝不支持参数。Qwen目标3:2、H3严格16:9；H3 RandomNoise seed必须接任务seed，默认约5秒按帧数/fps实报。不把864x480叫16:9。",
+        "提供可追溯API JSON、UI工作流图/清晰导入导出约定、模型/节点指纹manifest与APP mode文档。前端实际可用性在原workflows节点验证，不仅按版本号宣称通过。无需升级Comfy或模型、不调用云生成。",
+        "验证：实际运行适配器MockTransport/本地集成测试检查发送图seed/参数、快照改文件稳定、参数拒绝和旧接口兼容；不把替身测试标真实生成。重型GPU禁止，本节点不提交推理。",
+        "输入：当前Qwen API图、H3图、Spark只读版本证据；输出上述代码/tests/docs及M01 runtime集成说明。任何必须改变约定、模型或UI图无法合法产出先报告主会话。"
+      ],
+      "state": "completed",
+      "title": "并行实现版本化工作流与参数适配"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m01.931bf5bbc699.c02"
+      ],
+      "dependencies": [
+        "node.m01.adapter-recovery",
+        "node.m01.contract",
+        "node.m01.fixture-preparation",
+        "node.m01.runtime-preparation",
+        "node.m01.workflow-preparation"
+      ],
+      "goal": "固定可回退的本地Qwen/H3工作流和业务参数映射，提供日常表单调参。",
+      "node_id": "node.m01.workflows",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：现有workflows/*.json、ComfyClient、Spark服务配置、M01契约。",
+        "输出：UI图与API JSON、workflow版本/hash、参数白名单、模型/节点指纹、APP mode使用说明、固定样片探针。",
+        "实现与理由：优先复用现有Qwen-Image-2.1/H3。核实Comfy/前端APP mode版本；调参表单与对外业务页面分离。按占位符注入prompt/seed/尺寸/帧数等，H3当前seed写死需修正。只暴露实际支持范围；记录16:9原生尺寸或可解释的最终适配，不把864×480称严格16:9。",
+        "边界与失败：此前SSH主机身份校验失败属于部署核实前置，需用可信指纹/既有访问方式正规核实，不禁用host校验。工作流默认版本切换不污染已在跑任务；图片视频不调用云生成。APP mode缺版本时记录并做受控兼容方案，不盲目升级整机。",
+        "验收与证据：读取实际部署版本与workflow哈希；用已选优测试原图各运行一次Qwen和H3并下载，确认seed和输出参数；验证默认切换时旧job仍保留旧版。记录实际耗时，不承诺历史12分钟就是当前耗时。",
+        "代码/资料：workflows/qwen-image-2.1-edit-api.json；workflows/minimax-h3-i2v-api.json；pyserver/media/comfy.py；https://docs.comfy.org/interface/app-mode",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "completed",
+      "title": "核实现地推理和版本化工作流"
+    }
+  ],
+  "criteria": [
+    {
+      "criterion_id": "criterion.task.m01.931bf5bbc699.c01",
+      "evidence_ids": [
+        "pyserver/tests/test_generation_contract.py",
+        "command:.venv/bin/python -m pytest pyserver/tests -q => 63 passed (main independent run 2026-09-28)",
+        "docs/local-generation-contract.md",
+        "docs/validation-assets/m01-public-yellowstone-first-run.json",
+        "docs/generated-evidence/m01/qwen-probe.json",
+        "git:37ecdc75a5977974c44f43c76cf5ac1c2093d752"
+      ],
+      "required": true,
+      "reviewer": "codex-main-astra",
+      "state": "passed",
+      "title": "手帐/视频/分镜共用的素材资格与任务DTO形成可运行契约：仅selected-photos中的本行程有效photoId、original版本；空/缺清单、不存在/越行程/未入选ID明确拒绝。任务固定选优批次与清单快照，清单替换不会隐式换图。",
+      "version": 2
+    },
+    {
+      "criterion_id": "criterion.task.m01.931bf5bbc699.c02",
+      "evidence_ids": [
+        "commit:22ece786612101ea7120490a046368e609455960",
+        "docs/validation-assets/m01-model-hashes.json",
+        "docs/generated-evidence/m01/qwen-probe.json",
+        "docs/generated-evidence/m01/qwen-app-preview.png",
+        "docs/generated-evidence/m01/h3-app-preview.png",
+        "docs/generated-evidence/m01/h3-engine.json",
+        "docs/generated-evidence/m01/workflow-switch.json",
+        "docs/generated-evidence/m01/framing-real-probe.json",
+        "docs/generated-evidence/m01/framing-cover-probe.mp4"
+      ],
+      "required": true,
+      "reviewer": "codex-main-astra",
+      "state": "passed",
+      "title": "本地Qwen/H3的实际模型、Comfy与节点版本、UI/API工作流和参数schema有记录；seed真实生效；工作流变更不影响已排队任务。手帐3:2及视频严格16:9输出策略明确且实证可用；APP mode版本可用性已核验。",
+      "version": 2
+    },
+    {
+      "criterion_id": "criterion.task.m01.931bf5bbc699.c03",
+      "evidence_ids": [
+        "commit:64a58750cf66a13e096137de789d69d85b55c546",
+        "docs/generated-evidence/m01/runtime-h3-restart.json",
+        "docs/generated-evidence/m01/runtime-concurrency-observation.json",
+        "docs/generated-evidence/m01/runtime-handoff-outcome.json",
+        "docs/generated-evidence/m01/runtime-h3-retry-deploy.json",
+        "docs/generated-evidence/m01/runtime-fault-cap-final.json",
+        "docs/generated-evidence/m01/runtime-loss-deploy.json",
+        "docs/generated-evidence/m01/runtime-loss-accepted.json",
+        "docs/generated-evidence/m01/runtime-loss-not-forwarded.json",
+        "docs/generated-evidence/m01/runtime-loss-final-read.json"
+      ],
+      "required": true,
+      "reviewer": "codex-main-astra",
+      "state": "passed",
+      "title": "复用并验证0ee6531控制器及单worker；图片/视频互斥、进度、失败有限重试、API重启后引擎队列/历史对账与产物恢复均有真实证据，不重复生成已完成镜头、不死循环轮询旧失败prompt。",
+      "version": 2
+    },
+    {
+      "criterion_id": "criterion.task.m01.931bf5bbc699.c04",
+      "evidence_ids": [
+        "commit:976d2a63db10cfacd96846e28fbc5a78bac822c7",
+        "commit:ddccf99",
+        "docs/local-generation-handoff.md",
+        "docs/local-generation-contract.md",
+        "docs/generated-evidence/m01/handoff-api-readonly.json",
+        "docs/generated-evidence/m01/handoff-ffmpeg-compare.json",
+        "docs/generated-evidence/m01/handoff-verification.json",
+        "docs/generated-evidence/m01/framing-real-probe.json",
+        "docs/generated-evidence/m01/runtime-loss-accepted.json"
+      ],
+      "required": true,
+      "reviewer": "codex-main-astra",
+      "state": "passed",
+      "title": "向下游交付独立手帐/分镜/视频所需公共DTO、提交/状态/结果/错误基础契约与可运行基础设施，附真实本地图片和H3单镜头探针；完整手帐、Step分镜及成片业务由M02/M03实现，不作为本task前置。已有旅行/选优/精修接口保持可用；未验证不标通过。",
+      "version": 2
+    }
+  ]
+}

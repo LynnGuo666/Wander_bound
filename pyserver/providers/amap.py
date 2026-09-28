@@ -6,6 +6,8 @@ import math
 
 import httpx
 
+from .amap_quota import consume as consume_quota
+
 
 async def _get(path: str, params: dict, timeout: float = 8) -> dict:
     async with httpx.AsyncClient(timeout=timeout) as client:
@@ -31,6 +33,8 @@ async def search_dining(city: str, anchors: list[dict], key: str | None) -> list
     points = [point for point in anchors if _number(point.get("lat")) is not None and _number(point.get("lng")) is not None][:7]
 
     async def around(point: dict):
+        # 每次周边检索计一次 POI 搜索配额（place/around 属于 POI 搜索计费项）。
+        await consume_quota("poi")
         data = await _get("place/around", {"key": key, "location": f"{point['lng']:.6f},{point['lat']:.6f}",
                                            "city": city, "types": "050000", "radius": 1800, "sortrule": "weight",
                                            "offset": 15, "extensions": "all"})
@@ -78,6 +82,8 @@ async def route_minutes(origin: dict, destination: dict, city: str, key: str) ->
               "destination": f"{destination['lng']},{destination['lat']}"}
     if not walking:
         params["city"] = city
+    # 路径规划属于基础 LBS 计费项。
+    await consume_quota("lbs")
     payload = await _get("direction/walking" if walking else "direction/transit/integrated", params)
     route = payload.get("route") or {}
     path = ((route.get("paths") or [None])[0] if walking else (route.get("transits") or [None])[0])
