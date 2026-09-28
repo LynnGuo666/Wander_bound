@@ -12,9 +12,9 @@ function ProgressBar({ percent, label }) {
   return <div role="progressbar" aria-label={label} aria-valuemin={percent == null ? undefined : 0} aria-valuemax={percent == null ? undefined : 100} aria-valuenow={percent == null ? undefined : percent} aria-valuetext={percent == null ? `${label}，正在进行` : `${label}，约 ${percent}%`} className="h-2 overflow-hidden rounded-full bg-muted"><div className={`h-full rounded-full bg-primary ${percent == null ? 'w-1/3 animate-pulse' : 'transition-[width] duration-500'}`} style={percent == null ? undefined : { width: `${percent}%` }} /></div>;
 }
 
-export default function InferenceView() {
+export default function InferenceView({ initialToken = '' }) {
   const [status, setStatus] = useState(null);
-  const [token, setToken] = useState('');
+  const [token, setToken] = useState(initialToken);
   const [message, setMessage] = useState('请用两句话介绍你自己。');
   const [answer, setAnswer] = useState('');
   const [error, setError] = useState('');
