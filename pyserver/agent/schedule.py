@@ -29,7 +29,8 @@ def select_outbound(state: dict) -> dict | None:
     valid = [item for item in offers if _timestamp(item, "departureAt") and _timestamp(item, "arrivalAt")]
     if not valid:
         return None
-    high_speed = "高铁" in str((state.get("preferences") or {}).get("transportPreference") or "")
+    preference = str((state.get("preferences") or {}).get("transportPreference") or "").lower()
+    high_speed = mode == "train" and not any(value in preference for value in ("普速", "普通列车", "slow"))
     def score(item: dict):
         dep = _timestamp(item, "departureAt")
         arr = _timestamp(item, "arrivalAt")

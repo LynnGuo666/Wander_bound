@@ -39,7 +39,7 @@ def test_longer_trip_keeps_middle_days_for_verified_places():
 
 def test_daylight_high_speed_train_is_selected_over_midnight_or_slow_train():
     state = _state(3)
-    state["preferences"] = {"transportPreference": "高铁"}
+    state["preferences"] = {"transportPreference": "train"}
     state["trains"] = [
         {"id": "midnight", "trainNumber": "G100", "departureAt": "2026-10-02T00:04:00",
          "arrivalAt": "2026-10-02T00:33:00", "totalPrice": 75},
