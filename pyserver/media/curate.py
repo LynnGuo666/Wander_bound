@@ -10,13 +10,17 @@ from .quality import quality, hamming
 DUP_THRESHOLD = 12
 
 
-def curate_trip(media, trip_id: str, target: int | None = None) -> dict:
+def curate_trip(media, trip_id: str, target: int | None = None,
+                photo_ids: list[str] | None = None) -> dict:
     """给一个行程跑 L0 选优：逐张打质量分，连拍去重只留最清晰的一张，按清晰度排序，
     传了 target 就截到目标张数。只算能测的指标，不调 VLM。返回 counts 概览、每张的
     verdict（keep/drop/dup/overflow）和入选照片 id 列表。
     """
     scored = []
+    included = set(photo_ids) if photo_ids is not None else None
     for photo in media.list(trip_id):
+        if included is not None and photo["id"] not in included:
+            continue
         data = media.bytes(photo["id"])
         if not data:
             continue

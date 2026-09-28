@@ -102,7 +102,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
     async def sticker_image(sticker_id: str, request: Request):
         require_media_auth(request)
         item = stickers.get(sticker_id)
-        if not item:
+        if not item or not trips.get(item.get("tripId", "")):
             raise HTTPException(404, "贴纸不存在")
         path = stickers.root / f"{sticker_id}.png"
         if item.get("status") != "succeeded" or not path.is_file():

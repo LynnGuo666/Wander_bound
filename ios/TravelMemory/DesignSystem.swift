@@ -1,12 +1,22 @@
 import SwiftUI
 
 enum Palette {
-    static let forest = Color(red: 0.13, green: 0.34, blue: 0.27)
-    static let ink = Color(red: 0.11, green: 0.22, blue: 0.19)
-    static let muted = Color(red: 0.43, green: 0.54, blue: 0.47)
-    static let canvas = Color(red: 0.96, green: 0.97, blue: 0.94)
-    static let pale = Color(red: 0.89, green: 0.94, blue: 0.88)
-    static let coral = Color(red: 0.95, green: 0.43, blue: 0.31)
+    static let brandForest = Color(red: 0.14, green: 0.34, blue: 0.29)
+    static let forest = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? UIColor(red: 0.55, green: 0.82, blue: 0.68, alpha: 1)
+        : UIColor(red: 0.14, green: 0.34, blue: 0.29, alpha: 1)
+    })
+    static let ink = Color.primary
+    static let muted = Color.secondary
+    static let canvas = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? UIColor(red: 0.08, green: 0.13, blue: 0.11, alpha: 1)
+        : UIColor(red: 0.96, green: 0.95, blue: 0.91, alpha: 1)
+    })
+    static let pale = Color(uiColor: .secondarySystemBackground)
+    static let coral = Color(uiColor: UIColor { trait in
+        trait.userInterfaceStyle == .dark ? UIColor(red: 0.91, green: 0.64, blue: 0.49, alpha: 1)
+        : UIColor(red: 0.62, green: 0.36, blue: 0.24, alpha: 1)
+    })
 }
 
 struct Surface<Content: View>: View {
@@ -16,7 +26,7 @@ struct Surface<Content: View>: View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(18)
-            .background(.white, in: RoundedRectangle(cornerRadius: 20))
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 20))
     }
 }
 

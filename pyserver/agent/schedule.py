@@ -64,15 +64,17 @@ def day_windows(state: dict) -> dict[str, tuple[datetime, datetime]]:
     return_offer = select_return(state)
     outbound = _timestamp(outbound_offer, "arrivalAt") if outbound_offer else None
     inbound = _timestamp(return_offer, "departureAt") if return_offer else None
+    outbound_mode = "train" if outbound_offer in (state.get("trains") or []) else "flight"
+    return_mode = "train" if return_offer in (state.get("returnTrains") or []) else "flight"
     windows = {}
     for index in range(state["days"]):
         day = start + timedelta(days=index)
         lower = datetime.combine(day, time(9))
         upper = datetime.combine(day, time(21))
         if outbound:
-            lower = max(lower, outbound + timedelta(hours=1))
+            lower = max(lower, outbound + timedelta(minutes=(20 if outbound_mode == "train" else 45) + 25))
         if inbound:
-            upper = min(upper, inbound - timedelta(hours=1))
+            upper = min(upper, inbound - timedelta(minutes=45 if return_mode == "train" else 120))
         if upper - lower >= timedelta(hours=2):
             windows[day.isoformat()] = (lower, upper)
     return windows

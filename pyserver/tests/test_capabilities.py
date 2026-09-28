@@ -20,7 +20,7 @@ def test_capabilities_use_live_docker_tools(tmp_path, monkeypatch):
                      media=MediaStore(tmp_path / "media"))
 
     async def scenario():
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test", headers={"Authorization": "Bearer legacy-test"}) as client:
             data = (await client.post("/api/capabilities", json={})).json()
             assert data["connections"]["dida"]["tools"][0]["name"] == "dida_search_hotels"
             assert data["connections"]["travelData"]["discovery"] == "runtime"

@@ -6,7 +6,7 @@ def initial_state(request: dict) -> dict:
     days = request.get("days")
     return {"destination": str(request.get("destination") or "").strip(), "originCity": str(request.get("originCity") or memory.get("homeCity") or "").strip(),
             "days": int(days) if days not in (None, "") else None, "startDate": str(request.get("startDate") or ""),
-            "totalBudgetCny": None, "requiredStays": [], "interests": memory.get("interests") or [],
+            "totalBudgetCny": None, "requiredStays": [], "request": {"location": request.get("location")}, "interests": memory.get("interests") or [],
             "preferences": memory.get("preferences") or {},
             "places": [], "discoveredCities": [], "trains": [], "returnTrains": [], "flights": [], "returnFlights": [],
             "providerStatus": {}, "hotels": [], "plan": None, "pendingQuestion": None,

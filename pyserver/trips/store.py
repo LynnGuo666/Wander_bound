@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from threading import RLock
 from .presentation import now, public_trip
+from ..accounts import current_user
 
 ID = re.compile(r"^[a-f0-9-]{36}$")
 
@@ -23,7 +24,9 @@ class TripStore:
         if not ID.fullmatch(trip_id or ""):
             return None
         try:
-            return json.loads((self.root / f"{trip_id}.json").read_text())
+            trip = json.loads((self.root / f"{trip_id}.json").read_text())
+            user = current_user.get()
+            return trip if user is None or trip.get("ownerId") == user["id"] else None
         except (FileNotFoundError, json.JSONDecodeError):
             return None
 
@@ -39,6 +42,7 @@ class TripStore:
 
     def create(self, request: dict) -> dict:
         trip = {"id": str(uuid.uuid4()), "title": str(request.get("query") or "新行程")[:80],
+                "ownerId": (current_user.get() or {}).get("id"),
                 "createdAt": now(), "phase": "planning", "plan": None, "events": [], "revisions": [],
                 "request": request, "continuation": None}
         return self.save(trip)
