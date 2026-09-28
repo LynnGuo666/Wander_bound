@@ -1,0 +1,18 @@
+{
+  "before": "cf768f744d09f2de77ae54f8aa80102f612e9949",
+  "localCommit": "9173cde",
+  "fileHashes": {
+    "pyserver/media/storyboards.py": "d8461dcad940434e12d981b301a8a3a4acd00b1036472eba61e023aef35b96f5",
+    "pyserver/media/storyboard_routes.py": "57cef0fdebef4a9531d405878fa40f0f7e68ed0ed2bf4fafec870273ed005e90",
+    "pyserver/app.py": "be31930756dd30335a789e303797d2078f6224cf9930a62e3980ebb4762265ba",
+    "pyserver/tests/test_storyboards.py": "e4c6fcb1c112e25f43053ad0b38e8316ed74ce309d9075fd19387ee623868932"
+  },
+  "tests": {
+    "exitCode": 0,
+    "stdout": "............                                                             [100%]\n12 passed in 3.35s\n",
+    "stderr": ""
+  },
+  "after": "6c5fc9b169e7acb69809ac42b393bab7ec5021ee",
+  "gitStatus": "",
+  "deployed": true
+}

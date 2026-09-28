@@ -1,0 +1,93 @@
+{
+  "reviewer": "codex-main-astra",
+  "kind": "local-model-preset-validation",
+  "productApiValidated": false,
+  "selectedPhotoId": "199b155d-0c14-4673-8d25-5de27f175676",
+  "items": [
+    {
+      "styleId": "watercolor",
+      "file": "watercolor-v11.jpg",
+      "sha256": "63322c4c65d304a835e4f4fc0120e8b7ef67d1eb86ce93a19fb177de110d2c85",
+      "dimensions": [
+        1248,
+        832
+      ],
+      "jobId": "6d8bde76-95ed-4887-b1fb-b2d459d32861",
+      "promptId": "8676ada8-8be3-476e-9204-755efc83dcd1",
+      "seed": 2026092901,
+      "workflowSnapshotSha256": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+      "startedAt": "2026-09-28T22:53:30.599430+08:00",
+      "completedAt": "2026-09-28T22:54:00.865750+08:00",
+      "elapsedSeconds": 30.26632,
+      "observation": "v1.1透明水彩色块覆盖山坡与树林，纸纹柔和；较v1摄影细节明显减少。"
+    },
+    {
+      "styleId": "papercut",
+      "file": "papercut-v11.jpg",
+      "sha256": "0b1f2afa9bcccada216536d1c2ca73c6b619c9e15af6bd679904eaf3bedf4904",
+      "dimensions": [
+        1248,
+        832
+      ],
+      "jobId": "055f8f6e-8fa6-445c-a008-43f6053059b8",
+      "promptId": "1967552e-3ca2-4d43-a9e8-1321a1398550",
+      "seed": 2026092902,
+      "workflowSnapshotSha256": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+      "startedAt": "2026-09-28T22:54:00.953458+08:00",
+      "completedAt": "2026-09-28T22:54:31.244427+08:00",
+      "elapsedSeconds": 30.290969,
+      "observation": "v1.1山体/云/树为分层卡纸，切边与投影清楚；v1主场景偏摄影，保留失败样。"
+    },
+    {
+      "styleId": "clay",
+      "file": "clay-v1.jpg",
+      "sha256": "bdcc3e7eea968e520d6dea2b2287b57e93f370a4973e14e0bae84700a408c2dd",
+      "dimensions": [
+        1248,
+        832
+      ],
+      "jobId": "6d6b9ece-6d9d-4ea3-a6ba-df07cfcaddac",
+      "promptId": "87fc2edb-d970-42c1-9daa-3d3e7c6fca5e",
+      "seed": 2026092903,
+      "workflowSnapshotSha256": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+      "startedAt": "2026-09-28T22:50:39.717155+08:00",
+      "completedAt": "2026-09-28T22:51:09.971550+08:00",
+      "elapsedSeconds": 30.254395,
+      "observation": "圆润树冠与草丛塑形明显，微缩浮雕感；表面仍有粗糙颗粒，区别于水彩和剪纸。"
+    },
+    {
+      "styleId": "halftone",
+      "file": "halftone-v1.jpg",
+      "sha256": "940fa77f7cf3d74845de723473c48ec4082ec6c29c85e5ba55c084129b010c00",
+      "dimensions": [
+        1248,
+        832
+      ],
+      "jobId": "2a96c54f-d019-4611-9069-a38384a32af9",
+      "promptId": "63640ee0-f6e4-4fad-82a1-77231a6edbf8",
+      "seed": 2026092904,
+      "workflowSnapshotSha256": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+      "startedAt": "2026-09-28T22:51:10.056114+08:00",
+      "completedAt": "2026-09-28T22:51:40.327134+08:00",
+      "elapsedSeconds": 30.27102,
+      "observation": "场景与贴纸均有墨线及网点，有限印刷配色明显。"
+    },
+    {
+      "styleId": "pixel",
+      "file": "pixel-v1.jpg",
+      "sha256": "f7d88692d40dd3feeabebf62da7b4e5c221c1a021b111b8ae62255977217b168",
+      "dimensions": [
+        1248,
+        832
+      ],
+      "jobId": "e991e93f-6b60-46a9-8f62-e44fb771e047",
+      "promptId": "1df9ec15-e42b-4a92-bc28-b4422d8bd707",
+      "seed": 2026092905,
+      "workflowSnapshotSha256": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+      "startedAt": "2026-09-28T22:51:40.413693+08:00",
+      "completedAt": "2026-09-28T22:52:10.674306+08:00",
+      "elapsedSeconds": 30.260613,
+      "observation": "场景与贴纸具有方形像素簇、阶梯轮廓，细节与原景对应。"
+    }
+  ]
+}

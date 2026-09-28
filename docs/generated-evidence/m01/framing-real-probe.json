@@ -1,0 +1,167 @@
+{
+  "audio": {
+    "codec": "aac",
+    "interpretation": "non-silent; content/licensing/source not established",
+    "volume_max_db": -11.9,
+    "volume_mean_db": -28.8
+  },
+  "deployment": {
+    "archived_parent": "d055caed1c290b81baad1d57dcfab46cc25621db",
+    "archived_paths": [
+      "pyserver/media/comfy.py",
+      "pyserver/media/workflow_versions.py",
+      "pyserver/tests/test_workflow_versions.py",
+      "workflows/model-manifest.json"
+    ],
+    "archived_remote_commit": "f4aea97abb70bc044708cba32990218b10217257",
+    "base_head": "d055caed1c290b81baad1d57dcfab46cc25621db",
+    "reviewed_source_commit": "22ece786612101ea7120490a046368e609455960",
+    "worktree_clean_after_archive": true
+  },
+  "engine_evidence": {
+    "clip_embedded_metadata_supporting_only": {
+      "fps": 24.0,
+      "frames": 124,
+      "height": 576,
+      "seed": 2026092802,
+      "width": 1024
+    },
+    "comfy_history": {
+      "observations": "running: history_record_missing; after controller stopped H3: ConnectError",
+      "obtained": false
+    }
+  },
+  "observed_result": {
+    "clip_sha256": "93cad7ed7863f97accd03450d4c144a1228e16a9430ab8ca6e220662b3226d60",
+    "completed_at": "2026-09-28T21:51:04.365530+08:00",
+    "engine_clip_ffprobe": {
+      "duration": "5.166667",
+      "height": 576,
+      "nb_frames": "124",
+      "r_frame_rate": "24/1",
+      "width": 1024
+    },
+    "extra_frame_interpretation": "Observed in final FFmpeg-composed output; cause not established. Engine single clip preserves requested 124 frames.",
+    "ffprobe": {
+      "format": {
+        "duration": "5.216000",
+        "size": "882193"
+      },
+      "programs": [],
+      "streams": [
+        {
+          "codec_name": "h264",
+          "codec_type": "video",
+          "height": 576,
+          "index": 0,
+          "nb_frames": "125",
+          "r_frame_rate": "24/1",
+          "width": 1024
+        },
+        {
+          "codec_name": "aac",
+          "codec_type": "audio",
+          "index": 1,
+          "nb_frames": "163",
+          "r_frame_rate": "0/0"
+        }
+      ]
+    },
+    "final_video_extra_frame_vs_engine_clip": 1,
+    "full_cpu_decode_exit": 0,
+    "old_job_and_clip_unchanged": true,
+    "prompt_id": "f07c21de-2fc4-4440-a4b7-9cdfa7051575",
+    "started_at": "2026-09-28T21:38:14.489790+08:00",
+    "status": "succeeded",
+    "video_http_status": 200,
+    "video_path": "docs/generated-evidence/m01/framing-cover-probe.mp4",
+    "video_sha256": "188bf8c4d2ca5f68b8b61f2337b44f28b366b102cc361d95db648aa1835e2fe7"
+  },
+  "probe": "H3 1.1.0 selected-original cover; one real formal API job through shared controller",
+  "raw_local_receipts": [
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-preflight.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-deploy.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-submit.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-resource-samples.jsonl",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-result.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-archive.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-audio-volumedetect.txt",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-border-metrics.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-motion-metrics.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-engine-clip-ffprobe.json"
+  ],
+  "request": {
+    "http_status": 202,
+    "input_policy": "contain-or-cover-v2",
+    "job_id": "ad2e7823-3ecb-4de0-b1d4-e15312ef6da5",
+    "original_sha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048",
+    "parameters": {
+      "aspect_ratio": "16:9",
+      "fit_mode": "cover",
+      "fps": 24,
+      "frames": 124
+    },
+    "photo_id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+    "seed": 2026092802,
+    "selection_batch": "m01-public-yellowstone-20260928-v1",
+    "selection_hash": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7",
+    "snapshot_hash": "adc4edf35102fc8f188857775d58a9e8cdc2e0a46cea69ce4adee04ace6cc01e",
+    "trip_id": "c2712842-c987-4347-938b-b6bc6fa7905e",
+    "workflow_hash": "62381c8c06402ce1e39b3175caf87b7c1a6cbac53a3395a7990246a5cb1d6a72",
+    "workflow_id": "travel.minimax-h3.i2v",
+    "workflow_version": "1.1.0"
+  },
+  "resource_samples": {
+    "count": 15,
+    "first_utc": "2026-09-28T13:37:36.559236+00:00",
+    "last_utc": "2026-09-28T13:51:26.863582+00:00",
+    "peak_memory": null,
+    "sampled_gpu_utilization_percent_max": 96.0,
+    "sampled_host_memavailable_gib_min": 44.9,
+    "source": "pyserver/inference/controller.py:_memory reads Linux /proc/meminfo MemAvailable and exposes memory.availableGiB; this is system RAM, not GPU VRAM"
+  },
+  "schema_version": 1,
+  "visual_review": {
+    "browser_taskspace": 7,
+    "crop_cost": "source 1920x1227 center-cropped to 1920x1080 before 1024x576 upload; 147 vertical pixels (11.98%) lost total; top/bottom context reduced",
+    "limitations": "Subjective review of one five-second probe; not a five-style or 20-second business acceptance",
+    "observed_dynamic": "steam/cloud motion and slow camera movement; boardwalk and spring remain recognizable; no conspicuous flash or gross geometry collapse in full playback and 1-4 second frames",
+    "old_vs_cover_white_edge_fraction_at_x5_and_x1018": {
+      "cover": [
+        {
+          "file": "framing-first.png",
+          "left_white_fraction": 0.0,
+          "right_white_fraction": 0.0
+        },
+        {
+          "file": "framing-middle.png",
+          "left_white_fraction": 0.0,
+          "right_white_fraction": 0.0
+        },
+        {
+          "file": "framing-last.png",
+          "left_white_fraction": 0.0,
+          "right_white_fraction": 0.0
+        }
+      ],
+      "old": [
+        {
+          "file": "h3-frame-0.png",
+          "left_white_fraction": 1.0,
+          "right_white_fraction": 1.0
+        },
+        {
+          "file": "h3-frame-1.png",
+          "left_white_fraction": 1.0,
+          "right_white_fraction": 1.0
+        },
+        {
+          "file": "h3-frame-2.png",
+          "left_white_fraction": 1.0,
+          "right_white_fraction": 1.0
+        }
+      ]
+    },
+    "player_full_playback_ended": true
+  }
+}
