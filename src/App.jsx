@@ -11,6 +11,7 @@ const TripsView = React.lazy(() => import('./views/TripsView.jsx'));
 const TravelView = React.lazy(() => import('./views/TravelView.jsx'));
 const MemoryView = React.lazy(() => import('./views/MemoryView.jsx'));
 const SettingsView = React.lazy(() => import('./views/SettingsView.jsx'));
+const DebugView = React.lazy(() => import('./views/DebugView.jsx'));
 const NAV = [['trips', Compass, '行程'], ['travel', BookOpen, '旅途'], ['profile', UserRound, '我的'], ['settings', Settings2, '设置']];
 
 function readMediaToken() {
@@ -18,7 +19,7 @@ function readMediaToken() {
 }
 
 export default function App() {
-  const [view, setView] = useState('trips');
+  const [view, setView] = useState(() => new URLSearchParams(window.location.search).has('debug') ? 'debug' : 'trips');
   const [trips, setTrips] = useState([]);
   const [tripError, setTripError] = useState('');
   const [memory, setMemory] = useState(() => normalizeMemory(readStored('travel-memory-v1', DEFAULT_MEMORY)));
@@ -55,6 +56,13 @@ export default function App() {
     setMediaToken(value);
     try { if (value) sessionStorage.setItem('travel-media-token', value); else sessionStorage.removeItem('travel-media-token'); } catch { /* Session-only fallback. */ }
   }
+  function navigate(next) {
+    const url = new URL(window.location.href);
+    if (next === 'debug') url.searchParams.set('debug', '1');
+    else url.searchParams.delete('debug');
+    window.history.replaceState(null, '', url);
+    setView(next);
+  }
   function addVisitedCity() {
     const name = newCity.trim().replace(/市$/, '');
     if (name) { updateMemory({ visitedCities: [...new Set([...memory.visitedCities, name])] }); setNewCity(''); }
@@ -65,15 +73,16 @@ export default function App() {
   }
 
   return <div className="travel-app">
-    <header className="site-header"><div className="header-inner"><button className="brand" onClick={() => setView('trips')} aria-label="行驿，返回行程"><span className="brand-mark"><Compass size={23} strokeWidth={1.8} /></span><span><strong>行驿</strong><small>TRAVEL STORIES</small></span></button>
-      <nav className="primary-nav" aria-label="主导航">{NAV.map(([id, Icon, label]) => <button key={id} type="button" className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => setView(id)}><Icon size={18} strokeWidth={1.8} /><span>{label}</span></button>)}</nav>
+    <header className="site-header"><div className="header-inner"><button className="brand" onClick={() => navigate('trips')} aria-label="行驿，返回行程"><span className="brand-mark"><Compass size={23} strokeWidth={1.8} /></span><span><strong>行驿</strong><small>TRAVEL STORIES</small></span></button>
+      <nav className="primary-nav" aria-label="主导航">{NAV.map(([id, Icon, label]) => <button key={id} type="button" className={view === id ? 'active' : ''} aria-current={view === id ? 'page' : undefined} onClick={() => navigate(id)}><Icon size={18} strokeWidth={1.8} /><span>{label}</span></button>)}</nav>
       <span className={`connection-indicator ${health?.ok ? 'online' : ''}`} title={health?.ok ? '规划服务已连接' : '规划服务未连接'}><i />{health?.ok ? '旅程已就绪' : '连接中'}</span>
     </div></header>
     <main className="app-main" id="main-content"><Suspense fallback={<div className="loading-page">正在打开旅程…</div>}>
       {view === 'trips' ? <TripsView trips={trips} refreshTrips={refreshTrips} currentTripId={tripId} currentPlan={plan} form={form} update={update} onGenerate={() => run({ ...form, memory })} events={events} error={error || tripError} running={running} onCancel={cancel} onOpenTrip={openTrip} onRevise={reviseTrip} token={mediaToken} /> : null}
-      {view === 'travel' ? <TravelView trips={trips} token={mediaToken} onOpenSettings={() => setView('settings')} /> : null}
+      {view === 'travel' ? <TravelView trips={trips} token={mediaToken} onOpenSettings={() => navigate('settings')} /> : null}
       {view === 'profile' ? <MemoryView memory={memory} trips={trips} destination={form.destination} updateMemory={updateMemory} setOriginCity={value => update('originCity', value)} newCity={newCity} setNewCity={setNewCity} addVisitedCity={addVisitedCity} newPlace={newPlace} setNewPlace={setNewPlace} addVisitedPlace={addVisitedPlace} /> : null}
-      {view === 'settings' ? <SettingsView onSaved={refreshHealth} mediaToken={mediaToken} onMediaTokenChange={updateMediaToken} health={health} /> : null}
+      {view === 'settings' ? <SettingsView mediaToken={mediaToken} onMediaTokenChange={updateMediaToken} health={health} onOpenDebug={() => navigate('debug')} /> : null}
+      {view === 'debug' ? <DebugView mediaToken={mediaToken} onSaved={refreshHealth} onBack={() => navigate('settings')} /> : null}
     </Suspense></main>
     <footer className="site-footer"><span>行驿 · 留下每一次出发</span><span>你的日记保存在当前浏览器，照片保存在私有相册。</span></footer>
     <Toaster viewportClassName="max-w-2xl" />
