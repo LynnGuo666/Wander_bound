@@ -38,14 +38,21 @@ class MediaStore:
     def add(self, image_bytes: bytes, trip_id: str, captured_day: str | None) -> dict:
         if len(image_bytes) > 15 * 1024 * 1024:
             raise ValueError("图片不能超过 15 MB")
-        if captured_day:
-            date.fromisoformat(captured_day)
         normalized, width, height = images.normalize(image_bytes)
+        exif = images.extract_exif(image_bytes)
+        captured_at = exif.get("capturedAt")
+        day = captured_day or exif.get("capturedDay")
+        if day:
+            try:
+                date.fromisoformat(day)
+            except ValueError:
+                day = None
         photo_id = str(uuid.uuid4())
         self._dirs()
         (self.photos_dir / f"{photo_id}.jpg").write_bytes(normalized)
-        photo = {"id": photo_id, "tripId": trip_id, "capturedDay": captured_day, "width": width,
-                 "height": height, "analysis": {"width": width, "height": height},
+        photo = {"id": photo_id, "tripId": trip_id, "capturedDay": day, "capturedAt": captured_at,
+                 "gps": exif.get("gps"), "width": width, "height": height,
+                 "analysis": {"width": width, "height": height}, "exif": exif,
                  "variants": [], "createdAt": now()}
         (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
         os.chmod(self.photos_dir / f"{photo_id}.jpg", 0o600)

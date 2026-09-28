@@ -2,7 +2,85 @@
 from __future__ import annotations
 
 import io
+import math
 from PIL import Image, ImageEnhance, ImageOps
+
+def _to_float(value):
+    if value is None:
+        return None
+    try:
+        if isinstance(value, (tuple, list)) and len(value) == 2:
+            numerator, denominator = value
+            return float(numerator) / float(denominator) if denominator else float(numerator)
+        return float(value)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+
+
+def _dms_to_deg(dms, ref):
+    if not dms or len(dms) != 3:
+        return None
+    parts = [_to_float(part) or 0.0 for part in dms]
+    deg = parts[0] + parts[1] / 60 + parts[2] / 3600
+    if str(ref).upper() in ("S", "W"):
+        deg = -deg
+    return round(deg, 6)
+
+
+def extract_exif(image_bytes: bytes) -> dict:
+    """抽取结构化 EXIF（时间/GPS/设备/三要素+EV）作选片信号；解析失败返回 {}，不阻断上传。
+
+    对外下载的是 normalize 去 EXIF 后的 JPEG，位置不会泄露。
+    """
+    result: dict = {}
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        exif = image.getexif()
+        exif_ifd = exif.get_ifd(0x8769)
+        captured = exif_ifd.get(0x9003) or exif.get(0x0132)
+        if captured:
+            text = str(captured).strip()
+            if text:
+                result["capturedAt"] = text
+                result["capturedDay"] = text[:10].replace(":", "-")
+        make = exif.get(0x010F)
+        model = exif.get(0x0110)
+        if make:
+            result["cameraMake"] = str(make).strip().strip("\x00")
+        if model:
+            result["cameraModel"] = str(model).strip().strip("\x00")
+        focal = _to_float(exif_ifd.get(0x920A))
+        if focal is not None:
+            result["focalLength"] = round(focal, 1)
+        if exif_ifd.get(0x9209) is not None:
+            result["flash"] = int(exif_ifd.get(0x9209))
+        f_number = _to_float(exif_ifd.get(0x829D))
+        exposure = _to_float(exif_ifd.get(0x829A))
+        iso = exif_ifd.get(0x8827)
+        iso = int(iso) if iso is not None else None
+        if f_number:
+            result["fNumber"] = round(f_number, 1)
+        if exposure:
+            result["exposureTime"] = exposure
+        if iso:
+            result["iso"] = iso
+        if f_number and exposure and exposure > 0 and iso:
+            ev = math.log2((f_number * f_number) / (exposure * (iso / 100.0)))
+            result["exposureValue"] = round(ev, 2)
+            result["lighting"] = "bright" if ev >= 12 else ("normal" if ev >= 8 else "low-light")
+        gps = exif.get_ifd(0x8825)
+        if gps:
+            lat = _dms_to_deg(gps.get(1), gps.get(2))
+            lon = _dms_to_deg(gps.get(4), gps.get(3))
+            if lat is not None and lon is not None:
+                altitude = _to_float(gps.get(6))
+                result["gps"] = {"lat": lat, "lng": lon}
+                if altitude is not None:
+                    result["gps"]["alt"] = round(altitude, 1)
+    except Exception:
+        return {}
+    return result
+
 
 def normalize(image_bytes: bytes) -> tuple[bytes, int, int]:
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(image_bytes))).convert("RGB")
