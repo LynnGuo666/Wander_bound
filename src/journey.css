@@ -1,0 +1,203 @@
+.travel-app { min-height: 100vh; background: #f5f2e9; color: #25342d; }
+.travel-app button { transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
+.travel-app button:focus-visible, .travel-app a:focus-visible, .travel-app textarea:focus-visible, .travel-app input:focus-visible, .travel-app select:focus-visible { outline: 3px solid #d88e5d; outline-offset: 3px; }
+.site-header { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid #dfded5; background: #fbfaf6f2; backdrop-filter: blur(18px); }
+.header-inner { max-width: 1320px; min-height: 76px; margin: auto; padding: 0 32px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 0; border: 0; background: transparent; color: #213d35; text-align: left; }
+.brand-mark { display: grid; place-items: center; width: 43px; height: 43px; color: #fffaf2; background: #24574b; border-radius: 13px 13px 13px 4px; }
+.brand strong { display: block; font: 700 24px/1.1 'PingFang SC', sans-serif; letter-spacing: .14em; }
+.brand small { display: block; margin-top: 4px; font: 600 9px/1.2 'Geist Variable', sans-serif; letter-spacing: .26em; color: #8b958a; }
+.primary-nav { display: flex; align-items: center; gap: 5px; padding: 5px; background: #f0f1e9; border-radius: 100px; }
+.primary-nav button { min-width: 101px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border: 0; border-radius: 100px; color: #63736a; background: transparent; font-size: 14px; font-weight: 650; }
+.primary-nav button.active { background: #fffdf8; color: #214d41; box-shadow: 0 2px 12px #2b463717; }
+.primary-nav button:hover { color: #214d41; }
+.connection-indicator { white-space: nowrap; color: #8b958a; font-size: 12px; }
+.connection-indicator i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #a9aca5; }
+.connection-indicator.online i { background: #68a67e; box-shadow: 0 0 0 3px #d9eadb; }
+.app-main { max-width: 1320px; min-height: calc(100vh - 160px); margin: auto; padding: 36px 32px 84px; }
+.site-footer { display: flex; justify-content: space-between; gap: 20px; max-width: 1320px; margin: auto; padding: 24px 32px 34px; border-top: 1px solid #dddcd1; color: #869086; font-size: 12px; }
+.section-kicker { display: inline-flex; align-items: center; gap: 7px; color: #9e6c4e; font-size: 11px; font-weight: 800; letter-spacing: .19em; text-transform: uppercase; }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 0 0 24px; }
+.section-heading h2, .plan-composer h2, .revise-panel h2, .journal-create h2 { margin: 6px 0; font-family: Georgia, 'Songti SC', 'Noto Serif CJK SC', serif; font-size: clamp(24px, 2.8vw, 34px); font-weight: 600; line-height: 1.25; }
+.section-heading h2 span { color: #be9a78; font: 400 18px/1 Georgia, serif; vertical-align: top; }
+.section-heading p, .plan-composer p, .revise-panel p, .journal-create p { color: #78847b; font-size: 14px; line-height: 1.7; }
+.solid-button, .light-button, .outline-button { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 43px; padding: 0 18px; border-radius: 9px; font-size: 13px; font-weight: 750; }
+.solid-button { border: 1px solid #245a4b; background: #245a4b; color: white; }
+.solid-button:hover:not(:disabled) { background: #174536; transform: translateY(-2px); }
+.light-button { border: 1px solid #fffaee; background: #fffaee; color: #2e5548; }
+.light-button:hover { transform: translateY(-2px); box-shadow: 0 6px 18px #143b2a30; }
+.outline-button { border: 1px solid #9fb2a6; background: transparent; color: #265446; }
+.text-button, .icon-text-button { display: inline-flex; align-items: center; gap: 7px; padding: 6px 0; border: 0; background: transparent; color: #356b56; font-size: 13px; font-weight: 700; }
+.travel-app button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.page-enter { animation: page-in .35s ease both; }
+@keyframes page-in { from { opacity: .3; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.spin { animation: rotate 1s linear infinite; }
+@keyframes rotate { to { transform: rotate(360deg); } }
+.loading-page, .quiet-copy { color: #7d887e; font-size: 14px; line-height: 1.7; }
+.form-error, .form-success { padding: 11px 14px; border-radius: 8px; font-size: 13px; line-height: 1.5; }
+.form-error { background: #fff0ea; color: #9a4d3e; }
+.form-success { background: #e8f3e9; color: #306644; }
+
+.journeys-hero { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); min-height: 355px; overflow: hidden; border-radius: 24px; background: #234d40; color: #fffaf1; box-shadow: 0 20px 50px #2d493426; }
+.journeys-hero > div:first-child { align-self: center; position: relative; z-index: 1; padding: 42px 0 46px 55px; }
+.journeys-hero .section-kicker { color: #c8dfbb; }
+.journeys-hero h1 { margin: 17px 0 16px; font-family: Georgia, 'Songti SC', 'Noto Serif CJK SC', serif; font-size: clamp(33px, 3.6vw, 53px); font-weight: 600; line-height: 1.28; letter-spacing: .02em; }
+.journeys-hero h1 em { font-style: normal; color: #e3c99d; }
+.journeys-hero p { max-width: 365px; color: #d6e0d2; font-size: 14px; line-height: 1.75; }
+.journeys-hero .light-button { margin-top: 19px; }
+.hero-art { overflow: hidden; position: relative; }
+.hero-art:before { content: ''; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, #234d40, transparent 35%); }
+.hero-art img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.plan-composer { max-width: 880px; margin: 42px auto 56px; padding: 34px 38px; border: 1px solid #e8dfcf; border-radius: 20px; background: #fffcf5; box-shadow: 0 12px 35px #745b3910; }
+.composer-collapsed { display: none; }
+.plan-composer h2 { margin-top: 10px; }
+.plan-composer > p { margin: 3px 0 23px; }
+.plan-composer textarea, .plan-composer input, .revise-panel textarea, .journal-create input, .journal-create select { width: 100%; border: 1px solid #d8ddcf; border-radius: 9px; background: #fffefa; color: #28382e; }
+.plan-composer textarea, .revise-panel textarea { padding: 15px; resize: vertical; line-height: 1.6; }
+.plan-composer textarea::placeholder, .revise-panel textarea::placeholder { color: #a1a99f; }
+.plan-options { margin-top: 14px; color: #547164; font-size: 13px; }
+.plan-options summary { cursor: pointer; font-weight: 700; }
+.plan-options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-top: 16px; }
+.plan-options-grid label, .create-form label { display: grid; gap: 6px; color: #54675d; font-size: 12px; font-weight: 700; }
+.plan-options-grid input, .journal-create input, .journal-create select { min-height: 39px; padding: 8px 10px; }
+.plan-composer-actions { display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-top: 17px; }
+.plan-composer-actions > span { color: #98a199; font-size: 12px; }
+.plan-progress { display: flex; align-items: center; gap: 9px; margin-top: 20px; padding: 13px 15px; border-radius: 9px; background: #eaf3e9; color: #45634e; font-size: 13px; }
+.plan-progress button { margin-left: auto; border: 0; background: transparent; color: #8f5c4a; font-weight: 700; }
+.progress-dot { width: 8px; height: 8px; flex: none; border-radius: 50%; background: #72a780; animation: pulse 1.5s ease infinite; }
+@keyframes pulse { 50% { opacity: .25; } }
+.journey-list { margin-top: 48px; }
+.trip-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 23px; }
+.trip-card { padding: 0; overflow: hidden; border: 1px solid #e1ddd1; border-radius: 17px; background: #fffdf8; text-align: left; box-shadow: 0 8px 20px #44523c0b; }
+.trip-card:hover { transform: translateY(-5px); box-shadow: 0 16px 30px #44523c1b; }
+.trip-cover { position: relative; height: 202px; overflow: hidden; background: #52695e; }
+.trip-cover:after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, #1d302ac9 100%); }
+.trip-cover img { width: 100%; height: 100%; object-fit: cover; }
+.trip-cover-1 img { object-position: 68% 50%; filter: hue-rotate(20deg) saturate(.85); }
+.trip-cover-2 img { object-position: 25% 50%; filter: hue-rotate(-20deg) saturate(.9); }
+.trip-cover-3 img { object-position: 75% 60%; filter: sepia(.25); }
+.trip-cover-city { position: absolute; z-index: 1; bottom: 18px; left: 22px; color: white; font-family: Georgia, 'Songti SC', serif; font-size: 27px; font-weight: 700; text-shadow: 0 2px 12px #0008; }
+.trip-card-body { padding: 19px 22px 21px; }
+.trip-card-status, .status-pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 20px; background: #e8eee4; color: #53715e; font-size: 11px; font-weight: 750; }
+.trip-card h3 { margin: 12px 0 7px; font-size: 19px; font-weight: 750; }
+.trip-card p { display: flex; align-items: center; gap: 6px; margin: 0; color: #879186; font-size: 12px; }
+.trip-card-link { display: flex; justify-content: space-between; align-items: center; margin-top: 17px; padding-top: 13px; border-top: 1px solid #eeeee8; color: #2c6753; font-size: 12px; font-weight: 750; }
+.empty-panel { display: flex; min-height: 250px; flex-direction: column; align-items: center; justify-content: center; padding: 35px; border: 1px dashed #d6d4c7; border-radius: 17px; background: #faf9f3; color: #557263; text-align: center; }
+.empty-panel > svg { width: 35px; height: 35px; }
+.empty-panel h2, .empty-panel h3 { margin: 16px 0 5px; color: #33473a; font-size: 20px; }
+.empty-panel p { margin: 0; color: #889389; font-size: 13px; }
+
+.trip-detail > .text-button { margin-bottom: 20px; }
+.trip-cover-large { height: 290px; border-radius: 18px; }
+.trip-cover-large .trip-cover-city { left: 35px; bottom: 28px; font-size: 44px; }
+.trip-detail-head { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin: 32px 0 22px; }
+.trip-detail-head h1 { margin: 5px 0 7px; font-family: Georgia, 'Songti SC', serif; font-size: 38px; }
+.trip-detail-head p { display: flex; align-items: center; gap: 7px; color: #7d8b7f; font-size: 13px; }
+.trip-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; overflow: hidden; border: 1px solid #e3e4db; border-radius: 13px; background: #e3e4db; }
+.trip-facts span { display: grid; gap: 5px; padding: 19px 23px; background: #fffcf5; color: #879087; font-size: 12px; }
+.trip-facts strong { color: #375547; font-size: 18px; }
+.trip-days, .trip-photo-section { margin-top: 47px; }
+.trip-day { display: grid; grid-template-columns: 94px 1fr; gap: 21px; margin: 0 0 14px; padding: 25px; border: 1px solid #e2e2d8; border-radius: 14px; background: #fffdf7; }
+.day-number { padding: 5px 0; color: #c7a77f; font: italic 46px/1 Georgia, serif; }
+.day-heading { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 18px; border-bottom: 1px solid #ebebe2; }
+.day-heading h3 { margin: 0 0 4px; font-size: 19px; }
+.day-heading p { margin: 0; color: #8a9489; font-size: 12px; }
+.day-heading > span { color: #bba586; font: 700 12px Georgia, serif; white-space: nowrap; }
+.stop-list { margin: 0; padding: 0; list-style: none; }
+.stop-list li { display: grid; grid-template-columns: 57px 1fr auto; align-items: center; gap: 12px; padding: 13px 0; border-bottom: 1px solid #f0eee6; }
+.stop-list li:last-child { border: 0; }
+.stop-time { color: #9a765d; font-size: 12px; }
+.stop-list strong { display: block; font-size: 14px; }
+.stop-list small { color: #98a197; font-size: 11px; }
+.stop-list a { color: #46745b; }
+.trip-photo-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.trip-photo-grid img, .trip-photo-grid .media-placeholder { width: 100%; aspect-ratio: 1; border-radius: 9px; object-fit: cover; }
+.media-placeholder { display: grid; place-items: center; min-height: 140px; background: #e9e8df; color: #8b9388; font-size: 12px; text-align: center; }
+.revise-panel { display: grid; grid-template-columns: .7fr 1fr; gap: 35px; margin-top: 48px; padding: 30px; border-radius: 17px; background: #e8ede3; }
+.revise-panel form { display: grid; justify-items: end; gap: 10px; }
+.revise-panel textarea { background: #fcfff8; }
+
+.page-intro { margin: 15px 0 28px; }
+.page-intro h1 { margin: 8px 0 8px; font-family: Georgia, 'Songti SC', serif; font-size: clamp(32px, 3vw, 42px); }
+.page-intro p { margin: 0; color: #7e8a7e; font-size: 14px; }
+.travel-intro { display: flex; align-items: end; justify-content: space-between; }
+.journal-volume { color: #b09274; font: italic 26px Georgia, serif; }
+.binder-shell { display: grid; grid-template-columns: minmax(0, 1fr) 54px; align-items: start; }
+.binder-content { min-width: 0; }
+.binder-tabs { display: flex; flex-direction: column; gap: 7px; padding-top: 83px; }
+.binder-tabs button { min-height: 100px; border: 1px solid #d8d0bd; border-left: 0; border-radius: 0 11px 11px 0; background: #dfdfcf; color: #526254; font-size: 12px; font-weight: 800; writing-mode: vertical-rl; letter-spacing: .16em; }
+.binder-tabs button:nth-child(2) { background: #e7d6c4; }
+.binder-tabs button:nth-child(3) { background: #d6e1d4; }
+.binder-tabs button:nth-child(4) { background: #e9dfd0; }
+.binder-tabs button.active { width: 61px; margin-left: -7px; background: #fffaf0; color: #255d4b; box-shadow: 3px 3px 10px #5459471a; }
+.page-turn { display: flex; justify-content: space-between; align-items: center; gap: 15px; min-height: 49px; margin-bottom: 17px; color: #829083; font-size: 12px; }
+.page-turn button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: #386a56; font-size: 13px; font-weight: 700; }
+.page-turn-bottom { margin: 24px 54px 0 0; }
+.journal-book { position: relative; display: grid; grid-template-columns: 1fr 1fr; min-height: 650px; overflow: hidden; border: 1px solid #d6cbb4; border-radius: 14px 3px 3px 14px; background: #fefaf0; box-shadow: 14px 20px 30px #6d634a21, inset 6px 0 9px #b5a8892d; }
+.journal-book:before { content: ''; position: absolute; inset: 19px auto 18px 19px; width: 16px; z-index: 3; background: radial-gradient(circle, #6d7668 0 5px, transparent 5.5px) center top / 16px 88px repeat-y; opacity: .6; }
+.journal-spine { position: absolute; z-index: 2; left: 50%; top: 0; bottom: 0; width: 15px; transform: translateX(-50%); background: linear-gradient(90deg, #ac9e8060, #fffdf3, #bcb09560); }
+.journal-page { min-width: 0; padding: 33px 37px 37px 43px; }
+.journal-visual { background: #f7f1e3; }
+.journal-words { padding-left: 44px; background: #fffcf4; }
+.journal-label { margin-bottom: 16px; color: #ab8f6c; font: 700 10px/1 Georgia, serif; letter-spacing: .2em; }
+.journal-cover { position: relative; height: 210px; overflow: hidden; border: 8px solid #fffdf6; box-shadow: 0 9px 20px #776e5425; }
+.journal-cover:after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, #142e26be, transparent 75%); }
+.journal-cover img { width: 100%; height: 100%; object-fit: cover; }
+.journal-cover > div { position: absolute; z-index: 1; left: 20px; bottom: 16px; color: white; }
+.journal-cover span { font-size: 11px; }
+.journal-cover h2 { margin: 4px 0; font-family: Georgia, 'Songti SC', serif; font-size: 29px; }
+.journal-cover small { font-size: 11px; }
+.journal-sticker { width: 135px; height: 70px; margin: -10px -9px 0 auto; transform: rotate(-7deg); background: url('/art/journal-ephemera.webp') 52% 12% / 315px auto no-repeat; opacity: .9; }
+.journal-photo-header { display: flex; align-items: center; gap: 8px; margin: 13px 0; color: #42664e; font-size: 14px; font-weight: 800; }
+.journal-photo-header span, .journal-photo-header button { margin-left: auto; color: #a39a84; font-size: 11px; }
+.journal-photo-header button { border: 0; background: transparent; }
+.journal-photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; padding: 4px; }
+.polaroid { min-width: 0; margin: 0; padding: 7px 7px 13px; background: #fffefa; box-shadow: 0 5px 15px #60594925; }
+.polaroid-1 { transform: rotate(3deg); }
+.polaroid-2 { transform: rotate(-2deg); }
+.polaroid img, .polaroid .media-placeholder { width: 100%; aspect-ratio: 1.22; min-height: 0; object-fit: cover; }
+.polaroid figcaption { margin-top: 6px; color: #948e7d; font: italic 11px Georgia, serif; text-align: center; }
+.journal-photo-empty { display: grid; justify-items: center; gap: 8px; padding: 34px 15px; border: 1px dashed #c7c6b4; color: #9a9f91; text-align: center; }
+.journal-photo-empty p { margin: 0; font-size: 12px; }
+.journal-date { display: flex; justify-content: space-between; margin-bottom: 24px; padding-bottom: 13px; border-bottom: 1px solid #e6e2d6; color: #b09d7e; font: italic 13px Georgia, serif; }
+.journal-words h2 { margin: 8px 0; font-family: Georgia, 'Songti SC', serif; font-size: 27px; }
+.journal-note-hint { color: #8d978d; font-size: 12px; }
+.journal-note { display: block; width: 100%; min-height: 160px; margin-top: 16px; padding: 9px 0; border: 0; resize: vertical; outline: none; background: repeating-linear-gradient(to bottom, transparent 0 31px, #e4e1d4 32px); color: #405347; font-family: Georgia, 'Songti SC', serif; font-size: 15px; line-height: 32px; }
+.journal-note:focus { outline: 0 !important; box-shadow: inset 0 -2px #97ab99; }
+.journal-note::placeholder { color: #b5bbaf; }
+.journal-saved { display: flex; align-items: center; gap: 5px; margin: 7px 0 25px; color: #a4a99f; font-size: 11px; }
+.same-city-note { margin: 16px 0 25px; padding: 16px 19px; border: 1px solid #dacbb2; background: #f6edda; }
+.same-city-note h3 { margin: 7px 0; font-size: 16px; }
+.same-city-note p { margin: 0 0 8px; color: #758174; font-size: 12px; }
+.same-city-note div { display: flex; flex-wrap: wrap; gap: 6px; }
+.same-city-note div span { padding: 4px 7px; border-radius: 5px; background: #fff9ea; color: #5c705a; font-size: 11px; }
+.same-city-note button { margin-top: 8px; }
+.journal-works { border-top: 1px solid #e6e2d6; padding-top: 10px; }
+.work-list { display: grid; gap: 12px; }
+.work-item { padding: 10px; border: 1px solid #e6e4d9; background: #fffefa; }
+.work-item-title { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; font-size: 12px; }
+.work-item-title span { margin-left: auto; color: #818d80; font-size: 11px; }
+.work-image, .work-video { width: 100%; max-height: 270px; object-fit: contain; background: #f4f0e7; }
+.binder-empty { min-height: 630px; border-radius: 14px 0 0 14px; }
+.journal-create { display: grid; grid-template-columns: .85fr 1.15fr; gap: 24px 40px; margin: 40px 54px 0 0; padding: 28px; border: 1px solid #dedbcc; border-radius: 14px; background: #fffdf7; }
+.selection-list { display: flex; flex-wrap: wrap; align-content: start; gap: 8px; }
+.selection-list label { display: flex; align-items: center; gap: 7px; padding: 7px 10px; border: 1px solid #d9e2d5; border-radius: 7px; color: #55735d; font-size: 11px; }
+.selection-list input { width: auto; min-height: 0; }
+.create-form { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr) auto; align-items: end; gap: 12px; }
+.journal-create > .quiet-copy { grid-column: 1 / -1; margin: 0; }
+
+.profile-hero { position: relative; overflow: hidden; padding: 37px 45px; border-radius: 19px; background: #e6ecdf; }
+.profile-hero:after { content: ''; position: absolute; right: 0; top: 0; width: 38%; height: 100%; background: url('/art/journal-ephemera.webp') center / cover no-repeat; opacity: .19; }
+.profile-hero h1 { position: relative; z-index: 1; margin: 7px 0; font-family: Georgia, 'Songti SC', serif; font-size: 38px; }
+.profile-hero p { position: relative; z-index: 1; color: #667c6c; font-size: 14px; }
+.profile-stats { position: relative; z-index: 1; display: flex; gap: 28px; margin-top: 25px; color: #6e8272; font-size: 13px; }
+.profile-stats strong { margin-right: 4px; color: #315c48; font: 700 26px Georgia, serif; }
+.settings-page { max-width: 930px; margin: auto; }
+.settings-token-input { flex: 1 1 300px; min-height: 40px; padding: 8px 11px; border: 1px solid #d8e1d6; border-radius: 7px; background: white; }
+.settings-advanced { padding: 16px 20px; border: 1px solid #e0e2d8; border-radius: 12px; background: #fdfcf7; }
+.settings-advanced summary { cursor: pointer; color: #446956; font-size: 14px; font-weight: 750; }
+.settings-advanced-content { display: grid; gap: 20px; margin-top: 20px; }
+
+@media (max-width: 1000px) { .trip-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .connection-indicator { display: none; } .journal-page { padding: 27px 23px 29px 29px; } .journal-words { padding-left: 31px; } .journal-cover { height: 170px; } .journal-create { grid-template-columns: 1fr; } .create-form { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) { .header-inner { min-height: 63px; padding: 0 15px; } .brand strong { font-size: 19px; } .brand small { font-size: 7px; } .brand-mark { width: 36px; height: 36px; } .primary-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; gap: 0; justify-content: space-around; border-radius: 0; border-top: 1px solid #e1e1d7; background: #fffdf7; padding: 6px 4px calc(7px + env(safe-area-inset-bottom)); } .primary-nav button { min-width: 0; flex: 1; flex-direction: column; gap: 3px; padding: 5px 1px; border-radius: 6px; font-size: 11px; } .primary-nav button.active { box-shadow: none; background: #e9eee6; } .app-main { padding: 16px 15px 95px; } .site-footer { padding: 18px 15px 90px; font-size: 10px; } .journeys-hero { grid-template-columns: 1fr; min-height: 470px; } .journeys-hero > div:first-child { align-self: start; padding: 30px 27px 0; } .journeys-hero h1 { font-size: 34px; } .hero-art { min-height: 210px; } .hero-art:before { background: linear-gradient(180deg, #234d40, transparent 34%); } .plan-composer { margin: 23px 0 36px; padding: 23px 20px; } .trip-card-grid { grid-template-columns: 1fr; gap: 15px; } .trip-cover { height: 190px; } .trip-cover-large { height: 220px; } .trip-detail-head { margin-top: 23px; } .trip-detail-head h1 { font-size: 29px; } .trip-facts { grid-template-columns: repeat(2, 1fr); } .trip-day { grid-template-columns: 50px 1fr; gap: 8px; padding: 17px 13px; } .day-number { font-size: 29px; } .trip-photo-grid { grid-template-columns: repeat(3, 1fr); } .revise-panel { grid-template-columns: 1fr; padding: 20px; } .binder-shell { display: flex; flex-direction: column; } .binder-content { width: 100%; } .binder-tabs { order: -1; width: 100%; flex-direction: row; gap: 4px; overflow: auto; padding: 0; margin: 0 0 16px; } .binder-tabs button, .binder-tabs button.active { width: auto; min-height: 40px; margin: 0; padding: 0 10px; border: 1px solid #d8d0bd; border-radius: 7px; writing-mode: horizontal-tb; white-space: nowrap; font-size: 11px; } .journal-book { grid-template-columns: 1fr; } .journal-spine { display: none; } .journal-book:before { inset: 20px auto 20px 8px; } .journal-page { padding: 22px 19px 25px 28px; } .journal-words { border-top: 2px dashed #d8d0bd; } .journal-cover { height: 190px; } .travel-intro { align-items: start; } .journal-volume { font-size: 18px; } .journal-create { margin-right: 0; padding: 19px; } .create-form { grid-template-columns: 1fr; } .page-turn-bottom { margin-right: 0; } .profile-hero { padding: 26px; } .profile-stats { gap: 15px; flex-wrap: wrap; } }
+@media (prefers-reduced-motion: reduce) { .page-enter, .spin, .progress-dot { animation: none; } .travel-app button { transition: none; } }

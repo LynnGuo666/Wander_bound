@@ -32,6 +32,12 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
     router = APIRouter()
     cards = MaterialCards(media)
 
+    @router.get("/api/media/trips/{trip_id}/works")
+    async def list_works(trip_id: str, request: Request):
+        require_media_auth(request)
+        _require_trip(trips, trip_id)
+        return {"works": jobs.list_for_trip(trip_id)}
+
     @router.get("/api/media/trips/{trip_id}/photos/{photo_id}/material-card")
     async def read_material_card(trip_id: str, photo_id: str, request: Request):
         require_media_auth(request)
