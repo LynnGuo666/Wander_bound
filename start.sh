@@ -23,6 +23,14 @@ fi
 
 export SPARK_COMFY_URL="${SPARK_COMFY_URL:-http://127.0.0.1:18188}"
 export SPARK_QWEN_COMFY_URL="${SPARK_QWEN_COMFY_URL:-http://127.0.0.1:18191}"
+export DGX_VISION_BASE_URL="${DGX_VISION_BASE_URL:-http://127.0.0.1:18192/v1}"
+if [[ -x .venv/bin/mcp-images ]]; then
+  export MCP_IMAGES_COMMAND="${MCP_IMAGES_COMMAND:-./.venv/bin/mcp-images}"
+fi
+if [[ "$(uname)" == "Darwin" && -d /opt/homebrew/opt/imagemagick/lib ]]; then
+  export MAGICK_HOME="${MAGICK_HOME:-/opt/homebrew/opt/imagemagick}"
+  export WAND_MAGICK_LIBRARY_SUFFIX="${WAND_MAGICK_LIBRARY_SUFFIX:--7.Q16HDRI}"
+fi
 export TRAVEL_OTA_MCP_URL="${TRAVEL_OTA_MCP_URL:-http://127.0.0.1:14176/mcp}"
 export TRAVEL_12306_MCP_URL="${TRAVEL_12306_MCP_URL:-http://127.0.0.1:14177/mcp}"
 export TRAVEL_DIDA_MCP_URL="${TRAVEL_DIDA_MCP_URL:-http://127.0.0.1:14178/mcp}"
@@ -32,4 +40,5 @@ export SPARK_QWEN_IMAGE_WORKFLOW_FILE="${SPARK_QWEN_IMAGE_WORKFLOW_FILE:-workflo
 
 echo "FastAPI + 前端：http://127.0.0.1:${PY_PORT:-4176}"
 echo 'Spark 工作流经本机 18188 / 18191 API 隧道调用。'
+echo '照片视觉分析使用本机 18192；参数处理使用受控 mcp_images stdio。'
 exec .venv/bin/uvicorn pyserver.app:app --host 127.0.0.1 --port "${PY_PORT:-4176}"
