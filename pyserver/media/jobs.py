@@ -71,6 +71,8 @@ class JobStore:
                 job["error"] = str(exc)[:300]
                 self.save(job)
                 await asyncio.sleep(30)
+        if getattr(self.controller, "primary_chat", False) and not self.controller.primary_paused:
+            self.controller.begin_warm("chat")
 
     async def resume(self):
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)

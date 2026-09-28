@@ -26,6 +26,11 @@ class ModelController:
                  specs: tuple[ModelSpec, ...] | None = None):
         self.enabled = (os.getenv("SPARK_MODEL_CONTROL") == "1") if enabled is None else enabled
         self.idle_seconds = idle_seconds if idle_seconds is not None else int(os.getenv("SPARK_MODEL_IDLE_SECONDS", "600"))
+        self.chat_idle_seconds = int(os.getenv("SPARK_QWEN38_IDLE_SECONDS", "1800"))
+        self.primary_chat = self.enabled and os.getenv("SPARK_QWEN38_STICKY") == "1"
+        self.primary_paused = False
+        self.reserve_gib = 16
+        self.peak_gib = {"image": 26, "video": 50, "chat": 60}
         self.specs = {item.name: item for item in (specs or (
             ModelSpec("image", "Qwen-Image-2.1", "qwen21-comfy.service", os.getenv("SPARK_QWEN_COMFY_URL", "http://127.0.0.1:18191"), "/system_stats", 24),
             ModelSpec("video", "MiniMax H3", "minimax-h3-comfy.service", os.getenv("SPARK_COMFY_URL", "http://127.0.0.1:18188"), "/system_stats", 48),
@@ -140,8 +145,9 @@ class ModelController:
         self.phase = "loading_model"
         memory = self._memory()
         available = memory.get("availableGiB")
-        if available is not None and available < spec.minimum_gib:
-            raise RuntimeError(f"可用内存 {available} GiB，启动 {spec.label} 至少需要 {spec.minimum_gib} GiB")
+        required = max(spec.minimum_gib, self.peak_gib[spec.name] + self.reserve_gib)
+        if available is None or available < required:
+            raise RuntimeError(f"可用内存 {available} GiB，启动 {spec.label} 至少需要 {required} GiB")
         if (memory.get("pressureFull10") or 0) > 1:
             raise RuntimeError("系统内存压力过高，暂缓加载模型")
         await self._command("systemctl", "--user", "start", spec.service, timeout=45)
@@ -158,10 +164,26 @@ class ModelController:
             if not await self._ready(spec):
                 raise RuntimeError(f"{spec.label} 未运行")
             return
-        for other in self.specs.values():
-            if other.name != name:
-                await self._stop(other)
-        if await self._service_state(spec) != "active" or not await self._ready(spec):
+        state = await self._service_state(spec)
+        load_needed = state != "active" or not await self._ready(spec)
+        if name == "video":
+            await self._stop(self.specs["image"])
+            await self._stop(self.specs["chat"])
+        elif name == "image":
+            await self._stop(self.specs["video"])
+            if await self._service_state(self.specs["chat"]) == "active":
+                available = self._memory().get("availableGiB")
+                required = self.peak_gib["image"] + self.reserve_gib if load_needed else self.reserve_gib
+                if available is None or available < required:
+                    await self._stop(self.specs["chat"])
+        elif name == "chat":
+            await self._stop(self.specs["video"])
+            if await self._service_state(self.specs["image"]) == "active":
+                available = self._memory().get("availableGiB")
+                required = self.peak_gib["chat"] + self.reserve_gib if load_needed else self.reserve_gib
+                if available is None or available < required:
+                    await self._stop(self.specs["image"])
+        if load_needed:
             await self._start(spec)
         self.last_used[name] = time.monotonic()
         self.error = None
@@ -205,6 +227,8 @@ class ModelController:
             raise ValueError("未知模型")
         if not self.enabled:
             raise RuntimeError("此环境未启用模型服务控制")
+        if name == "chat":
+            self.primary_paused = False
         if self.warm_task and not self.warm_task.done():
             if self.loading_model != name:
                 raise RuntimeError("另一个模型正在加载")
@@ -230,6 +254,8 @@ class ModelController:
         async with self.lock:
             try:
                 await self._stop(self.specs[name])
+                if name == "chat":
+                    self.primary_paused = True
                 self.phase = "idle"
             except RuntimeError as exc:
                 self.error = str(exc)[:200]
@@ -250,10 +276,12 @@ class ModelController:
             return {"id": spec.name, "label": spec.label, "service": spec.service,
                     "state": "ready" if ready else "stopped_on_demand" if state == "stopped" and self.enabled else state,
                     "active": self.active == spec.name,
+                    "idleTimeoutSeconds": self.chat_idle_seconds if spec.name == "chat" else self.idle_seconds,
                     "idleSeconds": round(time.monotonic() - self.last_used[spec.name]) if spec.name in self.last_used else None}
         models = await asyncio.gather(*(describe(spec) for spec in self.specs.values()))
         return {"enabled": self.enabled, "phase": self.phase, "activeModel": self.active,
                 "loadingModel": self.loading_model,
+                "primaryChat": self.primary_chat and not self.primary_paused,
                 "idleTimeoutSeconds": self.idle_seconds, "error": self.error, "memory": self._memory(), "gpu": await self._gpu(),
                 "models": models}
 
@@ -267,7 +295,14 @@ class ModelController:
                     last = self.last_used.get(spec.name)
                     if last is None:
                         self.last_used[spec.name] = time.monotonic()
-                    elif time.monotonic() - last >= self.idle_seconds:
+                    elif spec.name == "chat" and self.primary_chat and not self.primary_paused:
+                        if (self._memory().get("availableGiB") or 0) < self.reserve_gib:
+                            try:
+                                await self._stop(spec)
+                                self.error = "可用内存低于安全余量，已释放常驻 Qwen"
+                            except RuntimeError as exc:
+                                self.error = str(exc)[:200]
+                    elif time.monotonic() - last >= (self.chat_idle_seconds if spec.name == "chat" else self.idle_seconds):
                         try:
                             await self._stop(spec)
                             if self.phase == "cooling":

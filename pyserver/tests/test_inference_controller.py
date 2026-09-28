@@ -125,6 +125,50 @@ def test_background_warm_reports_loading_then_ready():
     asyncio.run(scenario())
 
 
+def test_primary_chat_shares_with_image_but_yields_to_video():
+    specs = (
+        ModelSpec("image", "Image", "image.service", "http://127.0.0.1:1", "/system_stats", 1),
+        ModelSpec("video", "Video", "video.service", "http://127.0.0.1:2", "/system_stats", 1),
+        ModelSpec("chat", "Chat", "chat.service", "http://127.0.0.1:3", "/v1/models", 1),
+    )
+
+    class Controller(ModelController):
+        def __init__(self):
+            super().__init__(enabled=True, specs=specs)
+            self.running = {"chat"}
+            self.stopped = []
+            self.available = 53
+
+        async def _service_state(self, spec):
+            return "active" if spec.name in self.running else "stopped"
+
+        async def _ready(self, spec):
+            return spec.name in self.running
+
+        async def _stop(self, spec):
+            if spec.name in self.running:
+                self.running.remove(spec.name)
+                self.stopped.append(spec.name)
+
+        async def _start(self, spec):
+            self.running.add(spec.name)
+
+        def _memory(self):
+            return {"availableGiB": self.available}
+
+    async def scenario():
+        controller = Controller()
+        await controller._ensure("image")
+        assert controller.running == {"chat", "image"}
+        controller.available = 32
+        await controller._ensure("chat")
+        assert controller.running == {"chat", "image"}
+        await controller._ensure("video")
+        assert controller.running == {"video"}
+        assert controller.stopped == ["image", "chat"]
+    asyncio.run(scenario())
+
+
 def test_web_status_and_control_auth(tmp_path, monkeypatch):
     monkeypatch.setenv("MEDIA_API_TOKEN", "test-token")
     monkeypatch.delenv("SPARK_MODEL_CONTROL", raising=False)
