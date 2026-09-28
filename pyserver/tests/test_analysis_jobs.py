@@ -57,3 +57,37 @@ def test_resume_uses_existing_visual_tags(tmp_path, monkeypatch):
         assert finished["results"][photo["id"]]["tags"]["scene"] == "已分析的照片"
 
     asyncio.run(scenario())
+
+
+def test_succeeded_batch_with_warning_can_retry_missing_tags(tmp_path, monkeypatch):
+    media = MediaStore(tmp_path / "media")
+    output = io.BytesIO()
+    Image.new("RGB", (64, 48), "blue").save(output, format="JPEG")
+    trip_id = "abfba2e7-6a13-4cba-8d7a-b75190ea0e2a"
+    photo = media.add(output.getvalue(), trip_id, None)
+    monkeypatch.setattr(module, "curate_trip", lambda _media, _trip, _target, _ids: {
+        "keep": [photo["id"]], "verdicts": {photo["id"]: "keep"}})
+    calls = {"n": 0}
+
+    def tag(_bytes):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise module.VLMError("temporary")
+        return {"scene": "火车站", "quality": {"keep": 4}}
+
+    monkeypatch.setattr(module, "tag_image", tag)
+
+    async def scenario():
+        jobs = module.AnalysisJobs(media)
+        jobs.schedule = lambda: None
+        queued = jobs.submit(trip_id, [photo["id"]], "batch-1")
+        await jobs.run_one(queued)
+        assert jobs.get(queued["id"])["warnings"]
+        retried = jobs.retry(queued["id"])
+        assert retried and retried["status"] == "queued"
+        await jobs.run_one(retried)
+        finished = jobs.get(queued["id"])
+        assert finished["status"] == "succeeded" and not finished["warnings"]
+        assert finished["results"][photo["id"]]["tags"]["scene"] == "火车站"
+
+    asyncio.run(scenario())
