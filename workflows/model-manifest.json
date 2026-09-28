@@ -17,8 +17,8 @@
   },
   "video": {
     "workflow_id": "travel.minimax-h3.i2v",
-    "workflow_version": "1.0.0",
-    "input_policy": "contain-white-v1",
+    "workflow_version": "1.1.0",
+    "input_policy": "contain-or-cover-v2",
     "engine": {"comfyui": "0.34.0", "commit": "e80c1570b6b44a2557d5d8e341e05782d18c9bbb", "frontend": "1.51.9"},
     "custom_nodes": {"ComfyUI_MiniMaxH3_Director": "7de4a95243ce1a25fedc634a0eda62672610afd1", "minimax-h3-hybrid-cond": "a1f20e01831de84243f672285611ba9b89e4f249"},
     "model_nodes": {
@@ -31,6 +31,7 @@
     },
     "parameter_schema": {
       "aspect_ratio": {"type": "string", "enum": ["16:9"], "default": "16:9"},
+      "fit_mode": {"type": "string", "enum": ["contain", "cover"], "default": "cover"},
       "frames": {"type": "integer", "minimum": 124, "maximum": 362, "step": 17, "default": 124},
       "fps": {"type": "integer", "const": 24},
       "seed": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615, "default": 0}

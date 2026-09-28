@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from pyserver.media.comfy import ComfyClient
 from pyserver.media import workflow_versions
@@ -42,9 +42,26 @@ def mock_client(monkeypatch):
 
 
 def uploaded_size(body):
+    return uploaded_image(body).size
+
+
+def uploaded_image(body):
     start = body.index(b"\xff\xd8")
     with Image.open(io.BytesIO(body[start:])) as image:
-        return image.size
+        return image.copy()
+
+
+def marked_jpeg(size):
+    image = Image.new("RGB", size, "green")
+    draw = ImageDraw.Draw(image)
+    width, height = size
+    draw.rectangle((0, 0, width, 59), fill="red")
+    draw.rectangle((0, height - 60, width, height), fill="blue")
+    draw.rectangle((0, 60, 59, height - 61), fill="yellow")
+    draw.rectangle((width - 60, 60, width, height - 61), fill="magenta")
+    output = io.BytesIO()
+    image.save(output, "JPEG", quality=95)
+    return output.getvalue()
 
 
 def test_persisted_prompt_identity_is_sent_and_validated_before_upload(monkeypatch):
@@ -90,8 +107,34 @@ async def _video_seed_canvas_frames_and_legacy_signature(monkeypatch):
     assert graph["7"]["inputs"]["noise_seed"] == 1234
     assert graph["14"]["inputs"]["fps"] == 24
     assert uploaded_size(seen["uploads"][0]) == (1024, 576)
+    assert uploaded_image(seen["uploads"][0]).getpixel((0, 288))[2] < 150
     assert await client.queue(jpeg(), "scene", 9, parameters={"frames": 141}) == "prompt-1"
     assert seen["graphs"][1]["6"]["inputs"]["length"] == 141
+
+
+def test_video_cover_and_contain_upload_actual_pixels(monkeypatch):
+    async def run():
+        seen = mock_client(monkeypatch)
+        client = ComfyClient("http://127.0.0.1:8188", WORKFLOWS / "minimax-h3-i2v-api.json", "video")
+        snapshot = client.freeze_workflow()
+        assert snapshot["workflow_version"] == "1.1.0"
+        assert snapshot["input_policy"] == "contain-or-cover-v2"
+        assert snapshot["parameter_schema"]["fit_mode"]["default"] == "cover"
+        for size in ((1920, 1227), (600, 900), (1800, 600), (1600, 900)):
+            await client.queue(marked_jpeg(size), "scene", 7, workflow_snapshot=snapshot)
+            actual = uploaded_image(seen["uploads"][-1])
+            assert actual.size == (1024, 576)
+            for point in ((0, 288), (1023, 288), (512, 0), (512, 575)):
+                assert max(actual.getpixel(point)) - min(actual.getpixel(point)) > 30
+        # The tall source must retain the full frame when contain is requested.
+        await client.queue(marked_jpeg((600, 900)), "scene", 7,
+                           workflow_snapshot=snapshot, parameters={"fit_mode": "contain"})
+        contained = uploaded_image(seen["uploads"][-1])
+        assert contained.size == (1024, 576)
+        assert min(contained.getpixel((0, 288))) > 245
+        covered_edge = uploaded_image(seen["uploads"][1]).getpixel((0, 288))
+        assert max(covered_edge) - min(covered_edge) > 30
+    asyncio.run(run())
 
 
 def test_frozen_graph_stays_stable_after_file_change(tmp_path, monkeypatch):
@@ -145,7 +188,8 @@ async def _invalid_parameters_and_snapshot_rejected_before_upload(monkeypatch):
     seen = mock_client(monkeypatch)
     client = ComfyClient("http://127.0.0.1:8188", WORKFLOWS / "minimax-h3-i2v-api.json", "video")
     snapshot = client.freeze_workflow()
-    for settings in ({"width": 864}, {"frames": 125}, {"fps": 30}, {"aspect_ratio": "3:2"}, {"aspect_ratio": []}):
+    for settings in ({"width": 864}, {"frames": 125}, {"fps": 30}, {"aspect_ratio": "3:2"},
+                     {"aspect_ratio": []}, {"fit_mode": "stretch"}, {"fit_mode": 42}):
         with pytest.raises(ValueError):
             await client.queue(jpeg(), "scene", 1, workflow_snapshot=snapshot, parameters=settings)
     with pytest.raises(ValueError):
@@ -176,3 +220,32 @@ async def _old_snapshot_keeps_defaults(tmp_path, monkeypatch):
         await client.queue(jpeg(), "new", 7, workflow_snapshot=client.freeze_workflow(), parameters={"frames": 124})
     await client.queue(jpeg(), "new", 7, workflow_snapshot=client.freeze_workflow())
     assert seen["graphs"][-1]["6"]["inputs"]["length"] == 141
+
+
+def test_old_video_snapshot_replays_contain_after_manifest_upgrade(tmp_path, monkeypatch):
+    async def run():
+        seen = mock_client(monkeypatch)
+        path = tmp_path / "video.json"
+        path.write_bytes((WORKFLOWS / "minimax-h3-i2v-api.json").read_bytes())
+        client = ComfyClient("http://127.0.0.1:8188", path, "video")
+        manifest = json.loads((WORKFLOWS / "model-manifest.json").read_text())
+        manifest["video"]["workflow_version"] = "1.0.0"
+        manifest["video"]["input_policy"] = "contain-white-v1"
+        del manifest["video"]["parameter_schema"]["fit_mode"]
+        old_manifest = tmp_path / "old-manifest.json"
+        old_manifest.write_text(json.dumps(manifest))
+        monkeypatch.setattr(workflow_versions, "MANIFEST", old_manifest)
+        old = client.freeze_workflow()
+        assert "fit_mode" not in old["parameter_schema"]
+        monkeypatch.setattr(workflow_versions, "MANIFEST", WORKFLOWS / "model-manifest.json")
+        path.unlink()
+        await client.queue(marked_jpeg((1920, 1227)), "old", 7, workflow_snapshot=old)
+        legacy = uploaded_image(seen["uploads"][-1])
+        assert legacy.size == (1024, 576)
+        assert min(legacy.getpixel((0, 288))) > 245
+        assert seen["graphs"][-1]["7"]["inputs"]["noise_seed"] == 7
+        with pytest.raises(ValueError, match="fit_mode|不支持"):
+            await client.queue(marked_jpeg((1920, 1227)), "old", 7,
+                               workflow_snapshot=old, parameters={"fit_mode": "cover"})
+        assert len(seen["uploads"]) == 1
+    asyncio.run(run())
