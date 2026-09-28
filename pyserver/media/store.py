@@ -68,6 +68,16 @@ class MediaStore:
         except FileNotFoundError:
             return None
 
+    def set_quality(self, photo_id: str, quality_score: dict) -> dict | None:
+        photo = self.get(photo_id)
+        if not photo:
+            return None
+        photo["quality"] = quality_score
+        meta = self.meta_dir / f"{photo_id}.json"
+        meta.write_text(json.dumps(photo, ensure_ascii=False))
+        os.chmod(meta, 0o600)
+        return photo
+
     def enhance(self, photo_id: str, preset: str) -> dict | None:
         photo = self.get(photo_id)
         if not photo:
