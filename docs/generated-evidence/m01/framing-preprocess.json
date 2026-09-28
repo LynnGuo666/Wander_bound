@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "validation": "CPU preprocessing only; H3 1.1.0 real generation pending",
+  "validation": "CPU preprocessing; subsequent H3 1.1.0 real generation is recorded separately in framing-real-probe.json",
   "source": "manual-acceptance-20260928 selected original, Grand Prismatic Spring",
   "source_photo_id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
   "source_sha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048",
