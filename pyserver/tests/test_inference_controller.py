@@ -46,7 +46,7 @@ class Image:
         return workflow_versions.freeze_workflow(Path(__file__).resolve().parents[2] / "workflows/qwen-image-2.1-edit-api.json", "image")
 
     async def queue(self, *_args, **_kwargs):
-        return "prompt-id"
+        return _kwargs["prompt_id"]
 
     async def result(self, _prompt_id):
         await asyncio.sleep(0.02)

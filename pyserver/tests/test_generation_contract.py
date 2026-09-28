@@ -36,7 +36,7 @@ class Adapter:
 
     async def queue(self, *args, **kwargs):
         self.queued.append(args)
-        return "prompt-id"
+        return kwargs["prompt_id"]
 
     async def result(self, _prompt_id):
         self.result_calls += 1

@@ -12,7 +12,7 @@
 
 ## 队列、恢复和失败
 
-运行时通过 `ModelController.use(image|video)` 共享单工作者模型调度。已有 `promptId` 只查询 ComfyUI history 和 queue；队列内任务继续等待，历史完成则下载，明确失败立即终止，连续三次缺失或服务不可达即失败，不会反复重提交。执行轮询最多 360 次，每次间隔 5 秒。模型资源申请连续失败最多三次，每次间隔 30 秒，随后 `RESOURCE_RETRY_EXHAUSTED`。显式 retry 总 attempt 最多三次，并保留冻结快照、参数、seed 与已完成镜头。
+运行时通过 `ModelController.use(image|video)` 共享单工作者模型调度。每次向 ComfyUI 提交前，先将规范 UUID `promptId` 和 `submissionState: intent_recorded` 写入 job；adapter 用同一 ID 向 `/prompt` 提交并校验响应。响应丢失时状态记为 `unknown`，只用持久 ID 查询 history 和 queue。API 重启后已有 `promptId` 的任务也只对账，不再次提交。队列内任务继续等待，历史完成则下载，明确失败立即终止，连续三次缺失或服务不可达即失败，不会反复重提交。执行轮询最多 360 次，每次间隔 5 秒。模型资源申请连续失败最多三次，每次间隔 30 秒，随后 `RESOURCE_RETRY_EXHAUSTED`。显式 retry 总 attempt 最多三次，失败 prompt 才分配新 UUID；已完成但尚未保存的产物保留原 UUID 供重取，并保留冻结快照、参数、seed 与已完成镜头。
 
 图片已保存的 `ai-{jobId}` 变体在恢复时直接确认完成。视频每个镜头先写 `.pending.mp4`，再原子替换为 `{index}.mp4`，保存 `done`。已完成且文件存在的镜头不会再次生成；已有 prompt 而镜头文件缺失时会对账历史并重下载。所有镜头完成后 ffmpeg 合成为 `memory.pending.mp4`，再原子替换 `memory.mp4`；最终文件存在时重启可直接确认完成。不会自动重试 ComfyUI 明确失败的 prompt；需要调用相应 retry 路由，未完成镜头才会重新排队。
 
