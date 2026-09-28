@@ -53,3 +53,44 @@ def curate_trip(media, trip_id: str, target: int | None = None) -> dict:
     for label in ("keep", "dup", "drop", "overflow"):
         counts[label] = sum(1 for value in verdicts.values() if value == label)
     return {"tripId": trip_id, "counts": counts, "verdicts": verdicts, "keep": keep}
+
+
+def commit_selection(media, trip_id: str, photo_ids, *, batch_id: str, source: str = "photo-selection") -> dict:
+    """把精选出的 photo_ids 提交给下游精修（整份替换，见 docs/photo-curation）。
+
+    底层调 media.set_selected(...)，该契约由共享 store 提供（在下游分支）；本函数只做
+    "选优产出 → 下游契约"的翻译，不碰存储实现，两条分支合并后即通，合并前用 stub 测试。
+    这是显式的一步，不并进 curate_trip 自动跑：精修要求"优选必须明确提交 id 清单"，
+    且整份替换语义下，跑到一半的 curate 不该覆盖下游已有清单。
+    photo_ids 应已属于该 trip 且无重复，取值校验交给 set_selected。
+    """
+    payload = {"batchId": batch_id, "source": source, "photoIds": list(photo_ids)}
+    return media.set_selected(trip_id, payload)
+
+
+def build_reel_assets(media, trip_id: str) -> dict:
+    """汇总"被选照片的提取信息"交给③剪辑/回忆编排（见 docs/photo-curation 预留接口）。
+
+    以 selected-photos 清单为"被选"基准（和精修共用同一份，避免用到没选的照片，media.selected
+    是下游共享 store 的鸭子接口）。每张被选照片聚合 exif + quality（L0）+ tags（VLM）成素材卡，
+    按 capturedDay（GPS）排序对应回忆视频的时间线，highlight=true 的单列方便挑高光镜头。
+    VLM 还没部署时照片没有 tags，该字段留空，剪辑可先用 exif/quality。
+    """
+    selection = media.selected(trip_id) or {}
+    cards = []
+    for pid in selection.get("photoIds", []):
+        photo = media.get(pid)
+        if not photo or photo.get("tripId") != trip_id:
+            continue
+        cards.append({
+            "photoId": pid,
+            "capturedDay": photo.get("capturedDay"),
+            "exif": photo.get("exif") or {},
+            "quality": photo.get("quality") or {},
+            "tags": photo.get("tags") or {},
+        })
+    cards.sort(key=lambda card: (card["capturedDay"] or "", card["photoId"]))
+    highlights = [card["photoId"] for card in cards
+                  if (card["tags"].get("quality") or {}).get("highlight")]
+    return {"tripId": trip_id, "batchId": selection.get("batchId"),
+            "source": selection.get("source"), "assets": cards, "highlights": highlights}
