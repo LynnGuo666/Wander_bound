@@ -10,6 +10,7 @@ import time
 import httpx
 
 from .images import DEFAULT_DEVELOP, normalize_develop
+from .vision import vision_base_url, vision_model, vision_token
 
 CATEGORY_GUIDANCE = {
     "landscape": "Landscape: use a vivid, anime-inspired travel illustration style while preserving the original scene and all subjects. Push ocean blue and sky cyan toward a clear, high-saturation look, add lively separation between water, foam, vegetation, and warm sand, and use a confident but smooth curve. Keep highlight detail in clouds and waves, retain shadow texture, and avoid muddy blacks, clipped skies, neon colors, or content changes.",
@@ -23,11 +24,18 @@ def _content_json(content: str) -> dict:
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.I)
     return json.loads(text)
 
+def _client_timeout() -> httpx.Timeout:
+    """读超时 180 秒：实测一次精修建议 100.3 秒，写死 90 秒正好卡在边缘，时好时坏。
+    连接超时单独给 8 秒，连不上多半是本机隧道没起，等再久也没用。"""
+    read = float(os.getenv("DGX_VISION_TIMEOUT", "180"))
+    return httpx.Timeout(read, connect=8)
+
+
 async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
     started = time.monotonic()
-    base_url = os.getenv("DGX_VISION_BASE_URL", "http://127.0.0.1:18192/v1").rstrip("/")
-    model = os.getenv("DGX_VISION_MODEL", "Qwen3-VL-8B-Instruct")
-    token = os.getenv("DGX_VISION_TOKEN", "")
+    base_url = vision_base_url()
+    model = vision_model()
+    token = vision_token()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     encoded = base64.b64encode(image_bytes).decode("ascii")
     payload = {"model": model, "temperature": 0.1, "max_tokens": 6000,
@@ -38,7 +46,7 @@ async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
                 {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}},
             ]}]}
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(90, connect=8)) as client:
+        async with httpx.AsyncClient(timeout=_client_timeout()) as client:
             response = await client.post(f"{base_url}/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
@@ -54,14 +62,16 @@ async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
         return {"category": category, "params": params, "rationale": rationale, "cropReason": crop_reason,
                 "model": model, "provider": base_url, "elapsedMs": round((time.monotonic() - started) * 1000)}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"DGX 照片分析失败：{exc}") from exc
+        # 不能只插 {exc}：httpx.ReadTimeout 的 str() 是空的，超时会变成一句没有内容的
+        # "DGX 照片分析失败："。带上类型名，排错时才知道是超时、连接失败还是解析问题。
+        raise RuntimeError(f"DGX 照片分析失败：{type(exc).__name__} {exc}".rstrip()) from exc
 
 
 async def review(original: bytes, edited: bytes, settings: dict) -> dict:
     started = time.monotonic()
-    base_url = os.getenv("DGX_VISION_BASE_URL", "http://127.0.0.1:18192/v1").rstrip("/")
-    model = os.getenv("DGX_VISION_MODEL", "Qwen3-VL-8B-Instruct")
-    token = os.getenv("DGX_VISION_TOKEN", "")
+    base_url = vision_base_url()
+    model = vision_model()
+    token = vision_token()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     def image_part(data: bytes):
         return {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(data).decode("ascii")}}
@@ -70,7 +80,7 @@ async def review(original: bytes, edited: bytes, settings: dict) -> dict:
         "messages": [{"role": "system", "content": "Compare the original and edited travel photo. Return only JSON with keys approved (boolean), note (short text). Reject blown highlights, blocked shadows, unnatural skin/color, excessive sharpening, or a crop that removes important content. Do not suggest content generation."},
             {"role": "user", "content": [{"type": "text", "text": f"Original then edited. Settings: {json.dumps(settings)}"}, image_part(original), image_part(edited)]}]}
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(90, connect=8)) as client:
+        async with httpx.AsyncClient(timeout=_client_timeout()) as client:
             response = await client.post(f"{base_url}/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
             result = _content_json(response.json()["choices"][0]["message"]["content"])
@@ -79,4 +89,5 @@ async def review(original: bytes, edited: bytes, settings: dict) -> dict:
         return {"approved": result["approved"], "note": str(result["note"])[:400], "model": model,
                 "elapsedMs": round((time.monotonic() - started) * 1000)}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"DGX 预览复核失败：{exc}") from exc
+        # 同 suggest：带异常类型名，否则 ReadTimeout 会让这里只剩一句空的消息
+        raise RuntimeError(f"DGX 预览复核失败：{type(exc).__name__} {exc}".rstrip()) from exc
