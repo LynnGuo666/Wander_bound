@@ -113,7 +113,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                     or not isinstance(motifs, list) or not 4 <= len(motifs) <= 8
                     or any(not isinstance(item, str) or not 2 <= len(item.strip()) <= 60
                            or any(ord(char) < 32 for char in item) for item in motifs)
-                    or len({item.strip() for item in motifs}) != len(motifs)
+                    or len({item.strip() for item in motifs}) < 4
                     or not isinstance(stamp, str) or not 2 <= len(stamp.strip()) <= 60
                     or any(ord(char) < 32 for char in stamp)):
                 raise ValueError("StepFun 返回了无效的模板或贴纸主题")
@@ -122,7 +122,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
             if (diary is not None and (not isinstance(diary, str) or len(diary) > 120)) or (
                     postcard_text is not None and (not isinstance(postcard_text, str) or len(postcard_text) > 80)):
                 raise ValueError("StepFun 返回的手账文字过长")
-            return {"templates": selected, "stickerMotifs": [item.strip() for item in motifs],
+            return {"templates": selected, "stickerMotifs": list(dict.fromkeys(item.strip() for item in motifs)),
                     "stampMotif": stamp.strip(), "postcardMotif": str(choice.get("postcardMotif") or stamp).strip()[:60],
                     "illustrationMotif": str(choice.get("illustrationMotif") or motifs[0]).strip()[:60],
                     "photoOrder": photo_order or [item["photoId"] for item in recognized],
