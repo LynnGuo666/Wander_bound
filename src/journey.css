@@ -391,7 +391,9 @@
 }
 .binder-flip-host { position: absolute; z-index: 80; top: 5.5%; left: 4.5%; width: 91%; height: 89%; pointer-events: none; }
 .binder-flip-host .stf__wrapper, .binder-flip-host .stf__block { width: 100%; height: 100%; }
-.binder-flip-page { box-sizing: border-box; overflow: hidden; background: #fff9ed url('/art/binder-paper.webp') center / 100% 100% no-repeat; backface-visibility: hidden; }
+.binder-flip-page { box-sizing: border-box; overflow: hidden; background: #fff9ed; backface-visibility: hidden; }
+.binder-flip-page::before { content: ''; position: absolute; inset: 0; background: url('/art/binder-paper.webp') center / 100% 100% no-repeat; pointer-events: none; }
+.binder-flip-page-left::before { transform: scaleX(-1); }
 .binder-flip-canvas { position: relative; width: 92.3%; height: 100%; overflow: hidden; }
 .binder-flip-page-right .binder-flip-canvas { margin-left: auto; }
 .binder-flip-canvas .studio-item { pointer-events: none; }

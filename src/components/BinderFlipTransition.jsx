@@ -16,8 +16,7 @@ export default function BinderFlipTransition({ direction, stageRef, incomingRef,
     let cancelWait = () => {};
     let imageTimer;
     const preview = incomingRef.current;
-    const previewPainted = () => preview?.dataset.previewReady === 'true'
-      && !preview.querySelector('.media-placeholder');
+    const previewPainted = () => preview?.dataset.previewReady === 'true';
     const waitForPreview = () => new Promise(resolve => {
       if (previewPainted()) { resolve(true); return; }
       if (!preview) { resolve(false); return; }
@@ -42,11 +41,10 @@ export default function BinderFlipTransition({ direction, stageRef, incomingRef,
       const images = [...source, ...incoming].flatMap(canvas => [...canvas.querySelectorAll('img')]);
       await Promise.race([
         Promise.all(images.map(img => img.decode().catch(() => {}))),
-        new Promise(resolve => { imageTimer = setTimeout(resolve, 1200); }),
+        new Promise(resolve => { imageTimer = setTimeout(resolve, 450); }),
       ]);
       clearTimeout(imageTimer);
       if (!active) return;
-      if (images.some(img => !img.complete || !img.naturalWidth)) { completeRef.current?.(); return; }
       const pages = Array.from({ length: 4 }, (_, index) => {
         const page = document.createElement('div');
         page.className = `binder-flip-page binder-flip-page-${index % 2 ? 'right' : 'left'}`;
@@ -70,8 +68,12 @@ export default function BinderFlipTransition({ direction, stageRef, incomingRef,
         if (event.data === 'read' && started) completeRef.current?.();
       });
       flip.loadFromHTML(pages);
-      stage.classList.add('flip-active');
-      frame = requestAnimationFrame(() => direction === 'next' ? flip.flipNext() : flip.flipPrev());
+      frame = requestAnimationFrame(() => {
+        if (!active) return;
+        stage.classList.add('flip-active');
+        direction === 'next' ? flip.flipNext() : flip.flipPrev();
+        if (flip.getState() !== 'flipping') completeRef.current?.();
+      });
     }
     start().catch(() => { if (active) completeRef.current?.(); });
     return () => {
