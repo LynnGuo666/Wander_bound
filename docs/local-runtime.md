@@ -18,4 +18,12 @@
 
 ## 验证边界
 
-本节点用合成 JPEG、假 Comfy 响应及假 ffmpeg 测试队列语义，没有启动 GPU 或验证真实模型产物。真实 Spark 队列、历史保留期、模型互斥及图像/视频质量仍由后续 runtime 验收。
+准备阶段用合成 JPEG、假 Comfy 响应及假 ffmpeg 测试队列语义；这些测试不能证明真实模型产物。以下真实恢复观察只覆盖已记录的时间窗口，镜头质量和完整 c03 验收仍须另查。
+
+## Spark 真实恢复检查（2026-09-28，进行中）
+
+主会话提交的 selected 原图 H3 job `90981311-bf42-47f5-b189-b7fcc62c5202` 于 20:26:54 +08 开始，镜头 prompt UUID 为 `4e38017b-4ff3-485c-9009-4063c1bcdc4d`。本轮在它仍处于 Comfy `queue_running` 时，仅执行一次 `systemctl --user restart travel-agent.service`：API PID `1154560 → 1155843`。重启前、立即恢复及 5 秒后，job 均为 `running/attempt=1/resourceRetries=2`，镜头 prompt 与队列 running ID 相同，pending 为空；重启后 authenticated memory GET 为 HTTP 200，控制器仍显示 `activeModel=video`。原始脱敏读数分别见 [重启观察](generated-evidence/m01/runtime-h3-restart.json)与 [API 回读](generated-evidence/m01/runtime-api-after-restart.json)。
+
+主会话在 H3 运行期间提交另一 Qwen job `92e48610-b124-46c2-a4bd-07a4a31ad2ec`。20:36:20 +08 的 [并发读数](generated-evidence/m01/runtime-concurrency-observation.json)显示 H3 仍运行，Qwen `queued/startedAt=null`，API queue 为一条 video 加一条 image，Comfy queue 只有原 H3 prompt。H3 完成后的 Qwen 启动顺序、最终 MP4 与下载哈希尚待追踪；这些中间读数不构成 c03 完整通过。
+
+真实 H3 在两次资源等待后进入 `running` 时，旧 busy `error` 文本仍在 job 中。本地后续提交 `fa9c197` 清正常运行/成功状态下的当前 `error/errorCode`，保留历史 `resourceRetries`；全量 pyserver 测试 64 passed。Spark 当前任务仍使用已部署 `37ecdc75`，本轮未部署这项修复。

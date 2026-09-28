@@ -1,0 +1,75 @@
+{
+  "job_id": "90981311-bf42-47f5-b189-b7fcc62c5202",
+  "prompt_id": "4e38017b-4ff3-485c-9009-4063c1bcdc4d",
+  "restart_executed": true,
+  "restart_command": "systemctl --user restart travel-agent.service",
+  "before": {
+    "observed_at_utc": "2026-09-28T12:32:33.923594+00:00",
+    "api_pid": "1154560",
+    "service_active": "active",
+    "job_status": "running",
+    "attempt": 1,
+    "resourceRetries": 2,
+    "clips": [
+      {
+        "promptId": "4e38017b-4ff3-485c-9009-4063c1bcdc4d",
+        "submissionState": "accepted",
+        "done": null
+      }
+    ],
+    "queue_prompt_ids": {
+      "queue_running": [
+        "4e38017b-4ff3-485c-9009-4063c1bcdc4d"
+      ],
+      "queue_pending": []
+    },
+    "history_present": false,
+    "history_status": null
+  },
+  "after_immediate": {
+    "observed_at_utc": "2026-09-28T12:32:34.257763+00:00",
+    "api_pid": "1155843",
+    "service_active": "active",
+    "job_status": "running",
+    "attempt": 1,
+    "resourceRetries": 2,
+    "clips": [
+      {
+        "promptId": "4e38017b-4ff3-485c-9009-4063c1bcdc4d",
+        "submissionState": "accepted",
+        "done": null
+      }
+    ],
+    "queue_prompt_ids": {
+      "queue_running": [
+        "4e38017b-4ff3-485c-9009-4063c1bcdc4d"
+      ],
+      "queue_pending": []
+    },
+    "history_present": false,
+    "history_status": null
+  },
+  "after_five_seconds": {
+    "observed_at_utc": "2026-09-28T12:32:39.321060+00:00",
+    "api_pid": "1155843",
+    "service_active": "active",
+    "job_status": "running",
+    "attempt": 1,
+    "resourceRetries": 2,
+    "clips": [
+      {
+        "promptId": "4e38017b-4ff3-485c-9009-4063c1bcdc4d",
+        "submissionState": "accepted",
+        "done": null
+      }
+    ],
+    "queue_prompt_ids": {
+      "queue_running": [
+        "4e38017b-4ff3-485c-9009-4063c1bcdc4d"
+      ],
+      "queue_pending": []
+    },
+    "history_present": false,
+    "history_status": null
+  }
+}
