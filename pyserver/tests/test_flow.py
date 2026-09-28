@@ -11,6 +11,9 @@ from pyserver.settings import ConfigStore
 from pyserver.media import MediaStore
 from pyserver.trips import TripStore
 from pyserver.agent.spec import set_trip_spec
+from pyserver.agent.state import initial_state
+from pyserver.agent.discovery import discover_places
+from pyserver.agent.catalog import available
 from pyserver import providers
 from pyserver.providers import amap
 
@@ -118,6 +121,25 @@ def test_preferences_are_merged_into_trip_memory():
     assert result["ok"] is True
     assert state["preferences"] == {"pace": "轻松", "transport": "高铁"}
     assert state["answerNeedsCommit"] is False
+
+
+def test_confirmed_origin_and_places_advance_to_transport_without_repeat_search(monkeypatch):
+    state = initial_state({"originCity": "广州", "destination": "深圳", "days": 3, "startDate": "2026-10-03"})
+    assert state["originDone"] is True
+    names = lambda: [item["function"]["name"] for item in available(state)]
+    assert "discover_places" in names()
+
+    async def fake_places(city, key):
+        assert city == "深圳"
+        return [{"id": "verified-1", "name": "世界之窗", "area": "南山", "source": "test"}]
+
+    monkeypatch.setattr(providers, "search_places", fake_places)
+    result = asyncio.run(discover_places({"city": "深圳"}, state, {}))
+    assert result["places"][0]["city"] == "深圳"
+    assert state["placesDone"] is True
+    assert "discover_places" not in names()
+    assert "search_transport" in names()
+    assert asyncio.run(discover_places({"city": "深圳龙岗区"}, state, {}))["code"] == "unplanned_city"
 
 
 def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, monkeypatch):

@@ -48,6 +48,7 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
     elif revision:
         state["plan"] = None
         state["placesDone"] = False
+        state["discoveredCities"] = []
         state["transportDone"] = False
         state["staysDone"] = False
         state["enrichmentDone"] = False

@@ -34,9 +34,10 @@ async def set_trip_spec(args: dict, state: dict, request: dict) -> dict:
     changed = any(proposal[key] != state.get(key) for key in ("destination", "originCity", "startDate", "days"))
     if changed:
         state.update({"originDone": False, "placesDone": False, "transportDone": False, "staysDone": False, "enrichmentDone": False,
-                      "places": [], "trains": [], "returnTrains": [], "flights": [], "returnFlights": [],
+                      "places": [], "discoveredCities": [], "trains": [], "returnTrains": [], "flights": [], "returnFlights": [],
                       "providerStatus": {}, "hotels": [], "plan": None})
     state.update(proposal)
+    state["originDone"] = bool(state["originCity"])
     state["answerNeedsCommit"] = False
     return {"ok": True, **proposal}
 

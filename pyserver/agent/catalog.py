@@ -45,7 +45,8 @@ def available(state: dict) -> list[dict]:
     names = ["ask_question", "set_trip_spec"]
     if not state.get("originDone"):
         names.append("resolve_origin")
-    names.append("discover_places")
+    if not state.get("placesDone"):
+        names.append("discover_places")
     if state.get("placesDone") and state.get("originDone"):
         names += ["search_transport", "search_stays"]
     if state.get("placesDone") and state.get("transportDone") and state.get("staysDone"):

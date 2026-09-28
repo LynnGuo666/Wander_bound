@@ -8,12 +8,19 @@ async def discover_places(args: dict, state: dict, credentials: dict) -> dict:
     city = str(args.get("city") or state["destination"] or "").strip()
     if not city:
         return _error("missing_destination", "请先确定目的地")
+    planned = {state["destination"], *(stay["city"] for stay in state.get("requiredStays") or [])}
+    if city not in planned:
+        return _error("unplanned_city", "请先用 set_trip_spec 确认要访问的城市")
+    if city in state.get("discoveredCities", []):
+        cached = [item for item in state["places"] if item.get("city") == city]
+        return {"ok": True, "city": city, "places": cached, "cached": True}
     found = await providers.search_places(city, credentials.get("amap"))
     existing = {item["id"]: item for item in state["places"]}
     existing.update({item["id"]: {**item, "city": city} for item in found})
     state["places"] = list(existing.values())
-    state["placesDone"] = True
-    return {"ok": True, "city": city, "places": [{key: item.get(key) for key in ("id", "name", "area", "category", "duration", "city")} for item in found]}
+    state.setdefault("discoveredCities", []).append(city)
+    state["placesDone"] = planned.issubset(state["discoveredCities"])
+    return {"ok": True, "city": city, "places": [{key: item.get(key) for key in ("id", "name", "area", "category", "duration", "city")} for item in state["places"] if item.get("city") == city]}
 
 async def search_transport(state: dict, credentials: dict, priorities: dict) -> dict:
     if not state["originDone"] or not state["startDate"]:

@@ -8,9 +8,9 @@ def initial_state(request: dict) -> dict:
             "days": int(days) if days not in (None, "") else None, "startDate": str(request.get("startDate") or ""),
             "totalBudgetCny": None, "requiredStays": [], "interests": memory.get("interests") or [],
             "preferences": memory.get("preferences") or {},
-            "places": [], "trains": [], "returnTrains": [], "flights": [], "returnFlights": [],
+            "places": [], "discoveredCities": [], "trains": [], "returnTrains": [], "flights": [], "returnFlights": [],
             "providerStatus": {}, "hotels": [], "plan": None, "pendingQuestion": None,
-            "originDone": False, "placesDone": False, "transportDone": False, "staysDone": False,
+            "originDone": bool(request.get("originCity") or memory.get("homeCity")), "placesDone": False, "transportDone": False, "staysDone": False,
             "enrichmentDone": False, "answerNeedsCommit": False}
 
 
