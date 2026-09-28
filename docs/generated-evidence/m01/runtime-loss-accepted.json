@@ -1,0 +1,137 @@
+{
+  "mode": "drop_after_accept",
+  "startedAtUtc": "2026-09-28T13:26:49.370893+00:00",
+  "deploymentSha": "d055caed1c290b81baad1d57dcfab46cc25621db",
+  "apiPidBefore": "1162610",
+  "preQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "envOriginalSha256": "010d04fdd3a7777c3f3cea75b6973ef6d399a26af5ece0b5886b70f34efaa012",
+  "startOriginalSha256": "ae4423c88b79fc426added6ada1f29873a844e64101ca47361966cd01919d47e",
+  "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+  "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+  "selectionBatchId": "m01-public-yellowstone-20260928-v1",
+  "seed": 2026092804,
+  "proxyBound": "127.0.0.1:18191",
+  "apiPidOnProxy": "1162809",
+  "submitHttp": 202,
+  "submitJobId": "377e9b50-1f05-44d6-a728-0e1043675468",
+  "jobId": "377e9b50-1f05-44d6-a728-0e1043675468",
+  "elapsedSeconds": 36.03,
+  "transitions": [
+    {
+      "elapsedSeconds": 0.0,
+      "point": [
+        "queued",
+        null,
+        null
+      ]
+    },
+    {
+      "elapsedSeconds": 1.0,
+      "point": [
+        "running",
+        "435f7b96-9129-4024-9418-d7ea7fad3733",
+        "unknown"
+      ]
+    },
+    {
+      "elapsedSeconds": 36.03,
+      "point": [
+        "succeeded",
+        "435f7b96-9129-4024-9418-d7ea7fad3733",
+        "completed"
+      ]
+    }
+  ],
+  "job": {
+    "id": "377e9b50-1f05-44d6-a728-0e1043675468",
+    "status": "succeeded",
+    "attempt": 1,
+    "promptId": "435f7b96-9129-4024-9418-d7ea7fad3733",
+    "submissionState": "completed",
+    "error": null,
+    "errorCode": null,
+    "variant": "ai-377e9b50-1f05-44d6-a728-0e1043675468"
+  },
+  "frozen": {
+    "workflowHash": "b967b10fbe052fa8ad2c3f1f8999f8b4efdc533a1608d8bbe69b094696d78cf1",
+    "snapshotHash": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+    "workflowVersion": "1.0.0",
+    "selectionHash": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7",
+    "originalHash": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+    "seed": 2026092804,
+    "parameters": {
+      "aspect_ratio": "3:2"
+    }
+  },
+  "proxy": {
+    "mode": "drop_after_accept",
+    "promptPostCount": 1,
+    "promptForwardCount": 1,
+    "promptId": "435f7b96-9129-4024-9418-d7ea7fad3733",
+    "upstreamAcceptedId": "435f7b96-9129-4024-9418-d7ea7fad3733",
+    "upstreamStatus": 200,
+    "responseDropped": true,
+    "bound": "127.0.0.1:18191"
+  },
+  "comfyHistoryContainsUuid": true,
+  "comfyHistoryStatus": "success",
+  "comfyQueueRunningIds": [],
+  "comfyQueuePendingIds": [],
+  "output": {
+    "path": "/home/Developer/travel-agent/data/media/photos/199b155d-0c14-4673-8d25-5de27f175676-ai-377e9b50-1f05-44d6-a728-0e1043675468.jpg",
+    "bytes": 342886,
+    "sha256": "9fef13f146438810f7a729cdb05c53cdc734882ad98b6ec8ddd1d791a66df245",
+    "format": "JPEG",
+    "size": [
+      1248,
+      832
+    ]
+  },
+  "apiPidRestored": "1163194",
+  "envRestoredExact": true,
+  "envRestoredSha256": "010d04fdd3a7777c3f3cea75b6973ef6d399a26af5ece0b5886b70f34efaa012",
+  "startRestoredExact": true,
+  "startRestoredSha256": "ae4423c88b79fc426added6ada1f29873a844e64101ca47361966cd01919d47e",
+  "gitCleanAfter": true,
+  "finalQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "finalModels": [
+    {
+      "id": "image",
+      "label": "Qwen-Image-2.1",
+      "service": "qwen21-comfy.service",
+      "state": "ready",
+      "active": false,
+      "idleTimeoutSeconds": 600,
+      "idleSeconds": null
+    },
+    {
+      "id": "video",
+      "label": "MiniMax H3",
+      "service": "minimax-h3-comfy.service",
+      "state": "stopped_on_demand",
+      "active": false,
+      "idleTimeoutSeconds": 600,
+      "idleSeconds": null
+    },
+    {
+      "id": "chat",
+      "label": "Qwen3.8-27B",
+      "service": "qwen38.service",
+      "state": "ready",
+      "active": false,
+      "idleTimeoutSeconds": 1800,
+      "idleSeconds": 1
+    }
+  ],
+  "endedAtUtc": "2026-09-28T13:27:28.247134+00:00"
+}
