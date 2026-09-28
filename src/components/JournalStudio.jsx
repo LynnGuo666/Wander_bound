@@ -7,6 +7,14 @@ import BinderFlipTransition from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 
 const STORE_PREFIX = 'travel-journal-layout-v1:';
+const DRAFT_PREFIX = 'travel-journal-pending-v1:';
+const samePage = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+function loadDrafts(tripId) {
+  try {
+    const drafts = JSON.parse(localStorage.getItem(`${DRAFT_PREFIX}${tripId}`) || '{}');
+    return drafts && typeof drafts === 'object' && !Array.isArray(drafts) ? drafts : {};
+  } catch { return {}; }
+}
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const itemId = () => crypto.randomUUID();
 function defaultText(trip) {
@@ -79,6 +87,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const selectedIds = previewOnly ? previewSelectedIds : providedSelectedIds;
   const pagesRef = useRef(pages);
   const versionRef = useRef(0);
+  const serverPagesRef = useRef([]);
+  const draftsRef = useRef(loadDrafts(trip.id));
   const saveChain = useRef(Promise.resolve());
   const [ready, setReady] = useState(!token);
   const [spreadIndex, setSpreadIndex] = useState(0);
@@ -89,6 +99,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
+  const [pendingCount, setPendingCount] = useState(Object.keys(draftsRef.current).length);
+  const [draftConflict, setDraftConflict] = useState(false);
   const drag = useRef(null);
   const stageRef = useRef(null);
   const nextPreviewRef = useRef(null);
@@ -98,8 +110,52 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
 
   function acceptDocument(document) {
     pagesRef.current = document.pages;
+    serverPagesRef.current = document.pages;
     versionRef.current = document.version;
     setPages(document.pages);
+  }
+  function storeDrafts() {
+    setPendingCount(Object.keys(draftsRef.current).length);
+    try {
+      if (Object.keys(draftsRef.current).length)
+        localStorage.setItem(`${DRAFT_PREFIX}${trip.id}`, JSON.stringify(draftsRef.current));
+      else localStorage.removeItem(`${DRAFT_PREFIX}${trip.id}`);
+    } catch { setError('本地草稿保存失败，请复制重要文字后重试。'); }
+  }
+  async function syncDrafts(document, overwrite = false) {
+    const drafts = draftsRef.current;
+    const indices = Object.keys(drafts).map(Number).filter(index => Number.isInteger(index) && index >= 0).sort((a, b) => a - b);
+    let conflict = false;
+    for (const index of indices) {
+      const draft = drafts[index];
+      if (!draft?.page || !document.pages[index]) continue;
+      if (samePage(document.pages[index], draft.page)) { delete drafts[index]; storeDrafts(); continue; }
+      if (!overwrite && !samePage(document.pages[index], draft.basePage)) { conflict = true; continue; }
+      const savedPage = draft.page;
+      try {
+        document = await mediaRequest(`/api/media/trips/${trip.id}/journal/pages/${index}`, token,
+          { method: 'PUT', body: JSON.stringify({ expectedVersion: document.version, page: savedPage }) });
+      } catch (reason) {
+        setError(`本地修改未同步：${reason.message}`);
+        break;
+      }
+      if (drafts[index] === draft) delete drafts[index];
+      storeDrafts();
+    }
+    setDraftConflict(conflict);
+    return document;
+  }
+  async function restoreDrafts(document, overwrite = false) {
+    const latest = await syncDrafts(document, overwrite);
+    acceptDocument(latest);
+    const overlay = [...latest.pages];
+    for (const [index, draft] of Object.entries(draftsRef.current))
+      if (overlay[Number(index)] && draft?.page) overlay[Number(index)] = draft.page;
+    pagesRef.current = overlay;
+    setPages(overlay);
+    if (Object.keys(draftsRef.current).length)
+      setError('本地修改仍未同步，已保留在页面上；同步后才能使用 AI 排版。');
+    else setError('');
   }
   useEffect(() => {
     if (!token) { setReady(true); return; }
@@ -117,9 +173,28 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
               { method: 'PUT', body: JSON.stringify({ expectedVersion: document.version, page: stored[index] }) });
           }
         }
-        if (alive) { acceptDocument(document); setReady(true); }
+        if (alive) {
+          try { await restoreDrafts(document); }
+          catch (reason) {
+            acceptDocument(document);
+            const overlay = [...document.pages];
+            for (const [index, draft] of Object.entries(draftsRef.current))
+              if (overlay[Number(index)] && draft?.page) overlay[Number(index)] = draft.page;
+            pagesRef.current = overlay; setPages(overlay);
+            setError(`本地修改未同步：${reason.message}`);
+          }
+          setReady(true);
+        }
       })
-      .catch(reason => { if (alive) { setError(reason.message); setReady(true); } });
+      .catch(reason => {
+        if (!alive) return;
+        const overlay = [...pagesRef.current];
+        for (const [index, draft] of Object.entries(draftsRef.current))
+          if (overlay[Number(index)] && draft?.page) overlay[Number(index)] = draft.page;
+        pagesRef.current = overlay; setPages(overlay);
+        setError(`无法读取手账：${reason.message}；本地修改仍保留在此浏览器。`);
+        setReady(true);
+      });
     return () => { alive = false; };
   }, [trip.id, token]);
 
@@ -131,6 +206,12 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
         const document = await mediaRequest(`/api/media/trips/${trip.id}/journal/pages/${pageIndex}`, token,
           { method: 'PUT', body: JSON.stringify({ expectedVersion: versionRef.current, page }) });
         versionRef.current = document.version;
+        serverPagesRef.current = document.pages;
+        const draft = draftsRef.current[pageIndex];
+        if (draft && samePage(draft.page, page)) delete draftsRef.current[pageIndex];
+        else if (draft) draftsRef.current[pageIndex] = { ...draft, basePage: document.pages[pageIndex] };
+        storeDrafts();
+        if (!Object.keys(draftsRef.current).length) { setError(''); setDraftConflict(false); }
       } catch (reason) { setError(`页面未同步：${reason.message}`); throw reason; }
     });
   }
@@ -139,7 +220,22 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       ? { ...transform(page), source: 'user', protected: true } : page);
     pagesRef.current = next;
     setPages(next);
+    if (token && !previewOnly) {
+      const previous = draftsRef.current[pageIndex];
+      draftsRef.current[pageIndex] = { page: next[pageIndex], basePage: previous?.basePage || serverPagesRef.current[pageIndex] };
+      storeDrafts();
+    }
     if (persist) persistPage(pageIndex);
+  }
+  async function retryDrafts() {
+    setBusy(true); setError('');
+    try {
+      await saveChain.current.catch(() => {});
+      saveChain.current = Promise.resolve();
+      const document = await mediaRequest(`/api/media/trips/${trip.id}/journal`, token);
+      await restoreDrafts(document, draftConflict);
+    } catch (reason) { setError(`本地修改未同步：${reason.message}`); }
+    finally { setBusy(false); }
   }
 
   useEffect(() => {
@@ -155,10 +251,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   }, [previewOnly, trip.id, token]);
 
   useEffect(() => {
-    if (previewOnly) return;
+    if (previewOnly || !ready) return;
     try { localStorage.setItem(`${STORE_PREFIX}${trip.id}`, JSON.stringify(pages)); }
     catch { setError('排版未能保存在当前浏览器'); }
-  }, [pages, trip.id]);
+  }, [pages, trip.id, ready]);
   useEffect(() => {
     if (previewOnly || !note || !ready || noteApplied.current) return;
     noteApplied.current = true;
@@ -286,6 +382,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     setBusy(true); setError(''); setNotice('');
     try {
       await saveChain.current;
+      if (Object.keys(draftsRef.current).length) throw new Error('还有本地修改未同步，请先保存页面。');
       if (pagesRef.current.length >= 12 && pagesRef.current.slice(0, 2).every(page => page.protected))
         throw new Error('已达到 12 页上限；现有页面均由你修改，AI 不会覆盖它们。');
       const plan = await mediaRequest(`/api/media/trips/${trip.id}/journal/compose`, token, { method: 'POST' });
@@ -320,6 +417,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     setBusy(true); setError('');
     try {
       await saveChain.current;
+      if (Object.keys(draftsRef.current).length) throw new Error('还有本地修改未同步，请先保存页面。');
       const document = await mediaRequest(`/api/media/trips/${trip.id}/journal/spreads`, token,
         { method: 'POST', body: JSON.stringify({ expectedVersion: versionRef.current }) });
       acceptDocument(document);
@@ -410,7 +508,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
           {toolTab === 'stickers' ? <div className="studio-panel studio-sticker-panel"><h3>行程贴纸 · 16 种</h3><form className="studio-generate" onSubmit={generateSticker}><input aria-label="自定义贴纸主题" value={motif} onChange={event => setMotif(event.target.value)} maxLength={80} placeholder="写一个自己的主题" /><button className="outline-button" disabled={!token || busy || motif.trim().length < 2} type="submit">绘制</button></form><div className="studio-category-grid">{stickerCategories.map(category => <button type="button" key={category.id} disabled={!token || busy} onClick={() => generateCategory(category)}>{category.name}<Plus size={12} /></button>)}</div><div className="studio-generated"><strong>已生成 / 绘制中</strong><div>{stickerJobs.filter(job => ['sticker', 'postcard', 'illustration'].includes(job.kind)).map(job => <button type="button" key={job.id} onClick={() => addGenerated(job)} aria-label={`添加${labelFor(job.kind)}：${job.motif}`}><span>{job.status === 'succeeded' ? <PrivateMedia url={`/api/media/stickers/${job.id}/image`} token={token} alt={job.motif} /> : job.status === 'failed' ? '失败' : '绘制中'}</span><small>{job.motif}</small></button>)}</div></div></div> : null}
           {toolTab === 'edit' ? active ? <div className="studio-panel studio-inspector"><h3>编辑{labelFor(active.kind)}</h3>{['text', 'postcard'].includes(active.kind) ? <textarea value={active.text || ''} onChange={event => updateItem(selected.pageIndex, active.id, { text: event.target.value }, false)} onBlur={() => persistPage(selected.pageIndex)} maxLength={300} aria-label="元素文字" /> : null}{active.kind === 'photo' && photos.length ? <label>照片<select value={photos.findIndex(photo => photo.id === active.photoId) >= 0 ? photos.findIndex(photo => photo.id === active.photoId) : active.photoIndex % photos.length} onChange={event => updateItem(selected.pageIndex, active.id, { photoIndex: Number(event.target.value), photoId: photos[Number(event.target.value)].id })}>{photos.map((photo, index) => <option value={index} key={photo.id}>{photo.capturedDay || '照片'} · {index + 1}</option>)}</select></label> : null}{active.kind === 'sticker' && stickerJobs.some(job => job.kind === 'sticker') ? <label>贴纸<select value={active.stickerId || ''} onChange={event => updateItem(selected.pageIndex, active.id, { stickerId: event.target.value })}><option value="">待生成</option>{stickerJobs.filter(job => job.kind === 'sticker').map(job => <option value={job.id} key={job.id}>{job.motif}</option>)}</select></label> : null}{['postcard', 'illustration', 'cover'].includes(active.kind) && stickerJobs.some(job => job.kind === (active.kind === 'cover' ? 'illustration' : active.kind)) ? <label>旅途画面<select value={active.assetId || ''} onChange={event => updateItem(selected.pageIndex, active.id, { assetId: event.target.value })}><option value="">默认画面</option>{stickerJobs.filter(job => job.kind === (active.kind === 'cover' ? 'illustration' : active.kind)).map(job => <option value={job.id} key={job.id}>{job.motif}</option>)}</select></label> : null}<div className="studio-sliders">{[['x', '左右', 0, 90], ['y', '上下', 0, 90], ['w', '宽度', 12, 90], ['h', '高度', 10, 85], ['r', '旋转', -30, 30]].map(([field, label, min, max]) => <label key={field}>{label}<input type="range" min={min} max={max} value={active[field]} onChange={event => updateItem(selected.pageIndex, active.id, { [field]: Number(event.target.value) }, false)} onPointerUp={() => persistPage(selected.pageIndex)} onKeyUp={() => persistPage(selected.pageIndex)} /></label>)}</div><div className="studio-layer"><button type="button" onClick={() => updateItem(selected.pageIndex, active.id, { z: active.z + 1 })}><ArrowUp size={14} />上一层</button><button type="button" onClick={() => updateItem(selected.pageIndex, active.id, { z: Math.max(1, active.z - 1) })}><ArrowDown size={14} />下一层</button><button type="button" onClick={removeActive}><Trash2 size={14} />移除</button></div></div> : <div className="studio-panel"><h3>选中一件素材</h3><p>可拖动、调整大小和层次。</p></div> : null}
           {toolTab === 'works' ? <div className="studio-panel studio-work-panel"><h3>旅途作品</h3>{works.slice(0, 3).map(work => <div className="studio-work-card" key={work.id}><strong>{work.title || (work.kind === 'memory' ? '回忆短片' : '风格手账')}</strong><small>{work.status === 'succeeded' ? '已完成' : work.progressLabel || '生成中'}</small>{work.status === 'succeeded' ? work.kind === 'memory' ? <PrivateMedia video url={`/api/media/memories/${work.id}/video`} token={token} /> : <PrivateMedia url={`/api/media/generation-jobs/${work.id}/image`} token={token} alt="旅途作品" /> : null}</div>)}{!works.length ? <p>还没有作品</p> : null}{photos.length && token ? <button className="outline-button" onClick={onCreateWork}>从照片制作</button> : null}</div> : null}
-        </div>{notice ? <p role="status" className="studio-message">{notice}</p> : null}{error ? <p role="alert" className="studio-message error">{error}</p> : null}
+        </div>{notice ? <p role="status" className="studio-message">{notice}</p> : null}{error ? <p role="alert" className="studio-message error">{error}</p> : null}{pendingCount && token ? <button type="button" className="outline-button" disabled={busy} onClick={retryDrafts}>{draftConflict ? '用本地修改覆盖服务器' : '重试同步本地修改'}</button> : null}
       </aside>
     </div>
   </section>;
