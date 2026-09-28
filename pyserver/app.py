@@ -12,6 +12,8 @@ from .inference import ModelController
 from .inference import routes as inference_routes
 from .settings import ConfigStore
 from .trips import TripStore
+from .media.storyboards import Storyboards
+from .media import storyboard_routes
 
 def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = None, media: MediaStore | None = None) -> FastAPI:
     config = config or ConfigStore()
@@ -20,14 +22,17 @@ def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = N
     image_client, video_client = configured_clients()
     controller = ModelController()
     jobs = JobStore(media, image_client, video_client, controller)
+    boards = Storyboards(jobs, config)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):
         controller.start()
         await jobs.resume()
+        await boards.resume()
         if controller.primary_chat and not jobs.pending():
             controller.begin_warm("chat")
         yield
+        await boards.close()
         await jobs.close()
         await controller.close()
 
@@ -38,6 +43,7 @@ def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = N
     app.include_router(trip_routes.router_for(trips, media))
     app.include_router(media_routes.router_for(trips, media, jobs, image_client, video_client, controller))
     app.include_router(inference_routes.router_for(controller, jobs))
+    app.include_router(storyboard_routes.router_for(trips, boards))
     app.include_router(web.router_for())
     return app
 
