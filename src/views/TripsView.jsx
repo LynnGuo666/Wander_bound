@@ -1,45 +1,84 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, Camera, History, MapPin, RefreshCw, Send } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Compass, LoaderCircle, MapPin, Plus, RefreshCw, Send, Sparkles } from 'lucide-react';
+import { PrivateMedia } from '../components/PrivateMedia.jsx';
+import { cityArtwork, tripDate, tripTitle } from '../lib/media.js';
 
-const STATUS = { not_started: '未开始', in_progress: '进行中', ended: '已结束' };
+const STATUS = { not_started: '即将出发', in_progress: '正在旅途', ended: '旅程已结束' };
 
-export default function TripsView({ currentTripId, onOpenConversation, onOpenPlan, onRevise, running }) {
-  const [trips, setTrips] = useState([]);
-  const [selected, setSelected] = useState(null);
+function TripCover({ trip, index = 0, large = false }) {
+  return <div className={`trip-cover trip-cover-${index % 4}${large ? ' trip-cover-large' : ''}`}>
+    <img src={cityArtwork(trip)} alt={`${tripTitle(trip)}的风格化城市插画`} />
+    <span className="trip-cover-city">{tripTitle(trip)}</span>
+  </div>;
+}
+
+function PlanComposer({ form, update, onGenerate, running, error, events, onCancel }) {
+  const recent = [...events].reverse().find(item => item.type === 'model_turn_end' && item.publicNote);
+  return <section className="plan-composer" aria-label="规划新行程">
+    <div className="section-kicker"><Sparkles size={15} /> 从一个想法开始</div>
+    <h2>下一站，想去哪里？</h2>
+    <p>说说时间、预算和你喜欢的旅行方式，我们会把它整理成可查看、可修改的行程。</p>
+    <form onSubmit={event => { event.preventDefault(); if (form.query.trim()) onGenerate(); }}>
+      <label className="sr-only" htmlFor="trip-query">描述旅行计划</label>
+      <textarea id="trip-query" rows={3} value={form.query} onChange={event => update('query', event.target.value)} placeholder="例如：十月从上海出发去成都玩四天，想看熊猫、吃川菜，行程轻松一些…" required />
+      <details className="plan-options"><summary>补充出发地与日期（可选）</summary><div className="plan-options-grid">
+        <label>出发城市<input value={form.originCity} onChange={event => update('originCity', event.target.value)} placeholder="例如 上海" /></label>
+        <label>目的地<input value={form.destination} onChange={event => update('destination', event.target.value)} placeholder="也可由需求识别" /></label>
+        <label>出发日期<input type="date" value={form.startDate} onChange={event => update('startDate', event.target.value)} /></label>
+        <label>旅行天数<input type="number" min="1" max="21" value={form.days} onChange={event => update('days', event.target.value ? Number(event.target.value) : '')} placeholder="天数" /></label>
+      </div></details>
+      <div className="plan-composer-actions"><span>地点与价格会标明来源</span><button className="solid-button" disabled={running || !form.query.trim()} type="submit">{running ? <LoaderCircle size={17} className="spin" /> : <ArrowRight size={17} />}{running ? '正在规划…' : '生成行程'}</button></div>
+    </form>
+    {running ? <div className="plan-progress" role="status"><span className="progress-dot" />{recent?.publicNote || '正在查找地点、交通与住宿，稍等片刻…'}<button type="button" onClick={onCancel}>停止</button></div> : null}
+    {error ? <p className="form-error" role="alert">{error}</p> : null}
+  </section>;
+}
+
+function TripDetail({ trip, index, onBack, onRevise, running, token }) {
   const [instruction, setInstruction] = useState('');
-  const [error, setError] = useState('');
-  async function refresh() {
+  const plan = trip.plan;
+  return <div className="trip-detail page-enter">
+    <button className="text-button" onClick={onBack}><ArrowLeft size={17} /> 返回所有行程</button>
+    <TripCover trip={trip} index={index} large />
+    <div className="trip-detail-head"><div><span className="section-kicker">YOUR ITINERARY</span><h1>{tripTitle(trip)}</h1><p><CalendarDays size={16} />{tripDate(trip)}{plan?.days ? ` · ${plan.days} 天` : ''}</p></div><span className="status-pill">{STATUS[trip.status] || '规划中'}</span></div>
+    {!plan ? <div className="empty-panel"><Compass /><h2>行程还在形成中</h2><p>继续回答规划问题，确定后就能在这里查看逐日安排。</p></div> : <>
+      <div className="trip-facts"><span>目的地 <strong>{plan.destination}</strong></span><span>景点 <strong>{plan.itinerary?.reduce((count, day) => count + (day.stops?.length || 0), 0) || 0} 处</strong></span><span>住宿选择 <strong>{plan.hotels?.length || 0} 项</strong></span><span>交通选择 <strong>{(plan.flights?.length || 0) + (plan.trains?.length || 0)} 项</strong></span></div>
+      <section className="trip-days"><div className="section-heading"><div><span className="section-kicker">DAY BY DAY</span><h2>每天，都有值得期待的事</h2></div></div>
+        {(plan.itinerary || []).map((day, dayIndex) => <article className="trip-day" key={day.day}><div className="day-number">{String(day.day || dayIndex + 1).padStart(2, '0')}</div><div><div className="day-heading"><div><h3>{day.title || `第 ${day.day} 天`}</h3><p>{day.date}{day.city ? ` · ${day.city}` : ''}</p></div><span>DAY {day.day}</span></div>
+          {day.stops?.length ? <ol className="stop-list">{day.stops.map((stop, stopIndex) => <li key={stop.id || stopIndex}><span className="stop-time">{stop.start || '待定'}</span><div><strong>{stop.name}</strong><small>{stop.category || '旅途停靠'}</small></div>{Number.isFinite(stop.lng) && Number.isFinite(stop.lat) ? <a title={`导航到${stop.name}`} href={`https://uri.amap.com/navigation?to=${encodeURIComponent(`${stop.lng},${stop.lat},${stop.name}`)}&mode=car&src=travel-agent`} target="_blank" rel="noreferrer"><MapPin size={17} /></a> : null}</li>)}</ol> : <p className="quiet-copy">这一天的地点还没有确定。</p>}
+        </div></article>)}
+      </section>
+      {trip.photos?.length ? <section className="trip-photo-section"><div className="section-heading"><div><span className="section-kicker">MOMENTS</span><h2>这趟旅程的照片</h2></div></div>{token ? <div className="trip-photo-grid">{trip.photos.slice(0, 6).map(photo => <PrivateMedia key={photo.id} url={`/api/media/photos/${photo.id}`} token={token} alt={`${tripTitle(trip)}的旅行照片`} />)}</div> : <p className="quiet-copy">照片保存在私有相册。到设置页连接后可查看。</p>}</section> : null}
+      <section className="revise-panel"><div><span className="section-kicker">MAKE IT YOURS</span><h2>想换一种走法？</h2><p>可以继续修改这趟行程，已确定的内容会保留在历史版本里。</p></div><form onSubmit={event => { event.preventDefault(); if (instruction.trim()) { onRevise(trip, instruction.trim()); setInstruction(''); } }}><label className="sr-only" htmlFor="revision">修改行程</label><textarea id="revision" value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="例如：第三天轻松一点，留更多时间在老城区…" rows={3} /><button className="solid-button" disabled={running || !instruction.trim()} type="submit"><Send size={16} />发送修改</button></form></section>
+    </>}
+  </div>;
+}
+
+export default function TripsView({ trips, refreshTrips, currentTripId, currentPlan, form, update, onGenerate, events, error, running, onCancel, onOpenTrip, onRevise, token }) {
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [composing, setComposing] = useState(false);
+  async function open(id) {
+    setLoading(true); setDetailError('');
     try {
-      const response = await fetch('/api/trips');
-      if (!response.ok) throw new Error('行程读取失败');
-      const list = (await response.json()).trips;
-      setTrips(list);
-      if (selected?.id || currentTripId) await select(selected?.id || currentTripId);
-    } catch (reason) { setError(reason.message); }
+      const response = await fetch(`/api/trips/${encodeURIComponent(id)}`);
+      if (!response.ok) throw new Error('行程暂时无法读取');
+      const detail = await response.json();
+      setSelected(detail); setComposing(false); onOpenTrip(detail);
+    } catch (reason) { setDetailError(reason.message); }
+    finally { setLoading(false); }
   }
-  async function select(id) {
-    const response = await fetch(`/api/trips/${id}`);
-    if (!response.ok) { setError('行程读取失败'); return; }
-    setSelected(await response.json());
-  }
-  useEffect(() => { refresh(); }, [currentTripId]);
-  function revise() {
-    if (!selected || !instruction.trim()) return;
-    onOpenConversation(selected);
-    onRevise(selected.id, instruction.trim());
-    setInstruction('');
-  }
-  return <div className="flex flex-col gap-6"><div className="flex items-end justify-between gap-4"><div><p className="text-xs font-semibold tracking-[.16em] text-primary">YOUR JOURNEYS</p><h1 className="mt-2 text-3xl font-semibold">我的行程</h1><p className="mt-2 text-sm text-muted-foreground">规划会话、逐日安排和照片共用同一个行程 ID；每次修改都保留历史版本。</p></div><Button variant="outline" onClick={refresh}><RefreshCw data-icon="inline-start" />刷新</Button></div>
-    {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
-    <div className="grid items-start gap-6 lg:grid-cols-[320px_minmax(0,1fr)]"><Card><CardHeader><CardTitle>行程列表</CardTitle><CardDescription>按最近修改时间排序</CardDescription></CardHeader><CardContent className="flex flex-col gap-2">{trips.length ? trips.map(trip => <Button key={trip.id} variant={selected?.id === trip.id ? 'secondary' : 'ghost'} className="h-auto w-full justify-between gap-3 py-3 text-left" onClick={() => select(trip.id)}><span className="min-w-0 truncate">{trip.plan?.destination || trip.title}</span><Badge variant="outline">{STATUS[trip.status]}</Badge></Button>) : <p className="text-sm text-muted-foreground">还没有行程；从 Agent 调试页开始规划。</p>}</CardContent></Card>
-      {selected ? <div className="flex min-w-0 flex-col gap-4"><Card><CardHeader><div className="flex flex-wrap items-center gap-2"><CardTitle>{selected.plan?.destination || selected.title}</CardTitle><Badge>{STATUS[selected.status]}</Badge><Badge variant="outline">{selected.phase === 'planning' ? '规划中' : '行程已确定'}</Badge></div><CardDescription>{selected.plan ? `${selected.plan.startDate} 至 ${selected.plan.endDate} · ${selected.plan.days} 天` : '会话进行中，行程尚未确定'} · {selected.id}</CardDescription></CardHeader><CardContent className="flex flex-wrap gap-2"><Button onClick={() => onOpenConversation(selected)}>查看会话与 Debug <ArrowRight data-icon="inline-end" /></Button>{selected.plan ? <Button variant="outline" onClick={() => onOpenPlan(selected)}>查看完整行程</Button> : null}</CardContent></Card>
-        {selected.plan ? <Card><CardHeader><CardTitle>逐日安排与导航</CardTitle><CardDescription>点击目的地可打开高德导航。</CardDescription></CardHeader><CardContent className="space-y-4">{selected.plan.itinerary?.map(day => <div key={day.day} className="border-t pt-3 first:border-t-0 first:pt-0"><strong className="text-sm">第 {day.day} 天 · {day.date}</strong><div className="mt-2 flex flex-wrap gap-2">{day.stops?.length ? day.stops.map(stop => <a key={stop.id} href={`https://uri.amap.com/navigation?to=${encodeURIComponent(`${stop.lng},${stop.lat},${stop.name}`)}&mode=car&src=travel-agent`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm text-primary"><MapPin className="size-3" />{stop.name}</a>) : <span className="text-sm text-muted-foreground">当天尚无可核实的地点</span>}</div></div>)}</CardContent></Card> : null}
-        <Card><CardHeader><CardTitle className="flex items-center gap-2"><Camera className="size-4" />行程照片</CardTitle><CardDescription>iOS 上传时使用本行程 ID，照片会自动归档到这里。</CardDescription></CardHeader><CardContent>{selected.photos?.length ? <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{selected.photos.map(photo => <figure key={photo.id} className="overflow-hidden rounded-md border"><img src={`/api/trips/${selected.id}/photos/${photo.id}`} alt={photo.capturedDay || '旅行照片'} className="aspect-square w-full object-cover" loading="lazy" /><figcaption className="p-2 text-xs text-muted-foreground">{photo.capturedDay || '未记录日期'}</figcaption></figure>)}</div> : <p className="text-sm text-muted-foreground">还没有关联的照片。</p>}</CardContent></Card>
-        <Card><CardHeader><CardTitle className="flex items-center gap-2"><History className="size-4" />会话与行程历史</CardTitle><CardDescription>{selected.revisions?.length || 0} 个已确定版本 · {selected.events?.filter(event => event.type === 'user_answer').length || 0} 次问答</CardDescription></CardHeader><CardContent className="space-y-3">{selected.revisions?.map((revision, index) => <div key={index} className="rounded-md border p-3 text-sm"><strong>版本 {index + 1} · {new Date(revision.at).toLocaleString('zh-CN')}</strong><p className="mt-1 text-muted-foreground">{revision.instruction}</p><p className="mt-1">{revision.plan?.destination} · {revision.plan?.startDate} 至 {revision.plan?.endDate}</p></div>)}<div className="border-t pt-3"><label htmlFor="trip-revision" className="text-sm font-medium">继续对话，修改这趟行程</label><Textarea id="trip-revision" className="mt-2" value={instruction} onChange={event => setInstruction(event.target.value)} placeholder="例如：把第三天改成轻松一点，保留已经确定的日期和预算" /><Button className="mt-2" onClick={revise} disabled={running || !instruction.trim()}><Send data-icon="inline-start" />发送修改</Button></div></CardContent></Card>
-      </div> : null}</div>
+  useEffect(() => { if (currentTripId && !running && selected?.id !== currentTripId) open(currentTripId); }, [currentTripId, running]);
+  useEffect(() => { if (currentPlan && currentTripId) setSelected(previous => previous?.id === currentTripId ? { ...previous, plan: currentPlan } : previous); }, [currentPlan, currentTripId]);
+  const selectedIndex = trips.findIndex(item => item.id === selected?.id);
+  if (selected) return <TripDetail trip={selected} index={selectedIndex < 0 ? 0 : selectedIndex} onBack={() => setSelected(null)} running={running} token={token} onRevise={(trip, instruction) => onRevise(trip.id, instruction)} />;
+  return <div className="journeys-page page-enter">
+    <section className="journeys-hero"><div><span className="section-kicker">THE JOURNEY BEGINS HERE</span><h1>去看看世界，<br /><em>也留下自己的故事。</em></h1><p>从一个念头出发，把每一次计划都变成值得回看的旅程。</p><button className="light-button" onClick={() => { setComposing(true); document.getElementById('plan-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}><Plus size={18} /> 规划新行程</button></div><div className="hero-art"><img src="/art/travel-cover.webp" alt="山海与小镇的风格化旅行插画" /></div></section>
+    <div id="plan-composer" className={composing || !trips.length || running || error ? '' : 'composer-collapsed'}><PlanComposer form={form} update={update} onGenerate={() => { setComposing(true); onGenerate(); }} running={running} error={error} events={events} onCancel={onCancel} /></div>
+    <section className="journey-list"><div className="section-heading"><div><span className="section-kicker">YOUR COLLECTION</span><h2>我的行程 <span>{trips.length ? String(trips.length).padStart(2, '0') : ''}</span></h2><p>继续筹备，或重新走进一段已经完成的旅程。</p></div><button className="icon-text-button" onClick={refreshTrips} aria-label="刷新行程"><RefreshCw size={17} /> 刷新</button></div>
+      {detailError ? <p className="form-error" role="alert">{detailError}</p> : null}{loading ? <p className="quiet-copy">正在打开行程…</p> : null}
+      {trips.length ? <div className="trip-card-grid">{trips.map((trip, index) => <button className="trip-card" key={trip.id} onClick={() => open(trip.id)}><TripCover trip={trip} index={index} /><div className="trip-card-body"><span className="trip-card-status">{STATUS[trip.status] || '规划中'}</span><h3>{tripTitle(trip)}</h3><p><CalendarDays size={14} />{tripDate(trip)}</p><span className="trip-card-link">查看行程 <ChevronRight size={16} /></span></div></button>)}</div> : <div className="empty-panel"><Compass /><h3>你的旅程，从这里开始</h3><p>写下想去的地方，第一张行程卡片就会出现。</p></div>}
+    </section>
   </div>;
 }

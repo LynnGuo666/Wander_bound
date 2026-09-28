@@ -1,0 +1,18 @@
+{
+  "id": "city-cover-qwen21-t2i-v1",
+  "name": "行程城市封面 · 无参考图",
+  "tags": ["行程卡片", "城市封面", "纯文生图", "Qwen-Image-2.1", "3:2", "水粉剪纸"],
+  "workflow": "workflows/qwen-image-2.1-t2i-api.json",
+  "aspectRatio": "3:2",
+  "resolution": [1536, 1024],
+  "seed": 2026092906,
+  "promptTemplate": "{{city}}{{time_of_day}}的旅行海报插画。{{landmarks}}在远处清晰可辨，前景为{{foreground}}。温暖奶油白纸张纹理，深青绿、鼠尾草绿和落日橙色，细腻水粉与层叠剪纸拼贴质感。横向三比二构图，适合作为旅行行程卡片封面。画面没有任何文字、汉字、字母、数字、标志或水印。",
+  "testedExample": {
+    "city": "深圳湾",
+    "time_of_day": "黄昏",
+    "landmarks": "平安金融中心与深圳现代天际线",
+    "foreground": "海滨步道、栏杆和几株亚热带树木",
+    "output": "../output/qwen-shenzhen-text-to-image.png",
+    "result": "2026-09-29 在 Spark ComfyUI 0.37.0 上以纯文生图工作流生成成功，无参考图上传"
+  }
+}

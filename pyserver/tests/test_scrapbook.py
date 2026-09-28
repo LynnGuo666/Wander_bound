@@ -54,6 +54,12 @@ def test_scrapbook_http_freezes_inputs_style_and_downloads_after_restart(tmp_pat
             response = await c.post("/api/media/scrapbooks", json=request)
             assert response.status_code == 202, response.text
             job_id = response.json()["id"]
+            works = await c.get(f"/api/media/trips/{trip['id']}/works")
+            assert works.status_code == 200
+            assert works.json()["works"][0]["id"] == job_id
+            assert "selectionSnapshot" not in works.json()["works"][0]
+            assert (await c.get(f"/api/media/trips/{trip['id']}/works",
+                                headers={"Authorization": ""})).status_code == 401
             before = jobs.get(job_id)
             assert before["kind"] == "scrapbook" and before["productKind"] == "scrapbook"
             assert (await c.get(f"/api/media/generation-jobs/{job_id}/image")).status_code == 409
