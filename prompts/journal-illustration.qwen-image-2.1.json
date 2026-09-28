@@ -1,0 +1,7 @@
+{
+  "id": "journal-illustration-qwen21-t2i-v1",
+  "model": "Qwen-Image-2.1",
+  "workflow": "workflows/qwen-image-2.1-sticker-api.json",
+  "tags": ["journal", "illustration", "trip-personalized", "text-to-image"],
+  "promptTemplate": "One expressive editorial watercolor travel illustration of {{city}} based on this real journey scene: {{motif}}. Distinctive food, architecture, landscape or transit details only when the scene calls for them; cinematic light, tactile paper texture, natural color variation and a clear focal point. Single complete image filling the square frame, no page layout, no book, no border, no readable text, no letters, no numbers, no logo, no watermark."
+}
