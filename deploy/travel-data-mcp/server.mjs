@@ -8,7 +8,7 @@ import { credentialsFromHeaders } from '../../server/mcp-data/validation.mjs';
 const string = { type: 'string' };
 const integer = { type: 'integer' };
 export const tools = [
-  { name: 'travel_search_transport', description: '查询去返程真实航班与火车报价，返回供应商状态和完整报价；按请求惰性调用 OTA、12306、Duffel MCP。',
+  { name: 'travel_search_transport', description: '查询去返程真实航班与火车报价，返回供应商状态和完整报价；按请求惰性调用 OTA、12306 MCP 与 Duffel API。',
     inputSchema: { type: 'object', properties: { originCity: string, destination: string, startDate: string, days: integer,
       priorities: { type: 'object' } }, required: ['originCity', 'destination', 'startDate', 'days'] } },
   { name: 'travel_search_stays', description: '通过道旅 MCP 查询酒店，返回真实价格、坐标和预订地址。',

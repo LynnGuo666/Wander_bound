@@ -1,16 +1,16 @@
-# Python backend modules
+# Python FastAPI 主服务
 
-`pyserver.app` is the FastAPI composition root. Each feature owns its HTTP routes, state, and integrations in a package:
+`pyserver.app` 是唯一应用入口。各模块有独立目录和多个文件：
 
-| Package | Responsibility |
+| 模块 | 职责 |
 | --- | --- |
-| `agent/` | Persistent Step Plan loop, streamed model client, lazy tool catalog, tool dispatch, trip specification, supplier discovery, and itinerary assembly |
-| `providers/` | HTTP clients for the Node.js Docker MCP endpoints on Spark, plus the Spark JS transport API and non-MCP place providers |
-| `trips/` | Durable trip records, status projection, and trip endpoints |
-| `settings/` | YAML configuration, credential and priority schema, and settings endpoints |
-| `media/` | Private photo store, image processing, Spark ComfyUI client, persistent jobs, authentication, and media endpoints |
-| `api/` | Cross-feature health and capability endpoints, planning stream, and built frontend files |
+| `agent/` | Step Plan 流式 Agent loop、会话状态、工具编排、供应商发现、计划与降级 |
+| `providers/` | MCP HTTP 客户端、高德非 MCP 查询；不解析供应商原始 MCP 业务信封 |
+| `trips/` | 行程状态、历史和持久化 |
+| `settings/` | `config.yml`、密钥和来源优先级 |
+| `media/` | 私有照片、修图与本地 Qwen/MiniMax H3 作业 |
+| `api/` | 健康、能力、规划流和网页资源 |
 
-The API keeps the existing `/api/*` paths. The Node.js Docker services on Spark host the OTA, 12306, and Dida MCP tools. Python only uses HTTP endpoints: `TRAVEL_OTA_MCP_URL`, `TRAVEL_12306_MCP_URL`, and `TRAVEL_DIDA_MCP_URL` for live `tools/list` discovery; `TRAVEL_DATA_API_URL` for outbound and return transport; `TRAVEL_STAYS_API_URL` for Dida hotels; and `TRAVEL_ATTRACTIONS_API_URL` for OTA attraction products. The Spark JavaScript data service calls its local Docker MCP containers. Python does not build or run those images. Supplier network calls happen only when the matching tool runs, and Spark generation calls happen only after a media job is submitted.
+供应商 MCP 运行于 DGX Spark Docker。`TRAVEL_DATA_MCP_URL` 用于调用 Node 归一化工具；`TRAVEL_OTA_MCP_URL`、`TRAVEL_12306_MCP_URL`、`TRAVEL_DIDA_MCP_URL` 用于真实 `tools/list` 展示。Python 不运行 Docker，也不调用旧 Node `/api/data/*`。图片工作流经本地到 Spark 的 ComfyUI API 隧道调用。
 
-Run locally with `./start.sh`. Run Python tests with `.venv/bin/python -m pytest pyserver/tests -q`.
+本地运行 `./spark-tunnel.sh` 和 `./start.sh`。测试：`.venv/bin/python -m pytest pyserver/tests -q`。

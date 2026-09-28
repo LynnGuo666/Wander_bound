@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { callOtaMcp, runCli } from '../server/ota/run-cli.mjs';
-import { discoverCapabilities } from '../server/capabilities.mjs';
+import { tools } from '../deploy/travel-data-mcp/server.mjs';
 
 test('OTA adapter invokes only a named MCP tool and sends per-request key outside the JSON-RPC body', async () => {
   const previous = process.env.TRAVEL_OTA_MCP_URL;
@@ -24,20 +24,8 @@ test('OTA adapter invokes only a named MCP tool and sends per-request key outsid
   }
 });
 
-test('capability discovery reports live MCP descriptions without inventing authenticated upstream tools', async () => {
-  const previous = process.env.TRAVEL_OTA_MCP_URL;
-  process.env.TRAVEL_OTA_MCP_URL = 'http://127.0.0.1:4176/mcp';
-  try {
-    const catalog = await discoverCapabilities({}, {
-      availability: () => ({ flyai: { configured: true }, dida: { configured: false } }),
-      listOta: async () => [{ name: 'flyai_search_flight', description: 'live wrapper tool', inputSchema: { type: 'object' } }],
-      didaDiscovery: async () => ({ kind: 'MCP', discovery: 'authentication_required', tools: [] }),
-    });
-    assert.equal(catalog.connections.ota.discovery, 'runtime');
-    assert.equal(catalog.connections.ota.tools[0].description, 'live wrapper tool');
-    assert.deepEqual(catalog.connections.dida.tools, []);
-  } finally {
-    if (previous === undefined) delete process.env.TRAVEL_OTA_MCP_URL;
-    else process.env.TRAVEL_OTA_MCP_URL = previous;
-  }
+test('data MCP announces only supported normalized read tools', () => {
+  assert.deepEqual(tools.map(tool => tool.name), ['travel_search_transport', 'travel_search_stays',
+    'travel_search_attractions', 'travel_search_places']);
+  assert.ok(tools.every(tool => tool.inputSchema?.type === 'object'));
 });

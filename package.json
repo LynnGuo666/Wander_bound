@@ -4,9 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -k \"node --env-file-if-exists=.env server/index.mjs\" \"vite --host 127.0.0.1\"",
-    "dev:server": "node --env-file-if-exists=.env server/index.mjs",
-    "agent:cli": "node --env-file-if-exists=.env server/cli.mjs",
+    "dev": "./start.sh",
+    "dev:server": "./start.sh",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "ios:generate": "cd ios && xcodegen generate",

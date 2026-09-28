@@ -17,7 +17,7 @@ if [[ ! -f dist/index.html ]]; then
 fi
 if [[ -f .env ]]; then
   set -a
-  source .env
+  source ./.env
   set +a
 fi
 
