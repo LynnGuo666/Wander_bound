@@ -76,7 +76,10 @@ def extract_exif(image_bytes: bytes) -> dict:
             result["lighting"] = "bright" if ev >= 12 else ("normal" if ev >= 8 else "low-light")
         gps = exif.get_ifd(0x8825)
         if gps:
-            lat = _dms_to_deg(gps.get(1), gps.get(2))
+            # GPS IFD 的 tag 编号：1/3 是纬度/经度方向(ASCII)，2/4 才是度分秒(RATIONAL)。
+            # 早期把纬度的 1、2 传反了，方向字符串当度分秒（长度不是 3）直接返回 None，
+            # 于是 lat 恒为 None、GPS 整块写不进去——经纬度都取不到。
+            lat = _dms_to_deg(gps.get(2), gps.get(1))
             lon = _dms_to_deg(gps.get(4), gps.get(3))
             if lat is not None and lon is not None:
                 altitude = _to_float(gps.get(6))
