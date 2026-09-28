@@ -1,7 +1,7 @@
 import asyncio
 
 from pyserver.agent.planning import draft_plan
-from pyserver.agent.schedule import day_windows
+from pyserver.agent.schedule import day_windows, select_outbound
 from pyserver.agent.spec import set_trip_spec
 from pyserver.agent.fallback import complete_with_tools
 
@@ -34,6 +34,21 @@ def test_longer_trip_keeps_middle_days_for_verified_places():
     assert result["ok"] is True
     assert not state["plan"]["itinerary"][0]["stops"]
     assert not state["plan"]["itinerary"][1]["stops"]
+    assert state["plan"]["itinerary"][2]["stops"][0]["start"] is None
+
+
+def test_daylight_high_speed_train_is_selected_over_midnight_or_slow_train():
+    state = _state(3)
+    state["preferences"] = {"transportPreference": "高铁"}
+    state["trains"] = [
+        {"id": "midnight", "trainNumber": "G100", "departureAt": "2026-10-02T00:04:00",
+         "arrivalAt": "2026-10-02T00:33:00", "totalPrice": 75},
+        {"id": "slow", "trainNumber": "K200", "departureAt": "2026-10-02T08:00:00",
+         "arrivalAt": "2026-10-02T10:00:00", "totalPrice": 24},
+        {"id": "daylight", "trainNumber": "G300", "departureAt": "2026-10-02T06:20:00",
+         "arrivalAt": "2026-10-02T07:00:00", "totalPrice": 75},
+    ]
+    assert select_outbound(state)["id"] == "daylight"
 
 
 def test_answer_can_change_explicit_days_and_infeasible_plan_asks_user(monkeypatch):

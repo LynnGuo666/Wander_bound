@@ -1,10 +1,10 @@
 """Build a dated itinerary exclusively from verified place IDs."""
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from ..trips import now
 from .state import _error
-from .schedule import day_windows, capacity
+from .schedule import day_windows, capacity, select_outbound
 
 async def draft_plan(args: dict, state: dict) -> dict:
     if not state["destination"] or not state["startDate"] or not isinstance(state["days"], int):
@@ -64,20 +64,29 @@ async def draft_plan(args: dict, state: dict) -> dict:
         required = next((stay for stay in state["requiredStays"] if stay["from"] <= day <= stay["to"]), None)
         if required and assignment["city"] != required["city"]:
             return _error("required_stay", f"{day} 必须停留在 {required['city']}")
-        lower = windows.get(day, (datetime.combine(date.fromisoformat(day), datetime.min.time()), None))[0]
-        stops = [{**catalog[item], "start": "19:00" if "夜" in catalog[item]["name"] else
-                  (lower + timedelta(hours=2 * slot)).strftime("%H:%M"),
-                  "travelMinutes": None, "travelSource": None} for slot, item in enumerate(assignment["placeIds"])]
+        stops = [{**catalog[item], "start": None, "travelMinutes": None, "travelSource": None}
+                 for item in assignment["placeIds"]]
         itinerary.append({"day": index + 1, "date": day, "city": assignment["city"], "requiredStay": bool(required),
                           "title": f"{assignment['city']} · 第 {index + 1} 天", "stops": stops})
+    areas = {}
+    for item in (stop for day in itinerary for stop in day["stops"]):
+        if item.get("area"):
+            areas[item["area"]] = areas.get(item["area"], 0) + 1
+    stay_area = {"name": max(areas, key=areas.get)} if areas else None
+    outbound = select_outbound(state)
+    mode = "train" if outbound in (state.get("trains") or []) else "flight"
     plan = {"destination": state["destination"], "originCity": state["originCity"], "startDate": state["startDate"],
             "endDate": (start + timedelta(days=state["days"] - 1)).isoformat(), "days": state["days"],
             "intro": "根据已确认的约束与已核实地点编排", "revisit": False, "skippedPlaces": [], "itinerary": itinerary,
-            "stayArea": None, "flights": state.get("flights") or [], "returnFlights": state.get("returnFlights") or [],
+            "stayArea": stay_area, "flights": state.get("flights") or [], "returnFlights": state.get("returnFlights") or [],
             "trains": state["trains"], "returnTrains": state.get("returnTrains") or [], "hotels": state["hotels"],
-            "attractionOffers": [], "dining": [], "groundJourneys": [], "providerStatus": state.get("providerStatus") or {}, "transportPreference": "train",
-            "hotelBrands": [], "generatedAt": now(), "locationDetected": False, "requiredStays": state["requiredStays"],
-            "totalBudgetCny": state["totalBudgetCny"], "recommendedOutboundTrainId": next((item["id"] for item in state["trains"] if item["totalPrice"] is not None), None)}
+            "attractionOffers": [], "dining": [], "groundJourneys": [], "providerStatus": state.get("providerStatus") or {},
+            "transportPreference": (state.get("preferences") or {}).get("transportPreference") or mode,
+            "selectedTransportMode": mode, "hotelBrands": (state.get("preferences") or {}).get("hotelBrands") or [],
+            "generatedAt": now(), "locationDetected": False, "requiredStays": state["requiredStays"],
+            "totalBudgetCny": state["totalBudgetCny"],
+            "recommendedOutboundTrainId": outbound.get("id") if outbound and mode == "train" else None,
+            "recommendedOutboundFlightId": outbound.get("id") if outbound and mode == "flight" else None}
     state["plan"] = plan
     state["enrichmentDone"] = False
     return {"ok": True, "days": itinerary, "selectedPlaceIds": ids}

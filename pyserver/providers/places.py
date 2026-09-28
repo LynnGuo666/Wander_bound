@@ -42,6 +42,5 @@ async def search_places(city: str, key: str | None) -> list[dict]:
             continue
         places.append({"id": str(row["id"]), "name": str(row.get("name", "")), "lat": lat, "lng": lng,
                        "area": str(row.get("adname") or city), "category": str(row.get("type") or "景点").split(";")[0],
-                       "duration": 90, "description": str(row.get("address") or ""), "source": "高德"})
+                       "duration": None, "description": str(row.get("address") or ""), "source": "高德"})
     return places
-
