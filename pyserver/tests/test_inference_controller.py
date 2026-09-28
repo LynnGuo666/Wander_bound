@@ -9,6 +9,8 @@ from PIL import Image as PillowImage
 from pyserver.app import create_app
 from pyserver.inference.controller import ModelController, ModelSpec
 from pyserver.media.jobs import JobStore
+from pyserver.media import workflow_versions
+from pathlib import Path
 from pyserver.media import MediaStore
 from pyserver.settings import ConfigStore
 from pyserver.trips import TripStore
@@ -40,7 +42,10 @@ class Memory:
 class Image:
     configured = True
 
-    async def queue(self, *_args):
+    def freeze_workflow(self):
+        return workflow_versions.freeze_workflow(Path(__file__).resolve().parents[2] / "workflows/qwen-image-2.1-edit-api.json", "image")
+
+    async def queue(self, *_args, **_kwargs):
         return "prompt-id"
 
     async def result(self, _prompt_id):
