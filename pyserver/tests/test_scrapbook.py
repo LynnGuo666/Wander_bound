@@ -1,6 +1,7 @@
 """Product contracts/CPU layout; actual Qwen evidence is kept separately."""
 import asyncio
 import io
+from contextlib import contextmanager
 from pathlib import Path
 
 import httpx
@@ -18,6 +19,21 @@ def landscape():
     out = io.BytesIO()
     Image.new("RGB", (600, 400), "#bbaa77").save(out, "JPEG")
     return out.getvalue()
+
+
+def test_missing_title_font_preserves_contract_error(monkeypatch):
+    monkeypatch.setattr(scrapbook.Path, "is_file", lambda _path: False)
+
+    @contextmanager
+    def request_scope():
+        yield
+
+    with pytest.raises(ContractError) as caught:
+        with request_scope():
+            scrapbook.title_contract("黄石的秋天")
+    assert caught.value.code == "TITLE_FONT_UNAVAILABLE"
+    assert caught.value.status_code == 503
+    assert scrapbook.title_contract("") == ("", None)
 
 
 def test_scrapbook_http_freezes_inputs_style_and_downloads_after_restart(tmp_path, monkeypatch):

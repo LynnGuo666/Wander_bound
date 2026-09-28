@@ -15,7 +15,8 @@ MAX_INPUT_PHOTOS = 8
 MAX_PROMPT_LENGTH = 4000
 
 
-@dataclass(frozen=True)
+# Exceptions must allow Python/contextlib to attach traceback information.
+@dataclass
 class ContractError(ValueError):
     code: str
     message: str
