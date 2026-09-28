@@ -38,6 +38,49 @@ struct PlaceStop: Codable, Identifiable {
     let travelSource: String?
     let rating: Double?
     let ratingSource: String?
+    let mapCoordinate: Coordinates?
+    let durationSource: String?
+    let recommendedDurationMinutes: Int?
+}
+
+struct TimelineEvent: Codable {
+    let kind: String
+    let label: String
+    let startAt: String?
+    let endAt: String?
+    let minutes: Int?
+    let durationSource: String?
+    let routeStatus: String?
+}
+
+struct DayFeasibility: Codable {
+    let status: String
+    let issues: [String]
+}
+
+struct TimeCost: Codable {
+    let travelMinutes: Int
+    let visitMinutes: Int
+    let bufferMinutes: Int
+    let unknownLegs: Int
+}
+
+struct GroundJourney: Codable, Identifiable {
+    var id: String { "\(day)-\(purpose ?? "route")-\(from ?? "")-\(to ?? "")" }
+    let day: Int
+    let purpose: String?
+    let from: String?
+    let to: String?
+    let minutes: Int?
+    let mode: String?
+    let mapFromCoordinate: Coordinates?
+    let mapToCoordinate: Coordinates?
+    let mapGeometry: [Coordinates]?
+}
+
+struct TerminalPoint: Codable {
+    let name: String
+    let mapCoordinate: Coordinates?
 }
 
 struct ItineraryDay: Codable, Identifiable {
@@ -46,6 +89,9 @@ struct ItineraryDay: Codable, Identifiable {
     let date: String
     let title: String
     let stops: [PlaceStop]
+    let timeline: [TimelineEvent]?
+    let feasibility: DayFeasibility?
+    let timeCost: TimeCost?
 }
 
 struct StayArea: Codable {
@@ -54,6 +100,7 @@ struct StayArea: Codable {
     let lng: Double?
     let note: String?
     let averageKm: Double?
+    let mapCoordinate: Coordinates?
 }
 
 struct FlightOffer: Codable, Identifiable {
@@ -146,6 +193,9 @@ struct TravelPlan: Codable {
     let generatedAt: String
     let locationDetected: Bool?
     let agentRun: AgentRun?
+    let groundJourneys: [GroundJourney]?
+    let startLocation: Coordinates?
+    let terminals: [String: TerminalPoint?]?
 
     var placeCount: Int { itinerary.reduce(0) { $0 + $1.stops.count } }
     var allStops: [PlaceStop] { itinerary.flatMap(\.stops) }
@@ -163,4 +213,48 @@ struct PlanRequest: Encodable {
 
 struct APIError: Decodable {
     let error: String
+}
+
+struct AgentQuestion: Decodable, Identifiable {
+    struct Option: Decodable, Identifiable {
+        let id: String
+        let label: String
+        let description: String?
+    }
+    let id: String
+    let question: String
+    let options: [Option]
+}
+
+struct TripRecord: Decodable, Identifiable {
+    let id: String
+    let title: String
+    let status: String
+    let createdAt: String?
+    let plan: TravelPlan?
+    let pendingQuestion: AgentQuestion?
+    let photos: [ServerPhoto]?
+    let kind: String?
+
+    enum CodingKeys: String, CodingKey { case id, title, status, createdAt, plan, pendingQuestion, photos, kind }
+    init(from decoder: Decoder) throws {
+        let box = try decoder.container(keyedBy: CodingKeys.self)
+        id = try box.decode(String.self, forKey: .id)
+        title = (try? box.decode(String.self, forKey: .title)) ?? "规划中的旅程"
+        status = (try? box.decode(String.self, forKey: .status)) ?? "not_started"
+        createdAt = try? box.decode(String.self, forKey: .createdAt)
+        plan = try? box.decode(TravelPlan.self, forKey: .plan)
+        pendingQuestion = try? box.decode(AgentQuestion.self, forKey: .pendingQuestion)
+        photos = try? box.decode([ServerPhoto].self, forKey: .photos)
+        kind = try? box.decode(String.self, forKey: .kind)
+    }
+}
+
+struct TripList: Decodable { let trips: [TripRecord] }
+
+struct JournalNote: Codable {
+    let tripId: String
+    var text: String
+    var version: Int
+    let updatedAt: String?
 }

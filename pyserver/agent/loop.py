@@ -161,6 +161,35 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
             yield event("tool_end", turn=turns, source="server_enrichment", tool=name,
                         input={"destination": state["destination"]}, output=result,
                         ok=result.get("ok", False), code=result.get("code", "ok"))
+        from .timeline import build_timeline
+        build_timeline(state["plan"])
+        if credentials.get("amap"):
+            from .schedule import day_windows, capacity
+            from ..providers import amap
+            windows = day_windows(state)
+            for _ in range(8):
+                days = state["plan"]["itinerary"]
+                overflowing = next((day for day in days if day.get("feasibility", {}).get("status") == "conflict"
+                                    and day.get("stops") and not day["stops"][-1].get("locked")), None)
+                if not overflowing:
+                    break
+                import copy
+                before_adjustment = copy.deepcopy(state["plan"])
+                stop = overflowing["stops"].pop()
+                next_day = next((day for day in days if day["day"] > overflowing["day"] and day["city"] == overflowing["city"]
+                                and day["date"] in windows and len(day["stops"]) < capacity(windows[day["date"]])), None)
+                if next_day:
+                    next_day["stops"].append(stop)
+                else:
+                    state["plan"].setdefault("skippedPlaces", []).append(stop["name"])
+                try:
+                    state["plan"].update(await amap.enrich_routes(state["plan"], credentials["amap"]))
+                except Exception:
+                    state["plan"] = before_adjustment
+                    break
+                build_timeline(state["plan"])
+        from ..providers.coordinates import add_map_coordinates
+        add_map_coordinates(state["plan"])
         state["enrichmentDone"] = True
     trip["events"] = events
     trip["continuation"] = {"state": state, "messages": messages, "modelTurns": turns, "toolCalls": calls, "usage": usage}

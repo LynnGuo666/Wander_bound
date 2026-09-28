@@ -45,7 +45,8 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
         require_media_auth(request)
         if not trips.get(trip_id):
             raise HTTPException(404, "行程不存在")
-        return media.selected(trip_id)
+        selected = media.selected(trip_id)
+        return {**selected, "photos": [media.public_photo(photo) for photo in selected["photos"]]}
 
     @router.put("/api/media/trips/{trip_id}/selected-photos")
     async def put_selected_photos(trip_id: str, request: Request, payload: dict):
@@ -53,7 +54,8 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
         if not trips.get(trip_id):
             raise HTTPException(404, "行程不存在")
         try:
-            return media.set_selected(trip_id, payload)
+            selected = media.set_selected(trip_id, payload)
+            return {**selected, "photos": [media.public_photo(photo) for photo in selected["photos"]]}
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
@@ -78,17 +80,18 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
         if request.headers.get("content-type") != "image/jpeg":
             raise HTTPException(415, "仅接收 JPEG")
         try:
-            photo = media.add(await request.body(), trip_id, request.headers.get("X-Captured-Day"))
+            photo = media.add(await request.body(), trip_id, request.headers.get("X-Captured-Day"),
+                              request.headers.get("X-Client-Asset-Key"))
         except (ValueError, OSError) as exc:
             raise HTTPException(400, str(exc)) from exc
-        return JSONResponse(photo, status_code=201)
+        return JSONResponse(media.public_photo(photo), status_code=201)
 
     @router.get("/api/media/photos")
     async def list_photos(request: Request, tripId: str):
         require_media_auth(request)
         if not trips.get(tripId):
             raise HTTPException(404, "行程不存在")
-        return {"photos": media.list(tripId)}
+        return {"photos": [media.public_photo(photo) for photo in media.list(tripId)]}
 
     @router.get("/api/media/photos/{photo_id}")
     async def photo_bytes(photo_id: str, request: Request, variant: str = "original"):
@@ -107,7 +110,7 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
             raise HTTPException(400, str(exc)) from exc
         if not photo:
             raise HTTPException(404, "照片不存在")
-        return photo
+        return media.public_photo(photo)
 
     @router.post("/api/media/photos/{photo_id}/develop/suggest")
     async def develop_suggest(photo_id: str, request: Request):

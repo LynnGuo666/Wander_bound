@@ -7,7 +7,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 
-from ..media.auth import require_media_auth
+from ..accounts import require_admin
 from ..media.jobs import JobStore
 from .controller import ModelController
 
@@ -16,7 +16,8 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
     router = APIRouter()
 
     @router.get("/api/inference/status")
-    async def status():
+    async def status(request: Request):
+        require_admin(request)
         result = await controller.status()
         pending = jobs.pending()
         result["queue"] = {"total": len(pending), "image": sum(job["kind"] in {"edit", "scrapbook"} for job in pending),
@@ -27,7 +28,7 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
 
     @router.post("/api/inference/models/{name}/warm")
     async def warm(name: str, request: Request):
-        require_media_auth(request)
+        require_admin(request)
         if jobs.pending():
             raise HTTPException(409, "媒体任务排队中，请等待任务完成")
         try:
@@ -40,7 +41,7 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
 
     @router.post("/api/inference/models/{name}/release")
     async def release(name: str, request: Request):
-        require_media_auth(request)
+        require_admin(request)
         kinds = {"image": {"edit", "scrapbook"}, "video": {"memory"}}.get(name, set())
         if any(job["kind"] in kinds for job in jobs.pending()):
             raise HTTPException(409, "该模型仍有待处理任务")
@@ -54,7 +55,7 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
 
     @router.post("/api/inference/chat")
     async def chat(request: Request, payload: dict):
-        require_media_auth(request)
+        require_admin(request)
         if jobs.pending():
             raise HTTPException(409, "媒体任务排队中，请等待任务完成")
         message = str(payload.get("message") or "").strip()

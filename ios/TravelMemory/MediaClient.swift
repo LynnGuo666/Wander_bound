@@ -25,8 +25,20 @@ struct ImageEditJob: Decodable {
     let error: String?
 }
 
+struct PhotoAnalysisJob: Decodable, Identifiable {
+    let id: String
+    let status: String
+    let stage: String
+    let completed: Int
+    let total: Int
+    let recommended: [String]
+    let error: String?
+}
+private struct AnalysisJobList: Decodable { let jobs: [PhotoAnalysisJob] }
+
 private struct MediaError: Decodable {
-    let error: String
+    let error: String?
+    let detail: String?
 }
 
 private struct PhotoList: Decodable {
@@ -34,7 +46,7 @@ private struct PhotoList: Decodable {
 }
 
 enum MediaTokenStore {
-    private static let service = "ai.deepsleeptt.travelmemory.media"
+    private static let service = "ai.deepsleeptt.travelmemory.account"
 
     static func load() -> String {
         let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
@@ -85,7 +97,8 @@ struct MediaClient {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let response = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         guard (200...299).contains(response.statusCode) else {
-            let reason = (try? JSONDecoder().decode(MediaError.self, from: data).error) ?? "媒体服务返回 \(response.statusCode)"
+            let failure = try? JSONDecoder().decode(MediaError.self, from: data)
+            let reason = failure?.detail ?? failure?.error ?? "媒体服务返回 \(response.statusCode)"
             throw NSError(domain: "Media", code: response.statusCode, userInfo: [NSLocalizedDescriptionKey: reason])
         }
         return data
@@ -96,6 +109,51 @@ struct MediaClient {
         if let capturedDay { headers["X-Captured-Day"] = capturedDay }
         return try JSONDecoder().decode(ServerPhoto.self, from: await send("/api/media/photos", method: "POST", body: bytes,
             contentType: "image/jpeg", headers: headers))
+    }
+
+    func uploadFile(_ file: URL, tripId: String, assetKey: String, capturedDay: String?,
+                    onProgress: @escaping (Int64) -> Void) async throws -> ServerPhoto {
+        var request = try AppAPI(baseURL: serverURL).request("/api/media/photos", method: "POST", token: token)
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.setValue(tripId, forHTTPHeaderField: "X-Trip-Id")
+        request.setValue(assetKey, forHTTPHeaderField: "X-Client-Asset-Key")
+        if let capturedDay { request.setValue(capturedDay, forHTTPHeaderField: "X-Captured-Day") }
+        let observer = PhotoUploadObserver(onProgress)
+        let (data, response) = try await URLSession.shared.upload(for: request, fromFile: file, delegate: observer)
+        guard let response = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        guard (200...299).contains(response.statusCode) else {
+            let failure = try? JSONDecoder().decode(MediaError.self, from: data)
+            let reason = failure?.detail ?? failure?.error ?? "上传失败（\(response.statusCode)）"
+            throw NSError(domain: "Media", code: response.statusCode, userInfo: [NSLocalizedDescriptionKey: reason])
+        }
+        return try JSONDecoder().decode(ServerPhoto.self, from: data)
+    }
+
+    func createAnalysis(tripId: String, photoIds: [String]) async throws -> PhotoAnalysisJob {
+        let payload: [String: Any] = ["tripId": tripId, "photoIds": photoIds, "batchId": UUID().uuidString]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        return try JSONDecoder().decode(PhotoAnalysisJob.self, from: await send("/api/media/analysis-jobs", method: "POST",
+            body: data, contentType: "application/json"))
+    }
+
+    func analysisStatus(_ id: String) async throws -> PhotoAnalysisJob {
+        try JSONDecoder().decode(PhotoAnalysisJob.self, from: await send("/api/media/analysis-jobs/\(id)"))
+    }
+
+    func latestAnalysis(tripId: String) async throws -> PhotoAnalysisJob? {
+        let items = try JSONDecoder().decode(AnalysisJobList.self,
+            from: await send("/api/media/trips/\(tripId)/analysis-jobs")).jobs
+        return items.first
+    }
+
+    func retryAnalysis(_ id: String) async throws -> PhotoAnalysisJob {
+        try JSONDecoder().decode(PhotoAnalysisJob.self, from: await send("/api/media/analysis-jobs/\(id)/retry", method: "POST"))
+    }
+
+    func commitSelection(tripId: String, photoIds: [String], batchId: String) async throws {
+        let data = try JSONSerialization.data(withJSONObject: ["photoIds": photoIds, "batchId": batchId, "source": "ios-analysis"])
+        _ = try await send("/api/media/trips/\(tripId)/selected-photos", method: "PUT", body: data,
+                           contentType: "application/json")
     }
 
     func enhance(_ id: String, preset: String) async throws -> ServerPhoto {
@@ -148,5 +206,14 @@ struct MediaClient {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("travel-memory-\(id).mp4")
         try bytes.write(to: url, options: .atomic)
         return url
+    }
+}
+
+private final class PhotoUploadObserver: NSObject, URLSessionTaskDelegate {
+    let onProgress: (Int64) -> Void
+    init(_ onProgress: @escaping (Int64) -> Void) { self.onProgress = onProgress }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
+                    totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        onProgress(totalBytesSent)
     }
 }

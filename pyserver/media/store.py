@@ -10,11 +10,17 @@ from __future__ import annotations
 import json
 import os
 import uuid
+import base64
+import hashlib
 from datetime import date
 from pathlib import Path
+from threading import RLock
+from PIL import Image
+import io
 
 
 from ..trips import now
+from ..accounts import current_user
 from . import images
 
 
@@ -24,6 +30,13 @@ class MediaStore:
         self.photos_dir = self.root / "photos"
         self.meta_dir = self.root / "metadata"
         self.selections_dir = self.root / "selections"
+        self.lock = RLock()
+
+    @staticmethod
+    def public_photo(photo: dict) -> dict:
+        """Only fields required by clients; private camera and location metadata stays server-side."""
+        return {key: photo.get(key) for key in
+                ("id", "tripId", "capturedDay", "width", "height", "variants", "createdAt")}
 
     def _dirs(self):
         self.photos_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -32,7 +45,9 @@ class MediaStore:
     def get(self, photo_id: str) -> dict | None:
         try:
             uuid.UUID(photo_id)
-            return json.loads((self.meta_dir / f"{photo_id}.json").read_text())
+            photo = json.loads((self.meta_dir / f"{photo_id}.json").read_text())
+            user = current_user.get()
+            return photo if user is None or photo.get("ownerId") == user["id"] else None
         except (ValueError, FileNotFoundError, json.JSONDecodeError):
             return None
 
@@ -94,29 +109,49 @@ class MediaStore:
             temporary.unlink(missing_ok=True)
         return self.selected(trip_id)
 
-    def add(self, image_bytes: bytes, trip_id: str, captured_day: str | None) -> dict:
+    def add(self, image_bytes: bytes, trip_id: str, captured_day: str | None,
+            asset_key: str | None = None) -> dict:
         if len(image_bytes) > 40 * 1024 * 1024:  # 容纳 48/108MP 原图(可达数十 MB)；normalize 会压到 2560，存储产物仍小
             raise ValueError("图片不能超过 40 MB")
-        normalized, width, height = images.normalize(image_bytes)
-        exif = images.extract_exif(image_bytes)
-        captured_at = exif.get("capturedAt")
-        day = captured_day or exif.get("capturedDay")
-        if day:
+        if asset_key is not None and (not 1 <= len(asset_key) <= 128 or any(ord(c) < 33 for c in asset_key)):
+            raise ValueError("资源标识无效")
+        digest = hashlib.sha256(image_bytes).hexdigest()
+        with self.lock:
+            if asset_key:
+                for previous in self.list(trip_id):
+                    if previous.get("clientAssetKey") == asset_key:
+                        if previous.get("sourceSha256") != digest:
+                            raise ValueError("资源标识已用于另一张照片")
+                        return previous
+            normalized, width, height = images.normalize(image_bytes)
+            exif = images.extract_exif(image_bytes)
             try:
-                date.fromisoformat(day)
-            except ValueError:
-                day = None
-        photo_id = str(uuid.uuid4())
-        self._dirs()
-        (self.photos_dir / f"{photo_id}.jpg").write_bytes(normalized)
-        photo = {"id": photo_id, "tripId": trip_id, "capturedDay": day, "capturedAt": captured_at,
-                 "gps": exif.get("gps"), "width": width, "height": height,
-                 "analysis": {"width": width, "height": height}, "exif": exif,
-                 "variants": [], "createdAt": now()}
-        (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
-        os.chmod(self.photos_dir / f"{photo_id}.jpg", 0o600)
-        os.chmod(self.meta_dir / f"{photo_id}.json", 0o600)
-        return photo
+                source = Image.open(io.BytesIO(image_bytes))
+                exif_raw = next((payload for marker, payload in source.applist
+                                 if marker == "APP1" and payload.startswith(b"Exif\x00\x00")), b"")
+            except (OSError, ValueError, TypeError):
+                exif_raw = b""
+            captured_at = exif.get("capturedAt")
+            day = captured_day or exif.get("capturedDay")
+            if day:
+                try:
+                    date.fromisoformat(day)
+                except ValueError:
+                    day = None
+            photo_id = str(uuid.uuid4())
+            self._dirs()
+            (self.photos_dir / f"{photo_id}.jpg").write_bytes(normalized)
+            photo = {"id": photo_id, "tripId": trip_id, "capturedDay": day, "capturedAt": captured_at,
+                     "gps": exif.get("gps"), "width": width, "height": height,
+                     "analysis": {"width": width, "height": height}, "exif": exif,
+                     "exifRaw": base64.b64encode(exif_raw).decode("ascii") if exif_raw else None,
+                     "clientAssetKey": asset_key, "sourceSha256": digest,
+                     "ownerId": (current_user.get() or {}).get("id"),
+                     "variants": [], "createdAt": now()}
+            (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
+            os.chmod(self.photos_dir / f"{photo_id}.jpg", 0o600)
+            os.chmod(self.meta_dir / f"{photo_id}.json", 0o600)
+            return photo
 
     def bytes(self, photo_id: str, variant: str = "original") -> bytes | None:
         photo = self.get(photo_id)

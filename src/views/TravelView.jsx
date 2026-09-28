@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen, Camera, Check, Film, ImagePlus, LoaderCircle, RefreshCw, Save, Sparkles } from 'lucide-react';
 import { PrivateMedia } from '../components/PrivateMedia.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
+import { apiFetch } from '../lib/api.js';
 
-const NOTE_PREFIX = 'travel-journal-v1:';
 const cityKey = value => String(value || '').trim().replace(/市$/, '');
 
 function happenedOnThisDay(trip) {
@@ -18,10 +18,6 @@ function happenedOnThisDay(trip) {
     if (day.getFullYear() < currentYear && day.getMonth() === today.getMonth() && day.getDate() === today.getDate()) return true;
   }
   return false;
-}
-
-function readNote(id) {
-  try { return localStorage.getItem(`${NOTE_PREFIX}${id}`) || ''; } catch { return ''; }
 }
 
 function statusText(work) {
@@ -42,6 +38,9 @@ export default function TravelView({ trips, token, onOpenSettings }) {
   const trip = pages[Math.min(index, Math.max(pages.length - 1, 0))];
   const [detail, setDetail] = useState(null);
   const [note, setNote] = useState('');
+  const noteVersion = useRef(0);
+  const noteSave = useRef(Promise.resolve());
+  const noteTimer = useRef(null);
   const [works, setWorks] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [styles, setStyles] = useState([]);
@@ -74,20 +73,36 @@ export default function TravelView({ trips, token, onOpenSettings }) {
     const id = trip.id;
     activeTrip.current = id;
     const controller = new AbortController();
-    setDetail(null); setNote(readNote(id)); setWorks([]); setSelectedIds([]); setError(''); setNotice(''); setPhotoId('');
-    fetch(`/api/trips/${encodeURIComponent(id)}`, { signal: controller.signal })
+    setDetail(null); setNote(''); setWorks([]); setSelectedIds([]); setError(''); setNotice(''); setPhotoId('');
+    apiFetch(`/api/trips/${encodeURIComponent(id)}`, { signal: controller.signal })
       .then(response => { if (!response.ok) throw new Error('旅途暂时无法读取'); return response.json(); })
       .then(result => { if (!controller.signal.aborted) { setDetail(result); setPhotoId(result.photos?.[0]?.id || ''); } })
       .catch(reason => { if (!controller.signal.aborted) setError(reason.message); });
+    if (token) mediaRequest(`/api/trips/${encodeURIComponent(id)}/note`, token).then(result => {
+      if (controller.signal.aborted) return;
+      noteVersion.current = result.version;
+      setNote(result.text);
+    }).catch(reason => { if (!controller.signal.aborted) setError(reason.message); });
     refreshPrivate(id);
-    return () => controller.abort();
+    return () => { controller.abort(); clearTimeout(noteTimer.current); };
   }, [trip?.id, token]);
 
   function saveNote(value) {
     setNote(value);
-    if (!trip) return;
-    try { localStorage.setItem(`${NOTE_PREFIX}${trip.id}`, value); }
-    catch { setError('日记未能保存在当前浏览器'); }
+    if (!trip || !token) return;
+    const id = trip.id;
+    clearTimeout(noteTimer.current);
+    noteTimer.current = setTimeout(() => {
+      noteSave.current = noteSave.current.catch(() => {}).then(async () => {
+        try {
+          const saved = await mediaRequest(`/api/trips/${encodeURIComponent(id)}/note`, token, {
+            method: 'PUT', body: JSON.stringify({ text: value, version: noteVersion.current }),
+          });
+          noteVersion.current = saved.version;
+          if (activeTrip.current === id) setError('');
+        } catch (reason) { if (activeTrip.current === id) setError(`日记未保存：${reason.message}`); }
+      });
+    }, 600);
   }
 
   function turn(direction) {
@@ -151,7 +166,7 @@ export default function TravelView({ trips, token, onOpenSettings }) {
     <div className="binder-shell"><div className="binder-content"><nav className="page-turn" aria-label="翻阅旅途"><button onClick={() => turn(-1)} disabled={index === 0 || !pages.length} aria-label="上一页"><ArrowLeft size={18} /> 上一页</button><span>{pages.length ? `第 ${index + 1} 页 / 共 ${pages.length} 页` : '暂无匹配的记忆'}</span><button onClick={() => turn(1)} disabled={index === pages.length - 1 || !pages.length} aria-label="下一页">下一页 <ArrowRight size={18} /></button></nav>
     {!pages.length ? <div className="empty-panel binder-empty"><BookOpen /><h2>今天还没有旧旅途</h2><p>没有往年今天的行程记录。可以切换右侧标签，继续翻阅其他故事。</p></div> : <article className="journal-book" key={trip.id}><div className="journal-spine" aria-hidden="true" /><div className="journal-page journal-visual"><div className="journal-label">TRAVEL NOTES · {String(index + 1).padStart(2, '0')}</div><div className="journal-cover"><img src={cityArtwork(trip)} alt={`${tripTitle(trip)}的风格化城市插画`} /><div><span>一场值得记住的旅行</span><h2>{tripTitle(trip)}</h2><small>{tripDate(trip)}</small></div></div><div className="journal-sticker" aria-hidden="true" /><div className="journal-photo-header"><Camera size={17} /> 沿途的画面 <span>{detail?.photos?.length || 0} 张照片</span></div>
       {detail?.photos?.length && token ? <div className="journal-photo-grid">{detail.photos.slice(0, 4).map((photo, photoIndex) => <figure key={photo.id} className={`polaroid polaroid-${photoIndex % 3}`}><PrivateMedia url={`/api/media/photos/${photo.id}`} token={token} alt={`${tripTitle(trip)}的旅途照片`} /><figcaption>{photo.capturedDay || '旅途片刻'}</figcaption></figure>)}</div> : <div className="journal-photo-empty"><ImagePlus /><p>{!token ? '连接私有相册后，照片就会出现在这一页。' : '这趟旅程还没有上传照片。'}</p>{!token ? <button className="text-button" onClick={onOpenSettings}>前往设置 <ArrowRight size={14} /></button> : null}</div>}
-    </div><div className="journal-page journal-words"><div className="journal-date"><span>{trip.plan?.destination || '旅途'}</span><span>{trip.plan?.startDate || ''}</span></div><span className="section-kicker">DEAR DIARY</span><h2>写给这段旅程</h2><p className="journal-note-hint">写下路上的一个瞬间、一顿饭，或是只属于你的感受。</p><label className="sr-only" htmlFor="journal-note">旅行日记</label><textarea id="journal-note" className="journal-note" value={note} onChange={event => saveNote(event.target.value)} placeholder="那天走进这座城市的时候，我记得……" /><p className="journal-saved"><Save size={14} /> 日记保存在此浏览器</p>
+    </div><div className="journal-page journal-words"><div className="journal-date"><span>{trip.plan?.destination || '旅途'}</span><span>{trip.plan?.startDate || ''}</span></div><span className="section-kicker">DEAR DIARY</span><h2>写给这段旅程</h2><p className="journal-note-hint">写下路上的一个瞬间、一顿饭，或是只属于你的感受。</p><label className="sr-only" htmlFor="journal-note">旅行日记</label><textarea id="journal-note" className="journal-note" value={note} disabled={!token} onChange={event => saveNote(event.target.value)} placeholder={token ? '那天走进这座城市的时候，我记得……' : '连接私有相册后可同步日记'} /><p className="journal-saved"><Save size={14} /> 日记同步保存在私有服务器</p>
       {priorCityTrips.length ? <aside className="same-city-note"><span className="section-kicker">SAME CITY, ANOTHER TIME</span><h3>你还来过{trip.plan?.destination}</h3><p>过去 {priorCityTrips.length} 次旅程里，{rememberedStops.length ? '这些地点这次没有排进日程：' : '你留下了不同的路线和回忆。'}</p>{rememberedStops.length ? <div>{rememberedStops.map(name => <span key={name}>{name}</span>)}</div> : null}<button type="button" className="text-button" onClick={() => chooseMode('city')}>翻看同城记忆 <ArrowRight size={15} /></button></aside> : null}
       <div className="journal-works"><div className="journal-photo-header"><Sparkles size={17} /> 旅途作品 <button type="button" onClick={() => refreshPrivate(trip.id)} disabled={!token} aria-label="刷新作品"><RefreshCw size={15} /></button></div>{works.length ? <div className="work-list">{works.map(work => <div className="work-item" key={work.id}><div className="work-item-title">{work.kind === 'memory' ? <Film size={17} /> : <Sparkles size={17} />}<strong>{work.title || (work.kind === 'memory' ? '回忆短片' : '风格手账')}</strong><span>{statusText(work)}</span></div>{work.status === 'succeeded' ? work.kind === 'memory' ? <PrivateMedia video url={`/api/media/memories/${work.id}/video`} token={token} className="work-video" /> : <PrivateMedia url={`/api/media/generation-jobs/${work.id}/image`} token={token} alt={`${tripTitle(trip)}的风格手账`} className="work-image" /> : work.error ? <p className="form-error">{work.error}</p> : null}</div>)}</div> : <p className="quiet-copy">{token ? '还没有生成作品。可以从下方选一张照片制作手账。' : '连接私有相册后查看已生成作品。'}</p>}</div>
     </div></article>}

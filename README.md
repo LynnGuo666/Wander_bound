@@ -4,14 +4,16 @@
 
 ## 本地生成阶段交接
 
-接续手帐与旅行视频开发，请先读 [当前进度、证据和剩余任务](docs/delivery-handoff-2026-09-28.md) 与 [合并后接手步骤](docs/handoff/START_HERE.md)。M01/M02 已完成技术验证，M03 停在真实分镜草稿，Web/iOS 新业务入口和完整 H3 短片仍待实现。
+接续手帐与旅行视频开发，请先读 [当前进度、证据和剩余任务](docs/delivery-handoff-2026-09-28.md) 与 [合并后接手步骤](docs/handoff/START_HERE.md)。这些是历史交接记录；当前 Web 与 iOS 业务入口、账号和照片分析以代码与本文为准。完整 H3 短片仍依赖 Spark 工作流。
 
 ## 本地启动
 
 1. 安装 Python 3.12+、Node.js 22+、npm 和 ffmpeg。首次运行会自动创建 `.venv`、安装 Python/Node 依赖并构建网页。
-2. 在本机 `.env` 填写 Step Plan 和需要的供应商密钥；也可在应用设置页写入本机 `config.yml`。两者均不提交到 Git。
+2. 在本机 `.env` 填写 `BOOTSTRAP_INVITE_CODE`、Step Plan 和需要的供应商密钥；管理员登录后也可在设置页写入本机 `config.yml`。两者均不提交到 Git。
 3. 保持 `./spark-mcp-tunnel.sh` 运行，使本机 `14176`–`14179` 连接 Spark 的四个 Docker MCP 服务。需要图片生成时另开 `./spark-comfy-tunnel.sh`。
-4. 运行 `./start.sh`，打开 <http://127.0.0.1:4176/>。`GET /api/health` 检查主服务，`POST /api/capabilities` 展示 MCP `tools/list` 的实际能力。
+4. 运行 `./start.sh`，打开 <http://127.0.0.1:4176/>。首次注册使用 `.env` 中的初始邀请码并成为管理员；其后由管理员在设置页生成一次性邀请码。`GET /api/health` 可匿名检查主服务，其余私有 API 需要账号会话。
+
+Web 会话保存在当前浏览器会话，iOS 会话保存在设备钥匙串。高级设置和模型调度仅管理员可用。旧的共享媒体令牌不再用于登录；旧行程、照片与作品不自动迁移到账号，部署时应单独清理旧数据目录。iOS 连接 Spark 时需加入同一个 Tailscale 私网。
 
 本机开发使用 `./start.sh` 和 SSH MCP 隧道。Spark 生产环境在 `127.0.0.1:4174` 运行同一个 Python FastAPI 服务，由 `deploy/spark/travel-agent.service` 启动；它直接调用节点回环地址的四个 Docker MCP 和两套 ComfyUI。`./start.sh` 中的 API 地址可用环境变量覆盖，协作者只需要可访问的 MCP HTTP 地址，无须在本机运行供应商 Docker。
 
@@ -40,4 +42,4 @@ npm test
 npm run build
 ```
 
-`POST /api/plan/stream` 提供会话事件、工具调用与结果；`GET/PUT /api/settings` 管理密钥和来源优先级；`/api/trips` 保存行程与历史；`/api/media` 处理私有照片和回忆短片。真实供应商报价和订票链接以返回时的结果为准。
+`POST /api/plan/stream` 提供会话事件、工具调用与结果；`GET/PUT /api/settings` 仅管理员可读写；`/api/trips` 保存账号内的行程、历史与版本化日记；`/api/media` 处理私有照片、分析任务和作品。照片上传时私存完整 EXIF，下载与生成使用去除 EXIF 的规范化图。真实供应商报价和订票链接以返回时的结果为准。
