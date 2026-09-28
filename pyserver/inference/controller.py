@@ -260,6 +260,8 @@ class ModelController:
             except RuntimeError as exc:
                 self.error = str(exc)[:200]
                 raise
+        if name in {"image", "video"} and self.primary_chat and not self.primary_paused:
+            self.begin_warm("chat")
 
     async def _gpu(self) -> dict:
         try:
@@ -290,6 +292,7 @@ class ModelController:
             await asyncio.sleep(15)
             if not self.enabled or self.lock.locked():
                 continue
+            restore_primary = False
             async with self.lock:
                 for spec in self.specs.values():
                     last = self.last_used.get(spec.name)
@@ -304,11 +307,16 @@ class ModelController:
                                 self.error = str(exc)[:200]
                     elif time.monotonic() - last >= (self.chat_idle_seconds if spec.name == "chat" else self.idle_seconds):
                         try:
+                            was_active = await self._service_state(spec) == "active"
                             await self._stop(spec)
+                            if was_active and spec.name in {"image", "video"}:
+                                restore_primary = True
                             if self.phase == "cooling":
                                 self.phase = "idle"
                         except RuntimeError as exc:
                             self.error = str(exc)[:200]
+            if restore_primary and self.primary_chat and not self.primary_paused:
+                self.begin_warm("chat")
 
     def start(self):
         if self.enabled and self.sweeper is None:
