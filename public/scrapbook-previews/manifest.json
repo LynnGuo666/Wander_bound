@@ -1,0 +1,70 @@
+{
+  "source": "Actual local Qwen outputs from explicitly selected public NPS acceptance original; not user reference images",
+  "styles": [
+    {
+      "id": "watercolor",
+      "version": "1.1.0",
+      "layoutVersion": "1.0.0",
+      "name": "水彩",
+      "description": "柔和渗色与细腻纸纹",
+      "recommendedSeed": 2026092901,
+      "sha256": "a65dabb4438996c1270554e10a90c9f1cda2f30b0e78f166ee395842c7a60870",
+      "previewUrl": "/scrapbook-previews/watercolor.jpg",
+      "previewSha256": "eab5159d17a017658007bb67eb60820311b01e87c90c99f548cf60437f859233",
+      "sourceJobId": "6d8bde76-95ed-4887-b1fb-b2d459d32861",
+      "sourceFile": "watercolor-v11.jpg"
+    },
+    {
+      "id": "papercut",
+      "version": "1.1.0",
+      "layoutVersion": "1.0.0",
+      "name": "层叠剪纸",
+      "description": "纸层、切边与浅浮雕投影",
+      "recommendedSeed": 2026092902,
+      "sha256": "66dc270e8fbb757c5c0db1ffcb5cb333f4376ff68c2f3ebcde2b8988c215a14e",
+      "previewUrl": "/scrapbook-previews/papercut.jpg",
+      "previewSha256": "8cf100d8287418c60853fdef8130c9410dd9dd2720d2901c2adc0ad4fff2392e",
+      "sourceJobId": "055f8f6e-8fa6-445c-a008-43f6053059b8",
+      "sourceFile": "papercut-v11.jpg"
+    },
+    {
+      "id": "clay",
+      "version": "1.0.0",
+      "layoutVersion": "1.0.0",
+      "name": "黏土",
+      "description": "圆润塑形与细小手工压痕",
+      "recommendedSeed": 2026092903,
+      "sha256": "47d0eca65041affdbc0751c8e84024e4c15a8441c3ca21dbd6171417a06d8648",
+      "previewUrl": "/scrapbook-previews/clay.jpg",
+      "previewSha256": "3fedf570c4d1bfdec428d783829cb04e8ea038f1875c20a40ff2fd7516f5111d",
+      "sourceJobId": "6d6b9ece-6d9d-4ea3-a6ba-df07cfcaddac",
+      "sourceFile": "clay-v1.jpg"
+    },
+    {
+      "id": "halftone",
+      "version": "1.0.0",
+      "layoutVersion": "1.0.0",
+      "name": "网点漫画",
+      "description": "墨线、套色与印刷网点",
+      "recommendedSeed": 2026092904,
+      "sha256": "2b4b88898fb96c74e0822f193da3986f9b0dfb490cb4738f1c50c60b76522df8",
+      "previewUrl": "/scrapbook-previews/halftone.jpg",
+      "previewSha256": "b3097a495948026699f282a75defd262ac38c8b844fd256da6291e882eeb9d99",
+      "sourceJobId": "2a96c54f-d019-4611-9069-a38384a32af9",
+      "sourceFile": "halftone-v1.jpg"
+    },
+    {
+      "id": "pixel",
+      "version": "1.0.0",
+      "layoutVersion": "1.0.0",
+      "name": "像素",
+      "description": "方形网格与有限调色板",
+      "recommendedSeed": 2026092905,
+      "sha256": "ddd51a0f71369b118cb2a47402aa415d3c311869b6c70bda5ebe326c0684a394",
+      "previewUrl": "/scrapbook-previews/pixel.jpg",
+      "previewSha256": "78b262f06f43441e8e2c96be30ad6a856c24cab9f406ae7e1b1d63f5dbd12ab0",
+      "sourceJobId": "e991e93f-6b60-46a9-8f62-e44fb771e047",
+      "sourceFile": "pixel-v1.jpg"
+    }
+  ]
+}

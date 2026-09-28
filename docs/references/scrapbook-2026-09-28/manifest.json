@@ -1,0 +1,36 @@
+{
+  "source": "User-provided visual references, 2026-09-28",
+  "purpose": "Preserve visual inputs for VibeHub task/node evidence; decisions remain in VibeHub events. These are target appearance examples, not source photographs.",
+  "images": [
+    {
+      "reference": 1,
+      "path": "docs/references/scrapbook-2026-09-28/reference-01.png",
+      "bytes": 2795215,
+      "sha256": "38b9a594e56ea6dd8acb4abb0cbba0d0d4a94d0f2e1c1214a5635e7d70d0d2b7"
+    },
+    {
+      "reference": 2,
+      "path": "docs/references/scrapbook-2026-09-28/reference-02.png",
+      "bytes": 2853499,
+      "sha256": "a510c1b2671f45655aeaeaba76f233fff28c7df574728745327eab537bf7396c"
+    },
+    {
+      "reference": 3,
+      "path": "docs/references/scrapbook-2026-09-28/reference-03.png",
+      "bytes": 2505614,
+      "sha256": "69576df44a187440abbd485571befbc4def8745625fcb678db108316501cf1f6"
+    },
+    {
+      "reference": 4,
+      "path": "docs/references/scrapbook-2026-09-28/reference-04.png",
+      "bytes": 2824000,
+      "sha256": "1e527a73770bc6325630196ed52329b77be7b35ee30f7e937cedc859248c54b7"
+    },
+    {
+      "reference": 5,
+      "path": "docs/references/scrapbook-2026-09-28/reference-05.png",
+      "bytes": 2662914,
+      "sha256": "7c7b98c4130e45b032db1ec964a3b6dc35263f866133534950cbdba127549c99"
+    }
+  ]
+}

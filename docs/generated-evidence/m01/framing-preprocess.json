@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "validation": "CPU preprocessing; subsequent H3 1.1.0 real generation is recorded separately in framing-real-probe.json",
+  "source": "manual-acceptance-20260928 selected original, Grand Prismatic Spring",
+  "source_photo_id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+  "source_sha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048",
+  "source_size": [
+    1920,
+    1227
+  ],
+  "target_size": [
+    1024,
+    576
+  ],
+  "contain_fitted_size": [
+    901,
+    576
+  ],
+  "contain_padding_left_right": [
+    61,
+    62
+  ],
+  "cover_center_crop_source_size": [
+    1920,
+    1080
+  ],
+  "cover_vertical_pixels_lost_total": 147,
+  "cover_vertical_loss_percent": 11.98,
+  "outputs": {
+    "contain": {
+      "size": [
+        1024,
+        576
+      ],
+      "sha256": "c310c58744d1e43c943f66a3266085f6949be79847c565fb1ae2b353d349b7f6",
+      "midline_left_rgb": [
+        255,
+        255,
+        255
+      ],
+      "midline_right_rgb": [
+        255,
+        255,
+        255
+      ]
+    },
+    "cover": {
+      "size": [
+        1024,
+        576
+      ],
+      "sha256": "92cae2ab192607df22336d6415e72bc2d699c6b5de3da5c2b5aecdd3d2271a55",
+      "midline_left_rgb": [
+        161,
+        123,
+        148
+      ],
+      "midline_right_rgb": [
+        102,
+        55,
+        71
+      ]
+    }
+  }
+}

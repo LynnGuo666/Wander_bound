@@ -1,0 +1,55 @@
+{
+  "batch_id": "m01-public-yellowstone-20260928-v1",
+  "deployment_sha": "24aae844e252fe7cd8606a8f25ede45b66990dc0",
+  "fixture_key": "m01-public-yellowstone-20260928",
+  "photos": [
+    {
+      "original_get_status": 200,
+      "original_height": 1179,
+      "original_sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+      "original_width": 1920,
+      "page_id": 50246552,
+      "photo_id": "199b155d-0c14-4673-8d25-5de27f175676",
+      "source_sha256": "d6ae9810268fcf182b415e8fe6497863a312a9eb932725310eae70f5af463dfe",
+      "upload_status": 201
+    },
+    {
+      "original_get_status": 200,
+      "original_height": 1280,
+      "original_sha256": "803a9d06a992f9b448a0f8955c0434a1198a2fb5739ea289053428d8735a18e3",
+      "original_width": 1920,
+      "page_id": 24352222,
+      "photo_id": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+      "source_sha256": "02022d6901a88b8803dc0532f7a36fd6603ceaa7db66a7a294c0365b689d90fb",
+      "upload_status": 201
+    },
+    {
+      "original_get_status": 200,
+      "original_height": 1227,
+      "original_sha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048",
+      "original_width": 1920,
+      "page_id": 326389,
+      "photo_id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+      "source_sha256": "42a205ce99697791715d9854a79e5aa830732261fef5c43181e902568581817f",
+      "upload_status": 201
+    },
+    {
+      "original_get_status": 200,
+      "original_height": 2560,
+      "original_sha256": "35239be848e6df7b0e249ebda5a34e2606a5e9d4496fee8072c1a9b44aeb8539",
+      "original_width": 1707,
+      "page_id": 50247083,
+      "photo_id": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+      "source_sha256": "dae03e44fda948f8e97246938670a0b0f71a8a4cb60c424c61cf019b836724da",
+      "upload_status": 201
+    }
+  ],
+  "schema_version": 1,
+  "selection_count": 4,
+  "selection_get_status": 200,
+  "selection_put_status": 200,
+  "selection_updated_at": "2026-09-28T20:10:41.766989+08:00",
+  "source": "manual-acceptance-20260928",
+  "trip_creation": "TripStore.create",
+  "trip_id": "c2712842-c987-4347-938b-b6bc6fa7905e"
+}

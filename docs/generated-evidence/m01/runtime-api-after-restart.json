@@ -1,0 +1,31 @@
+{
+  "observed_at_utc": "2026-09-28T12:33:27.774274+00:00",
+  "api_pid": "1155843",
+  "memory_http_status": 200,
+  "memory_job": {
+    "id": "90981311-bf42-47f5-b189-b7fcc62c5202",
+    "status": "running",
+    "attempt": 1,
+    "completedClips": null,
+    "progressLabel": "生成镜头 1/1",
+    "progressPercent": null,
+    "errorCode": null
+  },
+  "queue": {
+    "total": 1,
+    "image": 0,
+    "video": 1,
+    "jobs": [
+      {
+        "id": "90981311-bf42-47f5-b189-b7fcc62c5202",
+        "kind": "memory",
+        "status": "running",
+        "progressLabel": "生成镜头 1/1",
+        "progressPercent": null,
+        "completedClips": null
+      }
+    ]
+  },
+  "controller_phase": "running",
+  "active_model": "video"
+}

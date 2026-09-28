@@ -16,6 +16,6 @@ flowchart LR
 
 Node.js 只处理 MCP：`deploy/ota-mcp` 封装飞猪和途牛 CLI，`deploy/rail-mcp` 封装社区 12306，`deploy/dida-mcp` 封装道旅 Bearer token 接口。`deploy/travel-data-mcp` 暴露 `travel_search_transport`、`travel_search_stays`、`travel_search_attractions`、`travel_search_places` 四个归一化只读工具。对应实现分置 `server/mcp-data/`；供应商 schema 解析在 `server/ota/` 和 `server/providers/`。容器只绑定 Spark 回环端口 4176–4179。
 
-本地 `./spark-tunnel.sh` 转发到 14176–14179；Python 的 `TRAVEL_DATA_MCP_URL` 默认是 `http://127.0.0.1:14179/mcp`，其他三个 MCP URL 用于真实 `tools/list` 能力展示。MCP 调用的密钥放在每次请求的私有 HTTP 头，工具入参不含密钥。数据和模型工具按需要调用。某个来源失败会记录来源状态并继续其他来源；没有可验证价格时保留未知，不编造数值。
+本地 `./spark-mcp-tunnel.sh` 转发到 14176–14179；`./spark-tunnel.sh` 则把 Spark 上的 Python 网页/API 服务转发到本机 4175。Python 的 `TRAVEL_DATA_MCP_URL` 默认是 `http://127.0.0.1:14179/mcp`，其他三个 MCP URL 用于真实 `tools/list` 能力展示。MCP 调用的密钥放在每次请求的私有 HTTP 头，工具入参不含密钥。数据和模型工具按需要调用。某个来源失败会记录来源状态并继续其他来源；没有可验证价格时保留未知，不编造数值。
 
 旧 Node 应用代码保存在 Git 标签 `archive/node-server`。修改主服务逻辑应只改 `pyserver/`；新增 MCP 供应商应在独立 Docker 适配器里实现解析，再接入 `travel-data-mcp`。

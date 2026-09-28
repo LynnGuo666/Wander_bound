@@ -1,7 +1,6 @@
 import React, { Suspense, useEffect, useState } from 'react';
-import { Activity, Compass, Database, Heart, MapPinned, Server, Settings2, ShieldCheck, Luggage } from 'lucide-react';
-import { DEFAULT_MEMORY } from '../shared/catalog.mjs';
-import { normalizeMemory } from '../shared/planner.mjs';
+import { Activity, Compass, Cpu, Database, Heart, MapPinned, Server, Settings2, ShieldCheck, Luggage } from 'lucide-react';
+import { DEFAULT_MEMORY, normalizeMemory } from './lib/memory.js';
 import { readStored } from './browser-state.mjs';
 import JourneyForm from './workbench/JourneyForm.jsx';
 import AgentTimeline from './workbench/AgentTimeline.jsx';
@@ -18,7 +17,8 @@ const MemoryView = React.lazy(() => import('./views/MemoryView.jsx'));
 const SourcesView = React.lazy(() => import('./views/SourcesView.jsx'));
 const SettingsView = React.lazy(() => import('./views/SettingsView.jsx'));
 const TripsView = React.lazy(() => import('./views/TripsView.jsx'));
-const NAV = [['debug', Activity, 'Agent 调试'], ['trips', Luggage, '我的行程'], ['plan', MapPinned, '完整行程'], ['sources', Database, '能力来源'], ['memory', Heart, '旅行记忆'], ['settings', Settings2, '设置']];
+const InferenceView = React.lazy(() => import('./views/InferenceView.jsx'));
+const NAV = [['debug', Activity, 'Agent 调试'], ['trips', Luggage, '我的行程'], ['plan', MapPinned, '完整行程'], ['sources', Database, '能力来源'], ['memory', Heart, '旅行记忆'], ['inference', Cpu, '模型调度'], ['settings', Settings2, '设置']];
 
 export default function App() {
   const [view, setView] = useState('debug');
@@ -64,6 +64,7 @@ export default function App() {
       <TabsContent value="plan"><Suspense fallback={<p className="text-sm text-muted-foreground">正在加载行程…</p>}>{plan ? <PlanView plan={plan} selectedDay={selectedDay} memory={memory} actions={{ rememberTrip, setSelectedDay }} /> : <Card><CardHeader><CardTitle>还没有行程</CardTitle><CardDescription>先在 Agent 调试页运行一次规划。</CardDescription></CardHeader></Card>}</Suspense></TabsContent>
       <TabsContent value="sources"><Suspense fallback={<p className="text-sm text-muted-foreground">正在读取能力…</p>}><SourcesView plan={plan} onOpenSettings={() => setView('settings')} /></Suspense></TabsContent>
       <TabsContent value="memory"><Suspense fallback={<p className="text-sm text-muted-foreground">正在加载旅行记忆…</p>}><MemoryView memory={memory} destination={form.destination} updateMemory={updateMemory} setOriginCity={value => update('originCity', value)} newCity={newCity} setNewCity={setNewCity} addVisitedCity={addVisitedCity} newPlace={newPlace} setNewPlace={setNewPlace} addVisitedPlace={addVisitedPlace} /></Suspense></TabsContent>
+      <TabsContent value="inference"><Suspense fallback={<p className="text-sm text-muted-foreground">正在读取模型状态…</p>}><InferenceView /></Suspense></TabsContent>
       <TabsContent value="settings"><Suspense fallback={<p className="text-sm text-muted-foreground">正在加载设置…</p>}><SettingsView onSaved={refreshHealth} /></Suspense></TabsContent>
     </main>
     <Toaster viewportClassName="max-w-2xl" />

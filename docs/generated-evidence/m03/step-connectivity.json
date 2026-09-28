@@ -1,0 +1,21 @@
+{
+  "model": "step-5-preview",
+  "configured": true,
+  "photosSent": false,
+  "kind": "text-only-connectivity",
+  "response": "{\"ok\":true}",
+  "usage": {
+    "prompt_tokens": 29,
+    "completion_tokens": 83,
+    "total_tokens": 112,
+    "prompt_tokens_details": {
+      "cached_tokens": 0
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  },
+  "finishReason": "stop",
+  "succeeded": true,
+  "elapsedSeconds": 1.563
+}
