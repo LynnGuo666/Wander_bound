@@ -53,7 +53,8 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
         yield {"type": "completion", "message": {"content": json.dumps({
             "templates": ["photo-wall", "book-and-clip"],
             "photoOrder": [photo["id"]],
-            "stickerMotifs": ["绿色电车和银杏", "黄浦江上的小船", "外滩建筑", "旅途美食"],
+            "stickerMotifs": ["绿色电车和银杏", "黄浦江上的小船", "外滩建筑", "旅途美食",
+                               "外滩夜色倒影", "黄浦江边的相机"],
             "stampMotif": "外滩江景", "postcardMotif": "黄浦江夜景明信片",
             "illustrationMotif": "江边建筑和游船", "diaryText": "黄浦江边看到了游船。"})}}
 
@@ -85,6 +86,7 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             assert "photoCount" in captured[0][1]["content"]
             assert "外滩黄浦江夜景" in captured[0][1]["content"]
             assert photo["id"] in response.json()["photoOrder"]
+            assert len(response.json()["stickerMotifs"]) == 6
             assert response.json()["diaryText"] == "黄浦江边看到了游船。"
             assert "base64" not in json.dumps(captured)
             assert "sourceSha256" not in json.dumps(captured)
