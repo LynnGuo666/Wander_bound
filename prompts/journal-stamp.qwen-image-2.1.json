@@ -1,0 +1,6 @@
+{
+  "id": "journal-stamp-qwen21-t2i-v1",
+  "tags": ["旅途手账", "邮票", "行程关联", "纯文生图", "透明背景", "Qwen-Image-2.1"],
+  "workflow": "workflows/qwen-image-2.1-sticker-api.json",
+  "promptTemplate": "This is an RGBA image with transparency. One single miniature collectible travel postage stamp inspired by {{city}} and this itinerary scene: {{motif}}. Nostalgic hand-painted watercolor illustration inside a tasteful perforated cream paper edge, small rectangular stamp, elegant warm palette. Only one isolated stamp with transparent margins. No other objects, no background, no readable letters, no numerals, no logo, no watermark. Alpha channel transparent background."
+}

@@ -10,7 +10,7 @@ export default defineConfig({
     proxy: {
       // Model controls belong to Spark. The local API runs in observation mode.
       '/api/inference': { target: process.env.SPARK_DEBUG_API_URL || 'http://spark-82.tailb7a50b.ts.net:7000', changeOrigin: true },
-      '/api': 'http://127.0.0.1:4176',
+      '/api': process.env.LOCAL_API_URL || 'http://127.0.0.1:4176',
     },
   },
 });
