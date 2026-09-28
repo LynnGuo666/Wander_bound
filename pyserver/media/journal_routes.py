@@ -88,7 +88,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                       "templates": [{"id": item["id"], "description": item["description"],
                                      "slots": [slot["kind"] for slot in item["slots"]]} for item in templates]}
         messages = [
-            {"role": "system", "content": "你是旅行手账设计师。根据城市、行程地点以及已精选照片的识别标签，为左右页各挑一个不同的模板，并构思 4 到 6 枚不同主题的贴纸、一枚邮票、一张风景插图和一张明信片图案。照片有标签时优先复用真实识别到的食物、建筑、风景和活动；没有标签时只依据行程，不得编造照片事实。插画与明信片图案只描述地点、建筑、风景或食物静物，不安排人物、游客或旅伴。还要写简短手账日记和明信片留言，不能把未识别的细节写成真实经历。用户保护的页面不能由你改动，这由服务端执行。只返回 JSON：{\"templates\":[\"左页模板id\",\"右页模板id\"],\"photoOrder\":[\"精选照片id\"],\"stickerMotifs\":[\"具体图案1\",\"具体图案2\",\"具体图案3\",\"具体图案4\"],\"stampMotif\":\"城市邮票图案\",\"postcardMotif\":\"明信片风景图案\",\"illustrationMotif\":\"页面插图图案\",\"diaryText\":\"不超过45字、只写可核实场景的手账短句\",\"postcardText\":\"不超过28字的明信片短句\"}。只使用给定的模板和照片 id。图案不超过 60 字，不含文字、品牌或排版指令。只用照片的文字标签，不请求原图。"},
+            {"role": "system", "content": "你是旅行手账设计师。根据城市、行程地点以及已精选照片的识别标签，为左右页各挑一个不同的模板，并构思 6 到 8 枚互不重复的贴纸、一枚邮票、一张风景插图和一张明信片图案。贴纸应覆盖照片中真实识别到的食物、建筑、风景或活动，以及行程中确有的地点；没有标签时只依据行程，不得编造照片事实。插画与明信片图案只描述地点、建筑、风景或食物静物，不安排人物、游客或旅伴。还要写简短手账日记和明信片留言，不能把未识别的细节写成真实经历。用户保护的页面不能由你改动，这由服务端执行。只返回 JSON：{\"templates\":[\"左页模板id\",\"右页模板id\"],\"photoOrder\":[\"精选照片id\"],\"stickerMotifs\":[\"具体图案1\",\"具体图案2\",\"具体图案3\",\"具体图案4\",\"具体图案5\",\"具体图案6\"],\"stampMotif\":\"城市邮票图案\",\"postcardMotif\":\"明信片风景图案\",\"illustrationMotif\":\"页面插图图案\",\"diaryText\":\"不超过45字、只写可核实场景的手账短句\",\"postcardText\":\"不超过28字的明信片短句\"}。只使用给定的模板和照片 id。图案不超过 60 字，不含文字、品牌或排版指令。只用照片的文字标签，不请求原图。"},
             {"role": "user", "content": json.dumps(input_data, ensure_ascii=False)},
         ]
         try:
@@ -110,9 +110,10 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                 raise ValueError("StepFun 返回了不属于精选清单的照片")
             if (not isinstance(selected, list) or len(selected) != 2 or selected[0] == selected[1]
                     or any(item not in ids for item in selected)
-                    or not isinstance(motifs, list) or not 4 <= len(motifs) <= 6
+                    or not isinstance(motifs, list) or not 4 <= len(motifs) <= 8
                     or any(not isinstance(item, str) or not 2 <= len(item.strip()) <= 60
                            or any(ord(char) < 32 for char in item) for item in motifs)
+                    or len({item.strip() for item in motifs}) < 4
                     or not isinstance(stamp, str) or not 2 <= len(stamp.strip()) <= 60
                     or any(ord(char) < 32 for char in stamp)):
                 raise ValueError("StepFun 返回了无效的模板或贴纸主题")
@@ -121,7 +122,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
             if (diary is not None and (not isinstance(diary, str) or len(diary) > 120)) or (
                     postcard_text is not None and (not isinstance(postcard_text, str) or len(postcard_text) > 80)):
                 raise ValueError("StepFun 返回的手账文字过长")
-            return {"templates": selected, "stickerMotifs": [item.strip() for item in motifs],
+            return {"templates": selected, "stickerMotifs": list(dict.fromkeys(item.strip() for item in motifs)),
                     "stampMotif": stamp.strip(), "postcardMotif": str(choice.get("postcardMotif") or stamp).strip()[:60],
                     "illustrationMotif": str(choice.get("illustrationMotif") or motifs[0]).strip()[:60],
                     "photoOrder": photo_order or [item["photoId"] for item in recognized],
