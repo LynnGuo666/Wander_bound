@@ -67,4 +67,4 @@ Comfy 日志明确显示 `Failed to validate prompt` 和 `sampler_name` 不在�
 | Comfy 受理后的真实 HTTP 响应丢失 | loopback 代理只转发一次，Comfy 返回相同 UUID 后断响应；job `unknown` 经 history 对账成功，真实 JPEG 与重启后 API 下载同 SHA。 |
 | 未转发请求的自然 `unknown` 与 409 防重 | 零次上游 `/prompt`、history/queue missing，约 11 秒失败；正式 retry 409 且 job 字节不变。此例无引擎采样。 |
 
-`d055cae` 已部署防重修复：明确的 HTTP 400/422 标 `rejected`、Comfy history 确认失败标 `failed`，两者可重试；`intent_recorded`、`accepted`、`unknown` 的失败 job 由正式 retry API 返回结构化 `PROMPT_OUTCOME_UNKNOWN` 409，保留原 UUID 与 job，等待人工对账。图片及视频镜头均受保护。远端 runtime 14 passed，本地 pyserver 全量 72 passed；真实网络探针已单独记录，替身测试不冒充模型证据。c03 criterion 的最终 review 由主会话执行。
+`d055cae` 已部署防重修复：明确的 HTTP 400/422 标 `rejected`、Comfy history 确认失败标 `failed`，两者可重试；`intent_recorded`、`accepted`、`unknown` 的失败 job 由正式 retry API 返回结构化 `PROMPT_OUTCOME_UNKNOWN` 409，保留原 UUID 与 job，等待人工对账。图片及视频镜头均受保护。远端 runtime 14 passed；本地全量结果以[交接实测收据](generated-evidence/m01/handoff-verification.json)的 **71 passed** 为准。此前本段的“72 passed”缺少原始日志支持，已在最终审查中撤回，不能作为历史通过数的证据。真实网络探针另行记录，替身测试不冒充模型证据。c03 已经主会话审查通过。
