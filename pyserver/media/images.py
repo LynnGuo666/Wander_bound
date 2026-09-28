@@ -1,4 +1,10 @@
-"""Private JPEG normalization and visual presets."""
+"""图片处理，以及选优信号的抽取。
+
+一边是 normalize / enhance：上传时把图归一到长边 2560、去掉 EXIF，或按预设修图；
+另一边是 extract_exif：从原图读出拍摄时间、GPS、设备和曝光三要素，供选优判断，
+读不出就返回空 dict，不影响上传。对外交付的都是 normalize 后的 JPEG，不带 EXIF，
+位置信息不外泄。
+"""
 from __future__ import annotations
 
 import io

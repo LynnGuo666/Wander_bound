@@ -49,6 +49,9 @@ def hamming(a: int, b: int) -> int:
 
 
 def quality(image_bytes: bytes, iso: int | None = None) -> dict:
+    """汇总单张的质量信号：锐度、曝光、噪声、近重复指纹，并给出该不该拒（reject）。
+    模糊（锐度 < 150）、过曝或欠曝、ISO >= 1600，都判为拒。
+    """
     gray = load_gray(image_bytes)
     lap = blur(gray)
     exp = exposure(gray)

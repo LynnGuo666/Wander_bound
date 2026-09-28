@@ -1,4 +1,10 @@
-"""Private local photo storage with EXIF removal and trip association."""
+"""私有照片存储，按行程归档。
+
+上传时用 images.normalize 去掉 EXIF、压到长边 2560，下载不会泄露位置；同时用
+extract_exif 把结构化 EXIF 存进 metadata 当选优信号。set_quality 供 L0 或 VLM 把
+选优分写回照片，供排序和去重复用。上传上限 40 MB，装得下手机和无人机的 48/108MP
+原图，归一化之后产物仍然很小。
+"""
 from __future__ import annotations
 
 import json
@@ -36,8 +42,8 @@ class MediaStore:
                       key=lambda item: item.get("capturedDay") or "")
 
     def add(self, image_bytes: bytes, trip_id: str, captured_day: str | None) -> dict:
-        if len(image_bytes) > 15 * 1024 * 1024:
-            raise ValueError("图片不能超过 15 MB")
+        if len(image_bytes) > 40 * 1024 * 1024:  # 容纳 48/108MP 原图(可达数十 MB)；normalize 会压到 2560，存储产物仍小
+            raise ValueError("图片不能超过 40 MB")
         normalized, width, height = images.normalize(image_bytes)
         exif = images.extract_exif(image_bytes)
         captured_at = exif.get("capturedAt")
@@ -69,6 +75,8 @@ class MediaStore:
             return None
 
     def set_quality(self, photo_id: str, quality_score: dict) -> dict | None:
+        """把选优分（锐度、曝光、dHash、flags 等）写回照片 metadata，供后续排序和去重读取。
+        """
         photo = self.get(photo_id)
         if not photo:
             return None
