@@ -1,0 +1,18 @@
+[
+  {"id":"food","name":"旅途美食","motif":"{{city}}{{place}}附近的一份有地方气息的旅行美食与餐具"},
+  {"id":"architecture","name":"城市建筑","motif":"{{city}}{{place}}的代表性建筑轮廓"},
+  {"id":"scenery","name":"沿途风景","motif":"{{city}}{{place}}的水彩风景与天空"},
+  {"id":"transport","name":"街头交通","motif":"{{city}}{{place}}附近的旅行交通工具与街角"},
+  {"id":"ticket","name":"旅途票根","motif":"以{{city}}{{place}}为灵感的无文字复古旅行票根"},
+  {"id":"flowers","name":"花与植物","motif":"{{city}}{{place}}附近的植物枝叶与小花"},
+  {"id":"night","name":"城市夜色","motif":"{{city}}{{place}}的夜间灯光与倒影"},
+  {"id":"market","name":"市集角落","motif":"{{city}}{{place}}的热闹市集摊位小物"},
+  {"id":"river","name":"水岸片刻","motif":"以{{city}}{{place}}为灵感的水岸旅行小景"},
+  {"id":"mountain","name":"远山云影","motif":"以{{city}}{{place}}为灵感的山形与云朵"},
+  {"id":"museum","name":"展馆收藏","motif":"{{city}}{{place}}的旅行博物馆收藏小物"},
+  {"id":"cafe","name":"午后咖啡","motif":"{{city}}{{place}}旅行中的咖啡杯与点心"},
+  {"id":"luggage","name":"出发行李","motif":"前往{{city}}{{place}}的旅行箱与随身物件"},
+  {"id":"weather","name":"天气心情","motif":"{{city}}{{place}}旅途中的阳光云朵与微风"},
+  {"id":"map","name":"地图路线","motif":"以{{city}}{{place}}为灵感的无文字地图路线与定位针"},
+  {"id":"camera","name":"拍照瞬间","motif":"记录{{city}}{{place}}的复古相机与照片角"}
+]
