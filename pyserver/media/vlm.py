@@ -1,8 +1,8 @@
-"""VLM 包装层：把照片发给多模态 LLM（Spark 上注入 key 的 HTTP API）做语义打标 + 选片打分。
+"""VLM 包装层：把照片发给多模态 LLM 做语义打标 + 选片打分。
 
 按 OpenAI 兼容 ``/v1/chat/completions`` 形态调用：图片以 base64 data-URI 进 user 消息，
-prompt 约束模型只返回结构化 JSON。``base_url`` / ``model`` / ``api_key`` 全走 env，
-默认连本机；密钥由 Spark 侧 docker 注入管理，本服务只读 env、不硬编码任何密钥。
+prompt 约束模型只返回结构化 JSON。``base_url`` / ``model`` / ``api_key`` 全走 env，默认值
+见 ``vision.py``（与精修共用同一台 Spark vLLM）；本服务只读 env，不硬编码任何密钥。
 
 识别或解析失败抛 :class:`VLMError`，不阻断上传——上层据此降级为只用 L0+EXIF。
 L0（blur/exposure/dhash）先粗筛，本层在候选集上叠加"语义废片/决定性瞬间/保留价值"。
@@ -21,18 +21,13 @@ from PIL import Image, ImageOps
 
 from .vision import vision_base_url, vision_model
 
-# Spark 上那台 vLLM 生成只有 8-10 tok/s，一张图打标实测 78-180s（模型被按需调度器
-# 卸载后首次请求还要等权重加载）。60s 是接 StepFun 时留下的值，到这里必然超时重试，
-# 三次都撞线就整张丢掉。
-DEFAULT_TIMEOUT = float(os.getenv("PYSERVER_VLM_TIMEOUT", "300"))
+# 单次请求的读超时。实测一张图打标 53-80 秒，模型刚被调度器卸载时首张要到 180 秒；
+# 60 秒是接 StepFun 时留下的值，第一张必然超时，重试三次全撞线这张就丢了。
+DEFAULT_TIMEOUT = float(os.getenv("PYSERVER_VLM_TIMEOUT", "180"))
 
 
 def _first_env(*names: str) -> str | None:
-    """按顺序取第一个已设置的环境变量。
-
-    选优和精修打的是 Spark 上同一台 vLLM，默认值集中在 `vision` 里，避免两边各写
-    一份、改了端口忘了改模型名；这里允许用 `PYSERVER_VLM_*` 单独覆盖选优那一侧。
-    """
+    """返回第一个已设置的变量，没有则 None。选优侧可用 PYSERVER_VLM_* 覆盖共享默认值。"""
     for name in names:
         value = os.getenv(name)
         if value:
