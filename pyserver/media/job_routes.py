@@ -9,6 +9,8 @@ from .jobs import JobStore
 from .auth import require_media_auth
 from .contracts import ContractError, MAX_PROMPT_LENGTH, PRODUCT_KINDS
 from .scrapbook import style_catalog
+from .material_cards import MaterialCards
+from .contracts import selected_original_snapshot
 
 
 def _contract_error(exc: ContractError) -> HTTPException:
@@ -28,6 +30,27 @@ def _require_trip(trips: TripStore, trip_id: object) -> None:
 
 def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter:
     router = APIRouter()
+    cards = MaterialCards(media)
+
+    @router.get("/api/media/trips/{trip_id}/photos/{photo_id}/material-card")
+    async def read_material_card(trip_id: str, photo_id: str, request: Request):
+        require_media_auth(request)
+        _require_trip(trips, trip_id)
+        try:
+            snapshot = selected_original_snapshot(media, trip_id, [photo_id], maximum=1)
+            return cards.snapshot(snapshot)[0]
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
+
+    @router.put("/api/media/trips/{trip_id}/photos/{photo_id}/material-card")
+    async def save_material_card(trip_id: str, photo_id: str, request: Request, payload: dict):
+        require_media_auth(request)
+        _require_trip(trips, trip_id)
+        try:
+            return cards.put(trip_id, photo_id, payload)
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
+
     @router.get("/api/media/scrapbook-styles")
     async def scrapbook_styles(request: Request):
         require_media_auth(request)
