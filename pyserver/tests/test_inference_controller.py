@@ -103,6 +103,28 @@ def test_busy_comfy_service_cannot_be_stopped():
     asyncio.run(scenario())
 
 
+def test_background_warm_reports_loading_then_ready():
+    class SlowController(ModelController):
+        def __init__(self, event):
+            super().__init__(enabled=True, specs=(ModelSpec("chat", "Chat", "chat.service", "http://127.0.0.1:1", "/v1/models", 1),))
+            self.event = event
+
+        async def _ensure(self, _name):
+            await self.event.wait()
+
+    async def scenario():
+        event = asyncio.Event()
+        controller = SlowController(event)
+        controller.begin_warm("chat")
+        assert controller.loading_model == "chat"
+        assert controller.phase == "loading_model"
+        event.set()
+        await controller.warm_task
+        assert controller.loading_model is None
+        assert controller.phase == "cooling"
+    asyncio.run(scenario())
+
+
 def test_web_status_and_control_auth(tmp_path, monkeypatch):
     monkeypatch.setenv("MEDIA_API_TOKEN", "test-token")
     monkeypatch.delenv("SPARK_MODEL_CONTROL", raising=False)
