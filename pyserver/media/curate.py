@@ -11,6 +11,11 @@ DUP_THRESHOLD = 12
 
 
 def curate_trip(media, trip_id: str, target: int | None = None) -> dict:
+    """给一个行程跑 L0 选优：逐张打质量分，连拍去重只留最清晰的一张，按清晰度排序，
+    传了 target 就截到目标张数。全程只算可测量指标，不调 VLM；语义筛选和审美留给
+    VLM 到位后叠加。返回 counts 概览、每张的 verdict（keep/drop/dup/overflow）和
+    入选照片 id 列表。
+    """
     scored = []
     for photo in media.list(trip_id):
         data = media.bytes(photo["id"])
