@@ -55,7 +55,9 @@ async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
         return {"category": category, "params": params, "rationale": rationale, "cropReason": crop_reason,
                 "model": model, "provider": base_url, "elapsedMs": round((time.monotonic() - started) * 1000)}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"DGX 照片分析失败：{exc}") from exc
+        # 不能只插 {exc}：httpx.ReadTimeout 的 str() 是空的，超时会变成一句没有内容的
+        # "DGX 照片分析失败："。带上类型名，排错时才知道是超时、连接失败还是解析问题。
+        raise RuntimeError(f"DGX 照片分析失败：{type(exc).__name__} {exc}".rstrip()) from exc
 
 
 async def review(original: bytes, edited: bytes, settings: dict) -> dict:
@@ -80,4 +82,5 @@ async def review(original: bytes, edited: bytes, settings: dict) -> dict:
         return {"approved": result["approved"], "note": str(result["note"])[:400], "model": model,
                 "elapsedMs": round((time.monotonic() - started) * 1000)}
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
-        raise RuntimeError(f"DGX 预览复核失败：{exc}") from exc
+        # 同 suggest：带异常类型名，否则 ReadTimeout 会让这里只剩一句空的消息
+        raise RuntimeError(f"DGX 预览复核失败：{type(exc).__name__} {exc}".rstrip()) from exc
