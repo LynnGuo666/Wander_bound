@@ -23,6 +23,12 @@ Spark 只读核对日：2026-09-28。API 运行目录当时为 `24aae844e252fe7c
 
 API JSON 供服务端提交；UI JSON 使用 ComfyUI 的画布节点和连线格式，供内部界面导入、查看及调参。UI 图的图片名、提示词和 seed 是空白/零占位，导入后需选择私有测试图片；UI 编辑结果应先导出 API 格式，完成 schema、尺寸和真实探针审查后再递增 `workflow_version` 与 manifest。不能只替换文件而沿用旧版本号。
 
+UI 的 KSampler 与 RandomNoise 在 seed 后保存 `control_after_generate=fixed` 控件；这是已安装节点声明的独立控件值，不能省略，否则后续采样参数会错位。真实 UI 导入仍须按下文验证。
+
+### 提交身份和恢复
+
+两套已安装 ComfyUI 的 `server.py:post_prompt` 均接受调用方提供的规范 UUID `prompt_id`。适配器 `queue(..., prompt_id=saved_id)` 在上传前校验格式，提交该 ID，并检查响应编号一致。队列调用者必须先持久化此 ID，再发送请求；遇到响应丢失或 API 重启，先查相同 ID 的 history/queue。ComfyUI 本身不保证相同 ID 重复 POST 去重，因此不得把此字段视为自动幂等功能。持续无法确认时明确失败，人工重试另存新 ID。
+
 [ComfyUI 官方 APP mode 文档](https://docs.comfy.org/interface/app-mode) 指出其起始前端版本为 `1.41.13`。现装的 `1.53.6` 和 `1.51.9` 均满足**版本下限**；本轮未启动服务或实测导入及 APP mode，不能宣称实际可用。内部本地 APP 使用不依赖云分享；云分享 URL 不在本任务范围。
 
 ## 后续真实验证

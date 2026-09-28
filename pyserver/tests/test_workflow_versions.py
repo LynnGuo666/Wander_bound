@@ -22,7 +22,7 @@ def jpeg(size=(900, 1200)):
 
 
 def mock_client(monkeypatch):
-    seen = {"uploads": [], "graphs": []}
+    seen = {"uploads": [], "graphs": [], "submissions": []}
 
     def handler(request):
         if request.url.path == "/upload/image":
@@ -30,8 +30,10 @@ def mock_client(monkeypatch):
             seen["uploads"].append(request.content)
             return httpx.Response(200, json={"name": "uploaded.jpg"})
         if request.url.path == "/prompt":
-            seen["graphs"].append(json.loads(request.content)["prompt"])
-            return httpx.Response(200, json={"prompt_id": "prompt-1"})
+            body = json.loads(request.content)
+            seen["graphs"].append(body["prompt"])
+            seen["submissions"].append(body)
+            return httpx.Response(200, json={"prompt_id": body.get("prompt_id", "prompt-1")})
         raise AssertionError(request.url)
 
     original = httpx.AsyncClient
@@ -43,6 +45,34 @@ def uploaded_size(body):
     start = body.index(b"\xff\xd8")
     with Image.open(io.BytesIO(body[start:])) as image:
         return image.size
+
+
+def test_persisted_prompt_identity_is_sent_and_validated_before_upload(monkeypatch):
+    async def run():
+        seen = mock_client(monkeypatch)
+        client = ComfyClient("http://127.0.0.1:8191", WORKFLOWS / "qwen-image-2.1-edit-api.json", "image")
+        identity = "4d78ae36-6c44-4d57-8bcf-a42f85b65cb4"
+        assert await client.queue(jpeg(), "scene", 42, prompt_id=identity) == identity
+        assert seen["submissions"][0]["prompt_id"] == identity
+        for invalid in ("bad-id", identity.upper(), 42):
+            with pytest.raises(ValueError, match="UUID"):
+                await client.queue(jpeg(), "scene", 42, prompt_id=invalid)
+        assert len(seen["uploads"]) == 1
+    asyncio.run(run())
+
+
+def test_mismatched_engine_identity_is_not_accepted(monkeypatch):
+    async def run():
+        def handler(request):
+            if request.url.path == "/upload/image":
+                return httpx.Response(200, json={"name": "uploaded.jpg"})
+            return httpx.Response(200, json={"prompt_id": "unexpected"})
+        original = httpx.AsyncClient
+        monkeypatch.setattr(httpx, "AsyncClient", lambda **kwargs: original(transport=httpx.MockTransport(handler), **kwargs))
+        client = ComfyClient("http://127.0.0.1:8191", WORKFLOWS / "qwen-image-2.1-edit-api.json", "image")
+        with pytest.raises(RuntimeError, match="编号不匹配"):
+            await client.queue(jpeg(), "scene", 42, prompt_id="4d78ae36-6c44-4d57-8bcf-a42f85b65cb4")
+    asyncio.run(run())
 
 
 def test_video_seed_canvas_frames_and_legacy_signature(monkeypatch):

@@ -52,9 +52,17 @@ class ComfyClient:
         return workflow_versions.freeze_workflow(self.workflow_file, self.kind)
 
     async def queue(self, image: bytes, prompt: str, seed: int | None = None, *,
-                    workflow_snapshot: dict | None = None, parameters: dict | None = None) -> str:
+                    workflow_snapshot: dict | None = None, parameters: dict | None = None,
+                    prompt_id: str | None = None) -> str:
         # Validate before uploading private input. A frozen graph never reads the
         # current workflow file, even when that file has since been replaced.
+        if prompt_id is not None:
+            try:
+                canonical = str(uuid.UUID(prompt_id))
+            except (ValueError, TypeError, AttributeError):
+                raise ValueError("prompt_id 必须是规范 UUID") from None
+            if canonical != prompt_id:
+                raise ValueError("prompt_id 必须是规范 UUID")
         snapshot = (workflow_versions.validate_snapshot(workflow_snapshot, self.kind)
                     if workflow_snapshot is not None else self.freeze_workflow())
         settings, seed = workflow_versions.validate_parameters(snapshot, parameters, seed)
@@ -82,11 +90,16 @@ class ComfyClient:
             text = f"<image1> {prompt}" if self.kind == "image" and "<image1>" not in prompt else prompt
             workflow = _replace(workflow, {"__TRAVEL_IMAGE__": name, "__TRAVEL_PROMPT__": text,
                                            "__TRAVEL_SEED__": seed if seed is not None else 0})
-            queued = await client.post(f"{self.base_url}/prompt", json={"prompt": workflow, "client_id": str(uuid.uuid4())})
+            submission = {"prompt": workflow, "client_id": str(uuid.uuid4())}
+            if prompt_id is not None:
+                submission["prompt_id"] = prompt_id
+            queued = await client.post(f"{self.base_url}/prompt", json=submission)
             queued.raise_for_status()
             body = queued.json()
             if not body.get("prompt_id") or body.get("error"):
                 raise RuntimeError(f"ComfyUI 拒绝工作流：{body.get('error')}")
+            if prompt_id is not None and body["prompt_id"] != prompt_id:
+                raise RuntimeError("ComfyUI 返回的任务编号不匹配；请核对已保存的提交编号")
             return body["prompt_id"]
 
     async def result(self, prompt_id: str) -> tuple[str, dict | None]:
