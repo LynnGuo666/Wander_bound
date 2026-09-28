@@ -34,13 +34,13 @@ def _dms_to_deg(dms, ref):
     return round(deg, 6)
 
 
-# EXIF Orientation(0x0112) 取值：1=正常，8/6=旋转90°，5/7= transpose，3=180°，2/4=镜像。
-# 只有 1 和 undefined 是"正常方向"；其余说明相机记录的像素方向和观看方向不一致。
+# EXIF Orientation(0x0112)：1=正常，8/6=旋转 90°，3=180°，2/4=镜像，5/7=转置。
+# 只有 1 算"方向正常"，其余说明相机记录的像素方向和观看方向不一致。
 _ORIENTATION_NORMAL = {1}
 
-# 传感器画幅 → 等效焦距换算系数(focalLength × crop = 35mm 等效)。
-# 只列常见机型片段，命中不了就返回 None，不用默认值猜——猜错会让"安全快门"整条判断失效。
-# 匹配按片段长度从长到短，避免 "eos r" 抢先命中全幅而漏掉后面的 APS-C "eos r7"。
+# 传感器画幅换成 35mm 等效焦距的系数（实际焦距 × crop）。
+# 只列常见机型片段，命中不了返回 None，不拿默认值猜——猜错画幅，安全快门整条都失效。
+# 按片段长度从长到短匹配，否则 "eos r" 会抢先命中全幅，漏掉后面的 APS-C "eos r7"。
 _CROP_BY_PREFIX = [
     (("ilce-7m", "ilce-7r", "ilce-7s", "ilce-9", "d850", "d810", "d750", "d6", "d5", "d4",
       "eos r5", "eos r6", "eos r3", "eos r8", "eos 5d", "eos-1d", "eos 6d", "z6", "z7", "z8", "z9",
@@ -74,16 +74,14 @@ def _equivalent_focal(focal_length, crop):
 
 
 def shake_assessment(exposure_time, focal_equiv):
-    """手持安全快门判据：安全速度≈1/等效焦距，实际更慢就有手抖风险。
+    """手持安全快门：快门慢于 1/等效焦距就有手抖风险。
 
-    返回安全快门值、慢了几档、风险档位。调用方保证两个参数都有才进来；
-    这里仍守一次空，宁可不判也不给错判。
+    返回安全快门、慢了几档、风险档位。调用方保证两个参数都有才进来，这里仍守一次空。
     """
     if not exposure_time or exposure_time <= 0 or not focal_equiv or focal_equiv <= 0:
         return {"safeShutter": None, "slowStops": None, "shakeRisk": None}
     safe_shutter = round(1.0 / focal_equiv, 6)
-    # 慢几档 = log2(实际快门 / 安全快门)；正数越大手抖风险越高
-    slow_stops = round(math.log2(exposure_time / safe_shutter), 2)
+    slow_stops = round(math.log2(exposure_time / safe_shutter), 2)  # 慢的档数，正数越大越危险
     if slow_stops >= 3.0:
         risk = "high"
     elif slow_stops >= 1.0:
@@ -136,13 +134,13 @@ def extract_exif(image_bytes: bytes) -> dict:
             result["exposureValue"] = round(ev, 2)
             result["lighting"] = "bright" if ev >= 12 else ("normal" if ev >= 8 else "low-light")
 
-        # 朝向：竖拍横放这类"方向错了"是确定性判据，不用 VLM 目测。
+        # 朝向：竖拍横放是相机自己记录的，不用 VLM 目测。
         orientation = exif.get(0x0112)
         if orientation is not None:
             result["orientation"] = int(orientation)
             result["rotated"] = int(orientation) not in _ORIENTATION_NORMAL
 
-        # 等效焦距 + 手持安全快门：判"是不是手抖糊"的物理先验，比图像特征更硬。
+        # 等效焦距 + 安全快门：判手抖糊，比图像特征可靠。
         focal_equiv_raw = _to_float(exif_ifd.get(0xA405))
         if focal_equiv_raw is not None:
             focal_equiv = round(focal_equiv_raw, 1)
@@ -152,16 +150,15 @@ def extract_exif(image_bytes: bytes) -> dict:
             focal_equiv = None
         if focal_equiv is not None:
             result["focalEquiv"] = focal_equiv
-        # 安全快门：有拍摄参数才判，判不了就不写这几个 key（保持"没信息=空字段"，
-        # 别拿三个 None 把结果撑满）。等效焦距拿不到时快门也无从比起。
+        # 快门和等效焦距缺一个就不写这几个 key，保持"没信息=空字段"，别拿三个 None 撑场面。
         if exposure and focal_equiv is not None:
             result.update(shake_assessment(exposure, focal_equiv))
 
         gps = exif.get_ifd(0x8825)
         if gps:
-            # GPS IFD 的 tag 编号：1/3 是纬度/经度方向(ASCII)，2/4 才是度分秒(RATIONAL)。
-            # 早期把纬度的 1、2 传反了，方向字符串当度分秒（长度不是 3）直接返回 None，
-            # 于是 lat 恒为 None、GPS 整块写不进去——经纬度都取不到。
+            # GPS IFD：tag 1/3 是纬度/经度方向(ASCII)，tag 2/4 才是度分秒(RATIONAL)。
+            # 早期纬度的 1、2 传反了，方向串长度不是 3 直接返回 None，于是 lat 恒为 None、
+            # 经纬度只要缺一个整块就不写——真实照片的 GPS 一直取不到。
             lat = _dms_to_deg(gps.get(2), gps.get(1))
             lon = _dms_to_deg(gps.get(4), gps.get(3))
             if lat is not None and lon is not None:

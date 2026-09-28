@@ -130,7 +130,7 @@ def test_sharpness_map_blocks_cover_the_frame():
 
 
 def test_motion_anisotropy_reports_both_axes():
-    """只输出连续量，不给布尔结论；两个轴都要量到。"""
+    """只输出数值，不给布尔结论；两个轴都要量到。"""
     info = quality.motion_anisotropy(quality.load_gray(_jpeg(_photo(1))))
     assert info["dominant"] in {"vertical", "horizontal"}
     assert 0.0 <= info["anisotropy"] <= 1.0

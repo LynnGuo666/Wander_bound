@@ -6,32 +6,32 @@
 
 - `curate_trip`：给一个行程打 L0 质量分、连拍去重，得出入选的照片 id 列表（见 `quality` / `curate`）。
 - `vlm.tag_image`：对一张照片出结构化 tags——场景、活动、人物、情绪、物体、时间、天气、地点线索、OCR，外加 `quality` 里的 composition/aesthetic/highlight/trash/keep。
-- 落库：质量分写 `photo["quality"]`（`MediaStore.set_quality`）；tags 写 `photo["tags"]`（`set_tags`）。VLM 还没部署时，照片可能只有 quality、没有 tags，下游要能容忍这种“没打过标”。
-- 原始 highest 不打分，`extract_exif` 只做无损只读解析，不重编码。
+- 落库：质量分写 `photo["quality"]`（`MediaStore.set_quality`）；tags 写 `photo["tags"]`（`set_tags`）。照片可能只有 quality、没打过 tags，下游要能容忍这种"没打过标"。
+- 原始图不打分，`extract_exif` 只做只读解析，不重编码。
 
 ## 废片怎么判：算法、EXIF、VLM 各管一段
 
-判“糊、歪、构图烂”不能指望任何一方单独拍板。算法只会算连续数值，看不出构图意图；VLM 能看懂画面，但它给的是相对判断，还会漏判确定性的物理错误。所以现在是三层，各自负责自己最有把握的那部分，互相作证，不互相替代。
+判“糊、歪、构图烂”不能指望任何一方单独拍板。算法只会算数值，看不出构图意图；VLM 看得懂画面，但它给的是相对判断，也会漏掉相机本来就说清楚了的物理错误。所以分三层，各自管自己最有把握的那部分，互相作证，不互相替代。
 
-| 层 | 负责什么 | 给出的量 |
+| 层 | 负责什么 | 给出的字段 |
 | --- | --- | --- |
-| EXIF | 相机自己记录下来的确定性事实，不用模型猜 | `orientation` / `rotated`、`focalEquiv`、`safeShutter` / `slowStops` / `shakeRisk` |
-| L0 算法 | 可量化的画质事实，只给连续量不下结论 | `blur`、`spatial`、`motion`（见下） |
-| VLM | 语义级的残缺：歪斜、拖影重影、主体被切被挡 | `trash` 八类 + `keep` / `highlight` |
+| EXIF | 相机自己记录的事实，不用模型猜 | `orientation` / `rotated`、`focalEquiv`、`safeShutter` / `slowStops` / `shakeRisk` |
+| L0 算法 | 能算的画质指标，只出数值不下结论 | `blur`、`spatial`、`motion`（见下） |
+| VLM | 算法看不出来的残缺：歪斜、拖影重影、主体被切被挡 | `trash` 八类 + `keep` / `highlight` |
 
-### EXIF：物理先验
+### EXIF：相机自己说清楚的事
 
-竖拍横放、方向记录与观看不一致，这是相机写死在 `Orientation` 里的，不等于 1 就是 `rotated`，比任何目测都硬。手抖同理：安全快门约为等效焦距的倒数，快门比它慢几档就是 `shakeRisk` 升档。等效焦距优先用图里的 tag，没有才按机型推画幅系数；认不出机型就留空，不填默认值——猜错画幅，安全快门整条判断跟着失效。
+竖拍横放这类方向记录与观看不一致，是相机写死在 `Orientation` 里的，不等于 1 就是 `rotated`，比任何目测都硬。手抖同理：安全快门约为等效焦距的倒数，快门比它慢几档，`shakeRisk` 就升档。等效焦距优先用图里的 tag，没有才按机型推画幅系数；认不出机型就留空，不填默认值——猜错画幅，安全快门整条判断跟着失效。
 
-GPS 这里有个实测结论：M5 素材 581 张里 0 张带 GPS，是相机本身不写，不是解析 bug。所以地点要靠 VLM 的 `location_clue` 加 OCR 兜着，EXIF 这条链子是指望不上的。
+GPS 这里有个实测结论：M5 素材 581 张里 0 张带 GPS，是相机本身不写，不是解析 bug。所以地点只能靠 VLM 的 `location_clue` 加 OCR 兜着。
 
-### L0 算法：只给连续量
+### L0 算法：只出数值，不下结论
 
-全局 Laplacian 方差是个“平均糊度”，会把该拒的整幅糊和往往是好片的浅景深糊混为一谈。`sharpness_map` 切 6×6 块分别测，看块间对比和清晰块占比，承认“分区明显”和“整体糊”是两回事。`motion_anisotropy` 量模糊的方向性，弱轴能量塌陷是拖影的特征。
+全局 Laplacian 方差是个“平均糊度”，会把该拒的整幅糊和往往是好片的浅景深糊混为一谈。`sharpness_map` 切 6×6 块分别测，看块间对比和清晰块占比，就是承认“分区明显”和“整体糊”是两回事。`motion_anisotropy` 量模糊的方向性，某个方向的梯度塌下去多少是拖影的特征。
 
 这两个量都只作证据，不作结论，原因很具体：PIL 的卷积核在 uint8 上会把 Laplacian 负值截成 0，方差越小越被截断噪声主导；纯色 JPEG 有 8×8 块效应振铃，方差能到 700 以上；相机原图边缘带锐化，靠边的分块会被系统性垫高。所以阈值必须拿真样本标定，单测里用连续噪声而不是台阶式放大图，也是这个道理。
 
-### VLM：兜语义
+### VLM：补算法看不出来的
 
 `trash` 列了八类，其中方向错、拖影或手抖连拍糊、构图失衡三类，本来就得靠模型看画面。同时 prompt 里写明了“不是所有不好看都算 trash”，普通随手拍靠 `keep` 给低分表达，避免动辄判删。
 
@@ -47,7 +47,20 @@ GPS 这里有个实测结论：M5 素材 581 张里 0 张带 GPS，是相机本�
 
 `commit_selection(media, trip_id, photo_ids, *, batch_id, source="photo-selection")` 把 curate 得出的入选 id 翻译成这份 payload，调 `MediaStore.set_selected` 落库。它是显式的一步，不并进 `curate_trip` 自动提交——精修文档要求“优选必须明确提交照片 id 清单”，而且整份替换语义下，跑到一半的 curate 不该覆盖下游已有的清单。
 
-`set_selected` / `selected` 的存储实现在下游分支的共享 store 里（`selections/{trip}.json`）。这里只鸭子式调用，不在本分支重复实现；两条分支 PR 合并后自动接上，合并前用 FakeMedia stub 测试。
+`set_selected` / `selected` / `is_selected` 的存储实现就在本分支的共享 store 里（`selections/{trip}.json`），已随 `feature/web-photo-develop` 合进来。`trip_id` 必须是 UUID：`store.selected()` 靠 `uuid.UUID(trip_id)` 防目录穿越，传非 UUID 的行程号不报错，只会静默读回一份空清单。
+
+两条分支已于 2026-09-28 合并，选优到精修是真链路，`tools/chain_test.py` 可端到端跑一遍。
+
+## 合并进本分支的下游改动
+
+`feature/web-photo-develop` 做的事比“精修”更多，这里记下它带来了什么，免得日后读代码对不上：
+
+- 退役了整个 Node 旧服务（`server/` 下的 agent、media、providers、http 全删），数据改走 Node MCP 网关；Python 的 `providers/js_api.py` 随之删除，`TRAVEL_DATA_MCP_URL` 取代旧的 `/api/data/*`。
+- 新增 AI 精修管线：`media/develop.py` 出视觉建议与复核（结构化 JSON 契约、八个 HSL 通道、5 点 master 曲线），`media/mcp_images.py` 是渲染后端，`media/photo_routes.py` 补上 develop 的四个接口和 selected-photos 的读写。
+- 共享 store 长出 selection：`set_selected` / `selected` / `is_selected`，以及存精修版本的 `save_develop`。
+- `media/images.py` 多了精修侧的处理：`normalize_develop` / `develop` / `finish_local_curves` / `_apply_hsl` / `_curve_lut`，和选优侧的 `extract_exif` 同住一个文件。这也是合并时 import 撞车的原因——`math` 算 EV 与安全快门，`colorsys` 调 HSL，两边都要。
+
+按需推理调度（`pyserver/inference/`、`deploy/spark/qwen38.service`）在 `origin/main` 上，**还没合进本分支**。Spark 上那台 vLLM 现在由 systemd 用户单元管着，空闲即停，内存压力下自动释放再恢复。容器不见了先查 `systemctl --user status qwen38.service`，别急着重建。详见 main 上的 `docs/SPARK_INFERENCE_SCHEDULING.md`。
 
 ## 契约二：剪辑素材卡（留给③回忆短片，当前预留）
 
@@ -64,7 +77,7 @@ GPS 这里有个实测结论：M5 素材 581 张里 0 张带 GPS，是相机本�
 
 ### 预留说明
 
-- ** curation/export 的 HTTP 路由暂不加**：下游分支正在大改 `photo_routes.py`，现在加路由会冲突。先用 `build_reel_assets` 纯函数加本文档占位，两条分支合并后再补只读路由；命名和路径（如 `curation/export`、`reel/plan`）待与③剪辑模块、leader 定。
+- ** curation/export 的 HTTP 路由暂不加**：`photo_routes.py` 刚被下游大改过，现在加路由容易再撞一次。先用 `build_reel_assets` 纯函数加本文档占位；命名和路径（如 `curation/export`、`reel/plan`）待与③剪辑模块、leader 定。
 - **素材卡字段可裁剪**：剪辑可能只要一部分（比如 scene/mood/highlight），按它的需要收窄，不急着塞全量。
 - **“被选”基准**默认跟精修共用 selected-photos；若剪辑希望独立用 keep 集，`build_reel_assets` 可加参数切换，等③定了再放开。
 
