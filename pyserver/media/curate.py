@@ -24,8 +24,20 @@ def curate_trip(media, trip_id: str, target: int | None = None) -> dict:
         iso = (photo.get("exif") or {}).get("iso")
         full = quality(data, iso=iso)
         digest = full["dhashBits"]
+        # blocks 是 grid×grid 的明细表，没人消费、存进 metadata 只会让每条记录翻倍；
+        # 落库存摘要标量，明细在有需要时现算。
+        spatial = full.pop("spatial", {})
+        motion = full.pop("motion", {})
         stored = {key: value for key, value in full.items() if key != "dhashBits"}
         stored["dhashHex"] = format(digest, "064x")
+        if spatial:
+            stored["spatial"] = {"contrast": spatial["contrast"],
+                                 "sharpFraction": spatial["sharpFraction"],
+                                 "dullFraction": spatial["dullFraction"]}
+        if motion:
+            stored["motion"] = {"dominant": motion["dominant"],
+                                "anisotropy": motion["anisotropy"],
+                                "weakAxisEnergy": motion["weakAxisEnergy"]}
         media.set_quality(photo["id"], stored)
         scored.append((photo, stored, digest))
 
