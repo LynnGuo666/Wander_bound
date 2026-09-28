@@ -37,6 +37,8 @@ class ModelController:
         self.phase = "idle"
         self.error: str | None = None
         self.sweeper: asyncio.Task | None = None
+        self.warm_task: asyncio.Task | None = None
+        self.loading_model: str | None = None
         self.owner_file = None
 
     async def _command(self, *args: str, timeout: int = 30) -> str:
@@ -143,7 +145,7 @@ class ModelController:
         if (memory.get("pressureFull10") or 0) > 1:
             raise RuntimeError("系统内存压力过高，暂缓加载模型")
         await self._command("systemctl", "--user", "start", spec.service, timeout=45)
-        for _ in range(60):
+        for _ in range(450 if spec.name == "chat" else 60):
             if await self._ready(spec):
                 self.phase = "ready"
                 return
@@ -198,6 +200,28 @@ class ModelController:
                 self.error = str(exc)[:200]
                 raise
 
+    def begin_warm(self, name: str):
+        if name not in self.specs:
+            raise ValueError("未知模型")
+        if not self.enabled:
+            raise RuntimeError("此环境未启用模型服务控制")
+        if self.warm_task and not self.warm_task.done():
+            if self.loading_model != name:
+                raise RuntimeError("另一个模型正在加载")
+            return
+        self.loading_model = name
+        self.phase = "loading_model"
+
+        async def run():
+            try:
+                await self.warm(name)
+            except RuntimeError:
+                pass  # warm() records the error for the status endpoint.
+            finally:
+                self.loading_model = None
+
+        self.warm_task = asyncio.create_task(run())
+
     async def release(self, name: str):
         if name not in self.specs:
             raise ValueError("未知模型")
@@ -229,6 +253,7 @@ class ModelController:
                     "idleSeconds": round(time.monotonic() - self.last_used[spec.name]) if spec.name in self.last_used else None}
         models = await asyncio.gather(*(describe(spec) for spec in self.specs.values()))
         return {"enabled": self.enabled, "phase": self.phase, "activeModel": self.active,
+                "loadingModel": self.loading_model,
                 "idleTimeoutSeconds": self.idle_seconds, "error": self.error, "memory": self._memory(), "gpu": await self._gpu(),
                 "models": models}
 
@@ -264,6 +289,13 @@ class ModelController:
             self.sweeper = asyncio.create_task(self._sweep())
 
     async def close(self):
+        if self.warm_task and not self.warm_task.done():
+            self.warm_task.cancel()
+            try:
+                await self.warm_task
+            except asyncio.CancelledError:
+                pass
+        self.warm_task = None
         if self.sweeper:
             self.sweeper.cancel()
             try:

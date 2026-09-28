@@ -83,10 +83,10 @@ flowchart LR
 
 在 B/C 阶段，每次提交前运行仓库的 `npm run check`，并补 Python 侧的队列/恢复/互斥测试及 Spark 上的串行压力测试。线上启用按需模式前保留原 systemd 单元和回退步骤；停止服务前确认任务与引擎队列均空。所有日志只记录任务 ID、模型名、状态、耗时和资源指标。
 
-## 当前代码入口
+## 首版实现与尚待验证的边界
 
-- `pyserver/media/jobs.py`：任务落盘与执行；当前每个任务独立创建协程，缺少全局互斥。
-- `pyserver/media/comfy.py`：ComfyUI 上传、排队、结果轮询；可增加队列与释放适配。
-- `pyserver/media/photo_routes.py`：媒体健康检查；需区分主动停机与未配置。
-- `deploy/spark/minimax-h3-comfy.service`、`deploy/spark/qwen21-comfy.service`：现有服务单元，当前均随用户会话自动启用。
-- `deploy/spark/start-python.sh`：当前固定的回环服务地址；引入调度器后保持媒体 API 路由兼容。
+- `pyserver/media/jobs.py` 已改为单 worker 串行领取落盘任务，API 重启会恢复未完成任务；模型暂不可启动时任务留在队列，30 秒后重试。现有 JSON 队列只支持一个 API 进程，控制器用文件锁阻止重复启动。
+- `pyserver/inference/controller.py` 只允许固定的三项 systemd 服务，持有全局锁直到整个媒体任务结束。停机前两次检查引擎队列；启动前检查 `MemAvailable` 和 PSI，空闲 10 分钟自动停机。目前每模型的内存门槛是保守初值，尚未用代表性生成任务峰值校准，也未实现 cgroup 峰值、持久心跳或跨模型公平调度。
+- `pyserver/inference/routes.py` 和 Web“模型调度”页提供状态、手动预热/释放及独立 Qwen 对话试跑；写操作复用私有媒体令牌。旅行规划仍由 Step Plan 驱动。
+- 2026-09-28 Spark 实测：H3 与 Qwen-Image-2.1 的 `/queue` 均为空，API 释放/预热/切换成功；两项服务已关闭开机自启。全部停机后 `MemAvailable` 约 109 GiB。仅验证了 ComfyUI 进程启停与健康探针，尚未运行代表性图像/视频生成任务。
+- Qwen3.8 权重和 vLLM 镜像仍在下载与验证阶段；未完成前 Spark 不安装其 systemd 单元，Web 应显示“尚未部署”。权重验证、实际加载、推理质量、峰值内存和冷启动时间仍属于 D 阶段。

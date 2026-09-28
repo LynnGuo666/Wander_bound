@@ -5,6 +5,7 @@ import os
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse
 
 from ..media.auth import require_media_auth
 from ..media.jobs import JobStore
@@ -28,12 +29,12 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
         if jobs.pending():
             raise HTTPException(409, "媒体任务排队中，请等待任务完成")
         try:
-            await controller.warm(name)
+            controller.begin_warm(name)
         except ValueError as exc:
             raise HTTPException(404, str(exc)) from exc
         except RuntimeError as exc:
             raise HTTPException(409, str(exc)) from exc
-        return await controller.status()
+        return JSONResponse(await controller.status(), status_code=202)
 
     @router.post("/api/inference/models/{name}/release")
     async def release(name: str, request: Request):
