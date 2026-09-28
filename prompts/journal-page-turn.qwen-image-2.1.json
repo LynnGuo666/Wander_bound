@@ -1,0 +1,16 @@
+{
+  "id": "journal-page-turn-qwen21-v1",
+  "model": "Qwen-Image-2.1",
+  "mode": "image-edit with Qwen-generated binder as reference",
+  "workflow": "workflows/qwen-image-2.1-edit-api.json",
+  "generatedAt": "2026-09-29",
+  "tags": ["活页本", "翻页", "动画", "30帧", "可复用提示词"],
+  "referenceAsset": "public/art/binder-spread.png",
+  "keyframes": [
+    {"file": "public/art/binder-turn-1.webp", "phase": "right page outer edge lifts", "prompt": "Edit the reference into a realistic page-turn animation keyframe. Keep the same camera, same open ivory loose-leaf travel scrapbook binder, same six central brass rings, same tan cover, same lighting and blank pages. The outer right edge of the right paper page has just lifted about 25 degrees toward the viewer and center, softly curled, showing natural paper thickness and a delicate cast shadow. The left page remains flat and completely blank. No hands, no writing, no objects, no other book, no text."},
+    {"file": "public/art/binder-turn-2.webp", "phase": "right page nearly vertical", "prompt": "Edit the reference into the middle page-turn animation keyframe. Keep the same camera, same open ivory loose-leaf travel scrapbook binder, same six central brass rings, same tan cover and lighting. The right blank paper page is lifted nearly vertical, about 80 degrees, hinged at the center rings, visibly curved in 3D with its blank underside and realistic moving shadow. The left page remains flat and blank. No hands, no writing, no objects, no other book, no text."},
+    {"file": "public/art/binder-turn-3.webp", "phase": "page crosses center", "prompt": "Edit the reference into a late page-turn animation keyframe. Keep the same camera, same open ivory loose-leaf travel scrapbook binder, same six central brass rings, same tan cover and lighting. The right blank paper page has turned across the center by about 145 degrees and is nearly settling over the left side, softly curved with realistic paper thickness and cast shadow. A fresh completely blank ivory page is visible on the right. No hands, no writing, no objects, no other book, no text."}
+  ],
+  "sequence": "30 ordered WebP images, binder-turn-frame-01.webp through binder-turn-frame-30.webp. A continuous 3D page rotation and cast-shadow sequence is rendered from the Qwen-generated binder and paper texture; 30 ms per frame. binder-turn-30.webp is the image-sequence fallback. The interactive client uses StPageFlip to curl live page content and cast shadows.",
+  "contentPolicy": "All depicted binder and paper artwork originates from Qwen-Image-2.1. No user photos are sent to the model. Journal content is composited separately in the browser."
+}

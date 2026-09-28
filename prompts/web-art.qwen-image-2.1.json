@@ -1,0 +1,29 @@
+{
+  "id": "web-art-qwen-image-2.1-v1",
+  "model": "Qwen-Image-2.1",
+  "workflow": "workflows/qwen-image-2.1-sticker-api.json",
+  "mode": "text-to-image, no reference image",
+  "generatedAt": "2026-09-29",
+  "assets": [
+    {
+      "file": "public/art/travel-cover.webp",
+      "sourcePng": "../output/qwen-travel-cover.png",
+      "prompt": "Wide scenic travel editorial illustration, mountain range, river, charming Chinese town and winding path under a warm dawn sky, sophisticated nostalgic watercolor on textured paper, rich sage green, burnt orange and cream, cinematic composition with clear focal point, no text, no letters, no logo, full bleed painting."
+    },
+    {
+      "file": "public/art/liuzhou.webp",
+      "sourcePng": "../output/qwen-liuzhou.png",
+      "prompt": "Beautiful travel editorial watercolor illustration of Liuzhou China, winding Liu River, limestone karst mountains, riverside city and a small traditional boat, warm afternoon light, paper texture, muted green and terracotta palette, distinctive scenic landscape, no text, no letters, no logo, full bleed painting."
+    },
+    {
+      "file": "public/art/postcard-sticker.png",
+      "sourcePng": "../output/qwen-postcard-sticker.png",
+      "prompt": "This is an RGBA image with transparency. One isolated die-cut vintage travel sticker: a charming paper postcard with a tiny mountain landscape, postage mark without any letters or numerals, a sprig of leaves and warm nostalgic watercolor texture, cream irregular paper border, centered with large transparent margins, no other objects, no background, no words, no watermark, alpha channel transparent background."
+    },
+    {
+      "file": "public/art/paperclip.png",
+      "sourcePng": "data/qwen-clip-original.png",
+      "prompt": "This is an RGBA image with transparency. One single vintage brass paperclip, hand-painted realistic watercolor illustration, slightly tilted, delicate metallic highlights and a tiny soft shadow, isolated object centered with transparent margins, no paper, no background, no other objects, no letters, no text, no watermark. Alpha channel transparent background."
+    }
+  ]
+}

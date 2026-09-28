@@ -1,0 +1,12 @@
+{
+  "id": "journal-sticker-qwen21-t2i-v1",
+  "tags": ["旅途手账", "AI贴纸", "纯文生图", "透明背景", "Qwen-Image-2.1"],
+  "workflow": "workflows/qwen-image-2.1-sticker-api.json",
+  "promptTemplate": "This is an RGBA image with transparency. One single die-cut travel scrapbook sticker inspired by {{city}}: {{motif}}. Hand-painted watercolor and layered paper texture, warm nostalgic palette, tasteful cream paper border around the subject. Only one isolated motif, centered with generous transparent margins. No landscape background, no rectangle, no extra stickers, no letters, no text, no watermark. The image has an alpha channel and a transparent background.",
+  "testedExample": {
+    "city": "上海",
+    "motif": "a vintage green tram with golden ginkgo leaves",
+    "output": "../output/qwen-sticker-shanghai-test.png",
+    "result": "2026-09-29 Spark Qwen-Image-2.1 生成成功，1024×1024 RGBA，具有透明区域"
+  }
+}

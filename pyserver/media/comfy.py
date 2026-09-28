@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import json
 import os
 import re
 import uuid
@@ -102,6 +104,37 @@ class ComfyClient:
             if prompt_id is not None and body["prompt_id"] != prompt_id:
                 raise RuntimeError("ComfyUI 返回的任务编号不匹配；请核对已保存的提交编号")
             return body["prompt_id"]
+
+    async def queue_text(self, prompt: str, seed: int, *, graph: dict | None = None,
+                         prompt_id: str | None = None) -> str:
+        """Submit a genuine Qwen text-to-image graph without uploading a reference."""
+        if self.kind != "image" or not isinstance(prompt, str) or not 1 <= len(prompt) <= 1600:
+            raise ValueError("文生图提示词无效")
+        if type(seed) is not int or not 0 <= seed <= (1 << 64) - 1:
+            raise ValueError("文生图 seed 无效")
+        if prompt_id is not None and str(uuid.UUID(prompt_id)) != prompt_id:
+            raise ValueError("prompt_id 无效")
+        workflow = copy.deepcopy(graph) if graph is not None else json.loads(self.workflow_file.read_text())
+        if (not isinstance(workflow, dict) or any(node.get("class_type") == "LoadImage" for node in workflow.values())
+                or workflow.get("5", {}).get("class_type") != "TextEncodeQwenImage21"
+                or workflow.get("6", {}).get("class_type") != "EmptyLatentImage"
+                or workflow.get("5", {}).get("inputs", {}).get("prompt") != "__TRAVEL_PROMPT__"
+                or workflow.get("7", {}).get("inputs", {}).get("seed") != "__TRAVEL_SEED__"):
+            raise ValueError("文生图工作流必须从空潜空间开始")
+        workflow["5"]["inputs"]["prompt"] = prompt
+        workflow["7"]["inputs"]["seed"] = seed
+        submission = {"prompt": workflow, "client_id": str(uuid.uuid4())}
+        if prompt_id:
+            submission["prompt_id"] = prompt_id
+        async with httpx.AsyncClient(timeout=35) as client:
+            queued = await client.post(f"{self.base_url}/prompt", json=submission)
+            queued.raise_for_status()
+            body = queued.json()
+        if body.get("error") or not body.get("prompt_id"):
+            raise RuntimeError(f"ComfyUI 拒绝文生图工作流：{body.get('error')}")
+        if prompt_id and body["prompt_id"] != prompt_id:
+            raise RuntimeError("ComfyUI 返回的任务编号不匹配")
+        return body["prompt_id"]
 
     async def result(self, prompt_id: str) -> tuple[str, dict | None]:
         async with httpx.AsyncClient(timeout=25) as client:
