@@ -40,4 +40,22 @@ Spark 验证分支原 HEAD `37ecdc75`、工作树 clean、API queue 0、原 H3 j
 
 正式 retry 只调用原 job `90981311-bf42-47f5-b189-b7fcc62c5202` 一次，HTTP 202、attempt 2。job 随后 `succeeded`，`error/errorCode` 均为空；已完成镜头 prompt 仍为 `4e38017b-4ff3-485c-9009-4063c1bcdc4d`，`0.mp4` SHA-256 仍为 `30c75a8a287b295fcaa925ac6adb477541a0cf1f0bb36403cd117a19a7dff773`。H3 服务仍 `inactive/MainPID=0`，没有再次加载模型。最终 `memory.mp4` 位于 Spark `data/media/jobs/90981311-bf42-47f5-b189-b7fcc62c5202/memory.mp4`，大小 923,563 字节，SHA-256 `9631d518df625a94bec2fcd5ba05bca72b398d73d9cb322b7531e2665bddd29b`。正式 API 下载 HTTP 200 且同 SHA；ffprobe 显示 H.264 `1024×576`、24 fps、125 帧、5.216 秒及 AAC；`ffmpeg -v error -i memory.mp4 -f null -` 对完整文件 CPU 解码退出码 0、无错误输出。完整脱敏读数见 [正式重试与解码](generated-evidence/m01/runtime-h3-retry-deploy.json)。
 
-此批证明原已完成镜头的 CPU 合成恢复。故障注入按主会话安排暂停，缺失 prompt 的有界对账、手动失败重试及整个 c03 验收尚无真实证据，不据此通过 criterion 或完成 runtime 节点。
+此批证明原已完成镜头的 CPU 合成恢复。以下故障探针另行验证了服务校验拒绝、缺失 UUID 的有限对账和 retry 上限；真正的网络响应丢失后引擎是否受理仍未注入。
+
+### 无效 sampler 的真实 Comfy 拒绝与有限重试
+
+在 Spark 验证分支 `a25a09f`、队列 0、正式 selected 清单包含秋景照片的前提下，将远端默认 Qwen API 图的 KSampler `sampler_name` 临时改成 `__invalid_sampler_fault_injection__`，manifest image 版本临时标 `1.0.1-fault-validation`。通过正式 selected-only redraw API 以固定 seed `2026092899` 提交一次 job `bfc7977b-a31d-4edf-9814-dfb9f3126afd`，收到 HTTP 202。立即在 `finally` 恢复两文件原字节；SHA-256 分别为 `60839fac6a38e81c9fe12d7ff0af16e2a95f0f8179603cdfdb035df33c3cc907` 和 `9eeb8703b6a21e1b787719009d442cb6523c9c4903d547798c6055572539589d`，Git clean。[提交与恢复](generated-evidence/m01/runtime-fault-submit.json)保留正式请求及冻结快照哈希。
+
+Comfy 日志明确显示 `Failed to validate prompt` 和 `sampler_name` 不在允许列表；这是 `/prompt` 参数校验拒绝，**不是引擎开始采样后失败**。首轮固定 UUID `a9181990-6e79-431f-82c0-2fda84028365` 在 history/queue 均不存在，job 有界失败并显示“持续找不到 prompt”；见[首轮拒绝](generated-evidence/m01/runtime-fault-attempt1.json)。正式手动 retry HTTP 202 后，attempt 2 和 3 各约 12 秒失败，分别换成 UUID `ebf80a25-6929-4475-b9cd-143f2dd2f46a`、`4b68e1e7-81bc-4b78-a910-cda5d84a21ca`；冻结工作流、选优清单、原图哈希、参数及 seed 均未变，Comfy history/queue 均无新 UUID，见[第二轮](generated-evidence/m01/runtime-fault-attempt2.json)与[第三轮](generated-evidence/m01/runtime-fault-attempt3.json)。第 4 次正式 retry 返回 HTTP 404“无法重试”，job JSON 未变。最终远端默认文件原哈希、Git clean、API queue 0，image 服务 ready/idle，video 服务 stopped_on_demand；见[上限与资源终态](generated-evidence/m01/runtime-fault-cap-final.json)。未直接向 Comfy 提交任务，未再次启动 H3。
+
+### c03 证据边界与待审修复
+
+| 子要求 | 证据与状态 |
+| --- | --- |
+| 单 worker 图片/视频串行、生成中释放保护 | H3 运行时 Qwen queued，H3 后 Qwen 启动；主会话 release HTTP 409。见并发读数、交接结果及 V3 `evt.3b1f25dd-8017-4b4e-87e1-9be4f450fcf0`。 |
+| API 在 H3 运行中重启并对账 | 重启观察保留同一 Comfy `queue_running` UUID，无重复 prompt。 |
+| 已完成镜头恢复、成片可读 | 正式重试 attempt 2 保留原 clip SHA/UUID，H3 inactive；最终 MP4 API 下载同 SHA，完整 CPU 解码通过。 |
+| Comfy 明确拒绝、missing 有界失败、人工 retry 和三次上限 | 本节五份 fault 证据；拒绝发生在图参数校验阶段，无实际采样。 |
+| 真正 HTTP 响应丢失但引擎可能已受理 | **未做真实网络故障注入**，不能由上述 Comfy 400 推断安全。 |
+
+当前 Spark 部署把 400 校验拒绝与网络结果不明都标记为 `submissionState=unknown`；人工 retry 会给后者换 UUID，存在重复执行风险。待主审的**仅本地修复，尚未部署**：明确的 HTTP 400/422 标 `rejected`、Comfy history 确认失败标 `failed`，两者可重试；`intent_recorded`、`accepted`、`unknown` 的失败 job 则由正式 retry API 返回结构化 `PROMPT_OUTCOME_UNKNOWN` 409，保留原 UUID 与 job，等待人工对账。图片及视频镜头均受保护。针对测试 14 passed，pyserver 全量 72 passed；测试不代替真正网络故障验证。主会话评审前不通过 c03、不完成 runtime 节点。

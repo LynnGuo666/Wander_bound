@@ -1,0 +1,67 @@
+{
+  "atUtc": "2026-09-28T13:06:36.568032+00:00",
+  "jobId": "bfc7977b-a31d-4edf-9814-dfb9f3126afd",
+  "preAttempt": 1,
+  "preStatus": "failed",
+  "prePromptId": "a9181990-6e79-431f-82c0-2fda84028365",
+  "preSubmissionState": "unknown",
+  "preQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "preWorkflowHash": "360738283950d5f691920d630168623905eaeb973fca98a9f8dede9642e0150a",
+  "preSnapshotHash": "85d14cb9db9a072552e5c08026f5aa3b3b60634d2567a6a2bdf9f8f84ffe45a2",
+  "preSelectionHash": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7",
+  "preOriginalHash": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+  "preSeed": 2026092899,
+  "retryHttp": 202,
+  "retryBody": {
+    "id": "bfc7977b-a31d-4edf-9814-dfb9f3126afd",
+    "status": "queued",
+    "attempt": 2
+  },
+  "elapsedSeconds": 12.01,
+  "observedTransitions": [
+    {
+      "elapsedSeconds": 0.0,
+      "point": [
+        2,
+        "queued",
+        null,
+        null
+      ]
+    },
+    {
+      "elapsedSeconds": 2.0,
+      "point": [
+        2,
+        "running",
+        "unknown",
+        "ebf80a25-6929-4475-b9cd-143f2dd2f46a"
+      ]
+    },
+    {
+      "elapsedSeconds": 12.01,
+      "point": [
+        2,
+        "failed",
+        "unknown",
+        "ebf80a25-6929-4475-b9cd-143f2dd2f46a"
+      ]
+    }
+  ],
+  "final": {
+    "status": "failed",
+    "attempt": 2,
+    "promptId": "ebf80a25-6929-4475-b9cd-143f2dd2f46a",
+    "submissionState": "unknown",
+    "error": "Spark 队列/历史中持续找不到 prompt",
+    "errorCode": "JOB_FAILED"
+  },
+  "frozenUnchanged": true,
+  "comfyHistoryContainsUuid": false,
+  "comfyQueueRunningIds": [],
+  "comfyQueuePendingIds": []
+}

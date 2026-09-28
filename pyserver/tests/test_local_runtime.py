@@ -5,8 +5,10 @@ import json
 from pathlib import Path
 
 import httpx
+import pytest
 
 from pyserver.media import workflow_versions
+from pyserver.media.contracts import ContractError
 from pyserver.media.jobs import JobStore
 from test_generation_contract import fixture
 
@@ -98,7 +100,9 @@ def test_http_parameters_are_bounded_and_persisted(tmp_path, monkeypatch):
             memory = await client.post("/api/media/memories", headers=headers,
                 json={"tripId": trip["id"], "photoIds": [chosen["id"]], "parameters": {"frames": 141}})
             assert memory.status_code == 202, memory.text
-            assert jobs.get(memory.json()["id"])["parameters"] == {"aspect_ratio": "16:9", "frames": 141, "fps": 24}
+            saved_memory = jobs.get(memory.json()["id"])
+            assert {key: saved_memory["parameters"][key] for key in ("aspect_ratio", "frames", "fps")} == {"aspect_ratio": "16:9", "frames": 141, "fps": 24}
+            assert set(saved_memory["parameters"]) == set(saved_memory["workflowSnapshot"]["parameter_schema"]) - {"seed"}
             invalid = await client.post("/api/media/memories", headers=headers,
                 json={"tripId": trip["id"], "photoIds": [chosen["id"]], "parameters": {"aspect_ratio": "3:2"}})
             assert invalid.status_code == 400 and invalid.json()["detail"]["code"] == "WORKFLOW_PARAMETERS_INVALID"
@@ -177,6 +181,10 @@ def test_response_lost_and_missing_prompt_fails_without_resubmission(tmp_path, m
     saved = jobs.get(job["id"])
     assert saved["status"] == "failed" and saved["promptId"] == image.calls[0][5]
     assert len(image.calls) == 1
+    with pytest.raises(ContractError) as error:
+        jobs.retry(job["id"], expected_kind="edit")
+    assert error.value.code == "PROMPT_OUTCOME_UNKNOWN"
+    assert jobs.get(job["id"]) == saved and len(image.calls) == 1
 
 
 def test_comfy_validation_rejection_is_bounded_and_retry_keeps_frozen_graph(tmp_path, monkeypatch):
@@ -197,13 +205,41 @@ def test_comfy_validation_rejection_is_bounded_and_retry_keeps_frozen_graph(tmp_
         saved = jobs.get(job["id"])
         assert saved["status"] == "failed" and saved["attempt"] == attempt
         assert saved["workflowSnapshot"] == frozen
-        assert saved["submissionState"] == "unknown"
+        assert saved["submissionState"] == "rejected"
         if attempt < 3:
             assert jobs.retry(job["id"], expected_kind="edit")["attempt"] == attempt + 1
     assert jobs.retry(job["id"], expected_kind="edit") is None
     assert len(image.calls) == 3
     assert len({call[5] for call in image.calls}) == 3
     assert all(call[3] == frozen for call in image.calls)
+
+
+def test_http_retry_rejects_ambiguous_image_and_video_without_mutation(tmp_path, monkeypatch):
+    app, media, jobs, _, trip, chosen, _, _ = fixture(tmp_path, monkeypatch)
+    media.set_selected(trip["id"], {"batchId": "runtime", "source": "test", "photoIds": [chosen["id"]]})
+    edit = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
+    memory = jobs.submit("memory", {"tripId": trip["id"], "photoIds": [chosen["id"]], "title": "旅行"})
+    edit.update({"status": "failed", "submissionState": "unknown", "promptId": "old-image-id"})
+    memory["clips"][0].update({"submissionState": "accepted", "promptId": "old-video-id"})
+    memory["status"] = "failed"
+    for job in (edit, memory):
+        jobs.save(job)
+    before = {job["id"]: jobs.get(job["id"]) for job in (edit, memory)}
+    scheduled = []
+    jobs._schedule = lambda: scheduled.append(True)
+
+    async def scenario():
+        headers = {"Authorization": "Bearer contract-test-token"}
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            for path in (f"/api/media/edits/{edit['id']}/retry",
+                         f"/api/media/memories/{memory['id']}/retry"):
+                response = await client.post(path, headers=headers)
+                assert response.status_code == 409
+                assert response.json()["detail"]["code"] == "PROMPT_OUTCOME_UNKNOWN"
+
+    asyncio.run(scenario())
+    assert not scheduled
+    assert all(jobs.get(job_id) == saved for job_id, saved in before.items())
 
 
 def test_running_and_success_clear_stale_resource_error_but_keep_retry_history(tmp_path, monkeypatch):
@@ -290,7 +326,8 @@ def test_completed_clip_is_not_regenerated_after_restart(tmp_path, monkeypatch):
     jobs, _, video, controller, trip, chosen, other = make_jobs(tmp_path, monkeypatch)
     job = jobs.submit("memory", {"tripId": trip["id"], "photoIds": [chosen["id"], other["id"]], "title": "旅行", "seed": 10})
     assert [clip["seed"] for clip in job["clips"]] == [10, 11]
-    assert job["parameters"] == {"aspect_ratio": "16:9", "frames": 124, "fps": 24}
+    assert {key: job["parameters"][key] for key in ("aspect_ratio", "frames", "fps")} == {"aspect_ratio": "16:9", "frames": 124, "fps": 24}
+    assert set(job["parameters"]) == set(job["workflowSnapshot"]["parameter_schema"]) - {"seed"}
     clip_dir = jobs.root / job["id"]
     clip_dir.mkdir()
     (clip_dir / "0.mp4").write_bytes(b"first clip")
