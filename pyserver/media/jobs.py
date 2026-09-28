@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import os
 import uuid
@@ -9,6 +10,7 @@ from pathlib import Path
 
 from .comfy import ComfyClient
 from .store import MediaStore
+from .contracts import ContractError, original_from_snapshot, product_contract, selected_original_snapshot
 from ..inference import ModelController
 from ..trips import now
 
@@ -39,13 +41,35 @@ class JobStore:
         os.replace(temporary, filename)
 
     def submit(self, kind: str, payload: dict) -> dict:
+        if kind not in {"edit", "memory"}:
+            raise ValueError("不支持的生成任务类型")
+        if kind == "edit":
+            photo = self.media.get(payload["photoId"])
+            if photo is None:
+                raise ContractError("PHOTO_NOT_FOUND", "照片不存在", 404)
+            snapshot = selected_original_snapshot(self.media, photo.get("tripId"), [payload["photoId"]], maximum=1)
+        else:
+            snapshot = selected_original_snapshot(self.media, payload.get("tripId"), payload.get("photoIds"), maximum=8)
         adapter = self.image if kind == "edit" else self.video
         if not adapter or not adapter.configured:
             raise ValueError("Spark 工作流未配置")
         job = {"id": str(uuid.uuid4()), "kind": kind, "status": "queued", "backend": "dgx-spark-qwen-image-2.1" if kind == "edit" else "dgx-spark-minimax-h3",
-               "createdAt": now(), "attempt": 1, "progressPercent": 0, "progressLabel": "等待调度", **payload}
+               "createdAt": now(), "attempt": 1, "progressPercent": 0, "progressLabel": "等待调度",
+               **payload, "selectionSnapshot": copy.deepcopy(snapshot)}
         self.save(job)
         self._schedule()
+        return job
+
+    def prepare_product(self, payload: dict) -> dict:
+        """Persist a validated product DTO; later feature tasks provide actual runners."""
+        contract = product_contract(self.media, payload)
+        job = {"id": str(uuid.uuid4()), "kind": contract["productKind"],
+               "productKind": contract["productKind"], "resultKind": contract["resultKind"],
+               "status": "prepared", "executionReady": False, "backend": None,
+               "createdAt": now(), "tripId": contract["snapshot"]["tripId"],
+               "selectionSnapshot": copy.deepcopy(contract["snapshot"]),
+               "prompt": contract["prompt"], "result": None, "error": None}
+        self.save(job)
         return job
 
     def _schedule(self):
@@ -115,7 +139,7 @@ class JobStore:
             self.save(job)
             if job["kind"] == "edit":
                 if not job.get("promptId"):
-                    source = self.media.bytes(job["photoId"])
+                    source = original_from_snapshot(self.media, job.get("selectionSnapshot"), job["photoId"])
                     job["promptId"] = await self.image.queue(source, job["prompt"], job["seed"])
                     self.save(job)
                 job["progressLabel"] = "图片生成中"
@@ -140,7 +164,8 @@ class JobStore:
                     self.save(job)
                     if not clip.get("promptId"):
                         prompt = f"旅行回忆短片第 {index + 1} 个镜头。保留输入照片的主体与真实场景，缓慢平稳的电影感运镜，自然光影。画面里不要出现文字、字幕或标志，不要虚构人物。"
-                        clip["promptId"] = await self.video.queue(self.media.bytes(clip["photoId"]), prompt)
+                        source = original_from_snapshot(self.media, job.get("selectionSnapshot"), clip["photoId"])
+                        clip["promptId"] = await self.video.queue(source, prompt)
                         self.save(job)
                     output.write_bytes(await self._wait(self.video, clip["promptId"]))
                     clip["done"] = True
@@ -165,6 +190,7 @@ class JobStore:
         except Exception as exc:
             job["status"] = "failed"
             job["error"] = str(exc)[:300]
+            job["errorCode"] = exc.code if isinstance(exc, ContractError) else "JOB_FAILED"
             job["progressLabel"] = "任务失败"
         self.save(job)
 
@@ -174,6 +200,7 @@ class JobStore:
             return None
         job["status"] = "queued"
         job["error"] = None
+        job.pop("errorCode", None)
         job["progressLabel"] = "等待调度"
         job["progressPercent"] = 0
         job["attempt"] += 1
