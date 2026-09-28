@@ -9,16 +9,19 @@ from pathlib import Path
 
 from .comfy import ComfyClient
 from .store import MediaStore
+from ..inference import ModelController
 from ..trips import now
 
 
 class JobStore:
-    def __init__(self, media: MediaStore, image: ComfyClient | None, video: ComfyClient | None):
+    def __init__(self, media: MediaStore, image: ComfyClient | None, video: ComfyClient | None,
+                 controller: ModelController):
         self.media = media
         self.image = image
         self.video = video
         self.root = media.root / "jobs"
-        self.tasks: dict[str, asyncio.Task] = {}
+        self.controller = controller
+        self.worker: asyncio.Task | None = None
 
     def get(self, job_id: str) -> dict | None:
         try:
@@ -42,19 +45,45 @@ class JobStore:
         job = {"id": str(uuid.uuid4()), "kind": kind, "status": "queued", "backend": "dgx-spark-qwen-image-2.1" if kind == "edit" else "dgx-spark-minimax-h3",
                "createdAt": now(), "attempt": 1, **payload}
         self.save(job)
-        self._schedule(job["id"])
+        self._schedule()
         return job
 
-    def _schedule(self, job_id: str):
-        if job_id not in self.tasks or self.tasks[job_id].done():
-            self.tasks[job_id] = asyncio.create_task(self._run(job_id))
+    def _schedule(self):
+        if self.worker is None or self.worker.done():
+            self.worker = asyncio.create_task(self._drain())
+
+    def pending(self) -> list[dict]:
+        jobs = (self.get(path.stem) for path in self.root.glob("*.json")) if self.root.exists() else ()
+        return sorted((job for job in jobs if job and job.get("status") in {"queued", "running", "loading_model"}),
+                      key=lambda job: (job.get("createdAt", ""), job["id"]))
+
+    async def _drain(self):
+        while pending := self.pending():
+            job = pending[0]
+            try:
+                async with self.controller.use("image" if job["kind"] == "edit" else "video"):
+                    await self._run(job["id"])
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                job = self.get(job["id"]) or job
+                job["status"] = "queued"
+                job["error"] = str(exc)[:300]
+                self.save(job)
+                await asyncio.sleep(30)
 
     async def resume(self):
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        for path in self.root.glob("*.json"):
-            job = self.get(path.stem)
-            if job and job.get("status") in {"queued", "running"}:
-                self._schedule(job["id"])
+        if self.pending():
+            self._schedule()
+
+    async def close(self):
+        if self.worker and not self.worker.done():
+            self.worker.cancel()
+            try:
+                await self.worker
+            except asyncio.CancelledError:
+                pass
 
     async def _wait(self, adapter: ComfyClient, prompt_id: str) -> bytes:
         for _ in range(360):
@@ -120,6 +149,10 @@ class JobStore:
         job["status"] = "queued"
         job["error"] = None
         job["attempt"] += 1
+        job.pop("promptId", None)
+        for clip in job.get("clips", []):
+            if not clip.get("done"):
+                clip.pop("promptId", None)
         self.save(job)
-        self._schedule(job_id)
+        self._schedule()
         return job

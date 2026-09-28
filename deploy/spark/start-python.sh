@@ -13,5 +13,8 @@ export SPARK_COMFY_URL=http://127.0.0.1:8188
 export SPARK_QWEN_COMFY_URL=http://127.0.0.1:8191
 export SPARK_H3_WORKFLOW_FILE=workflows/minimax-h3-i2v-api.json
 export SPARK_QWEN_IMAGE_WORKFLOW_FILE=workflows/qwen-image-2.1-edit-api.json
+export SPARK_MODEL_CONTROL=1
+export SPARK_QWEN38_URL=http://127.0.0.1:8192
+export SPARK_QWEN38_MODEL=qwen38-27b
 
 exec .venv/bin/uvicorn pyserver.app:app --host 127.0.0.1 --port 4174
