@@ -112,7 +112,7 @@ export default function TravelView({ trips, token, onOpenSettings }) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setIndex(next); return; }
     pendingIndex.current = next;
     setTurnDirection(direction > 0 ? 'next' : 'prev');
-    turnTimer.current = setTimeout(finishTurn, 1500);
+    turnTimer.current = setTimeout(finishTurn, 4500);
   }
 
   function finishTurn() {

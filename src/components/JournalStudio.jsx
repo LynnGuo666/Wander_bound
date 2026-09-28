@@ -83,6 +83,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const [pages, setPages] = useState(() => loadLayout(trip));
   const [previewPhotos, setPreviewPhotos] = useState([]);
   const [previewSelectedIds, setPreviewSelectedIds] = useState([]);
+  const [previewDataReady, setPreviewDataReady] = useState(!token);
+  const [previewAssetsReady, setPreviewAssetsReady] = useState(!token);
   const photos = previewOnly ? previewPhotos : providedPhotos;
   const selectedIds = previewOnly ? previewSelectedIds : providedSelectedIds;
   const pagesRef = useRef(pages);
@@ -241,12 +243,13 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   useEffect(() => {
     if (!previewOnly || !token) return;
     let alive = true;
+    setPreviewDataReady(false);
     Promise.all([
       mediaRequest(`/api/trips/${trip.id}`, token),
       mediaRequest(`/api/media/trips/${trip.id}/selected-photos`, token),
     ]).then(([detail, selection]) => {
-      if (alive) { setPreviewPhotos(detail.photos || []); setPreviewSelectedIds(selection.photoIds || []); }
-    }).catch(() => {});
+      if (alive) { setPreviewPhotos(detail.photos || []); setPreviewSelectedIds(selection.photoIds || []); setPreviewDataReady(true); }
+    }).catch(() => { if (alive) setPreviewDataReady(true); });
     return () => { alive = false; };
   }, [previewOnly, trip.id, token]);
 
@@ -290,7 +293,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
         }
       } catch (reason) { if (alive) setError(reason.message); }
     }
-    if (previewOnly) refresh();
+    if (previewOnly) {
+      setPreviewAssetsReady(false);
+      refresh().then(() => { if (alive) setPreviewAssetsReady(true); });
+    }
     else seedTripAssets();
     const timer = setInterval(refresh, 5000);
     return () => { alive = false; clearInterval(timer); };
@@ -442,7 +448,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     if (item.kind === 'cover' || item.kind === 'illustration') {
       const asset = stickerJobs.find(job => job.id === item.assetId);
       return asset?.status === 'succeeded'
-        ? <PrivateMedia url={`/api/media/stickers/${asset.id}/image`} token={token} alt={`${asset.motif}，千问生成的旅途插画`} />
+        ? <PrivateMedia url={`/api/media/stickers/${asset.id}/image`} token={token} loading="eager" alt={`${asset.motif}，千问生成的旅途插画`} />
         : item.assetId ? <span className="studio-sticker-pending">{asset?.status === 'failed' ? '插画生成失败' : '千问绘制中…'}</span>
           : <img src={cityArtwork(trip)} alt={`${tripTitle(trip)}的千问城市插画`} />;
     }
@@ -451,7 +457,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       const photo = photos.find(entry => entry.id === chosenId);
       const frame = (item.photoIndex || 0) % 2 ? 'ornate-photo-frame' : 'polaroid-frame';
       return <div className={`studio-prop-wrap studio-photo-${frame}`}><img className="studio-prop" src={`/art/${frame}.png`} alt="千问生成的空白相框" /><div className="studio-photo-slot">{photo && token
-        ? <PrivateMedia url={`/api/media/photos/${photo.id}`} token={token} alt="旅途照片" />
+        ? <PrivateMedia url={`/api/media/photos/${photo.id}`} token={token} loading="eager" alt="旅途照片" />
         : <span className="studio-empty"><ImagePlus size={20} />{token ? '等待旅途照片' : '连接私有相册'}</span>}</div></div>;
     }
     if (item.kind === 'video') {
@@ -463,7 +469,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     if (item.kind === 'sticker') {
       const job = stickerJobs.find(entry => entry.id === item.stickerId);
       return item.stickerId ? job?.status === 'succeeded'
-        ? <PrivateMedia url={`/api/media/stickers/${item.stickerId}/image`} token={token} alt={`${job.motif}，千问生成的贴纸`} />
+        ? <PrivateMedia url={`/api/media/stickers/${item.stickerId}/image`} token={token} loading="eager" alt={`${job.motif}，千问生成的贴纸`} />
         : <span className="studio-sticker-pending">{job?.status === 'failed' ? '贴纸生成失败' : '千问绘制中…'}</span>
         : <span className="studio-sticker-pending">行程贴纸待生成</span>;
     }
@@ -473,15 +479,15 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       const stamp = stickerJobs.find(job => job.id === stampId);
       const artwork = stickerJobs.find(job => job.id === item.assetId);
       return <div className="studio-prop-wrap"><img className="studio-prop" src="/art/postcard-blank.png" alt="千问生成的明信片模板" />{artwork?.status === 'succeeded'
-        ? <span className="studio-postcard-scene"><PrivateMedia url={`/api/media/stickers/${artwork.id}/image`} token={token} alt={`${artwork.motif}，千问绘制的旅途风景`} /></span>
+        ? <span className="studio-postcard-scene"><PrivateMedia url={`/api/media/stickers/${artwork.id}/image`} token={token} loading="eager" alt={`${artwork.motif}，千问绘制的旅途风景`} /></span>
         : null}<span className="studio-postcard-text">{item.text}</span><span className="studio-stamp">{stamp?.status === 'succeeded'
-        ? <PrivateMedia url={`/api/media/stickers/${stampId}/image`} token={token} alt={`${stamp.motif}，千问生成的邮票`} />
+        ? <PrivateMedia url={`/api/media/stickers/${stampId}/image`} token={token} loading="eager" alt={`${stamp.motif}，千问生成的邮票`} />
         : <span>{stamp?.status === 'failed' ? '邮票失败' : '行程邮票绘制中'}</span>}</span></div>;
     }
     if (item.kind === 'ticket' || item.kind === 'boarding') return <div className="studio-prop-wrap"><img className="studio-prop" src={`/art/${item.kind === 'ticket' ? 'rail-ticket-blank' : 'boarding-pass-blank'}.png`} alt={`千问生成的${labelFor(item.kind)}模板`} /><span className="studio-ticket-text">{trip.plan?.originCity || '旅途起点'} → {trip.plan?.destination || tripTitle(trip)}<br />{trip.plan?.startDate || '启程日期'}</span></div>;
     return <div className="studio-text">{item.text}</div>;
   }
-  if (previewOnly) return <div ref={sourceRef} className="studio-preview-source" aria-hidden="true">{pages.slice(0, 2).map((page, pageIndex) =>
+  if (previewOnly) return <div ref={sourceRef} className="studio-preview-source" data-preview-ready={ready && previewDataReady && previewAssetsReady} aria-hidden="true">{pages.slice(0, 2).map((page, pageIndex) =>
     <div className="studio-page" key={pageIndex}><div className="studio-canvas">{page.items.map(item =>
       <div className={`studio-item studio-${item.kind}`} key={item.id}
         style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z,
