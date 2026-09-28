@@ -39,3 +39,22 @@ services:
       - ALL
     environment:
       PORT: "4178"
+  travel-data-mcp:
+    build:
+      context: ../..
+      dockerfile: deploy/travel-data-mcp/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:4179:4179"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      PORT: "4179"
+      TRAVEL_OTA_MCP_URL: http://ota-mcp:4176/mcp
+      TRAVEL_12306_MCP_URL: http://rail-mcp:4177/mcp
+      TRAVEL_DIDA_MCP_URL: http://dida-mcp:4178/mcp
