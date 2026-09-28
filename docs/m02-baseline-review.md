@@ -5,7 +5,7 @@
 ## 版本与部署
 
 - 本地实施分支 `feat/m01-local-generation-foundation` 为 `37ecdc75a5977974c44f43c76cf5ac1c2093d752`，其 M01 起点为 `24aae844e252fe7cd8606a8f25ede45b66990dc0`。本地 `origin/main` 仍指向 `24aae84`；本次没有 fetch、pull 或合并。
-- 只读 SSH 在 Spark `/home/Developer/travel-agent` 核对到分支 `codex/m01-validation-20260928`、同一 `37ecdc75` 且工作树 clean。`localhost:4174/api/inference/status` 当次返回队列 0、image `ready`、video `stopped_on_demand`、chat `ready`、`loadingModel:null`。这只是瞬时健康与部署核对，不代表 M01 图片或 H3 视频生成通过；主会话正在统一运行真实 Qwen 探针，本节点不读其未发布结果。
+- 只读 SSH 在 Spark `/home/Developer/travel-agent` 核对到分支 `codex/m01-validation-20260928`、同一 `37ecdc75` 且工作树 clean。`localhost:4174/api/inference/status` 当次返回队列 0、image `ready`、video `stopped_on_demand`、chat `ready`、`loadingModel:null`。这是首次核对时的瞬时健康与部署状态；其后 Qwen 实证与 H3 运行状态见下方补充。
 - 历史 M02 baseline 记录的是 `4c31149`，旧原节点还引用 `0ee6531`。实际代码已加入 selected-original 契约、工作流快照及提交恢复机制；后续业务节点应以 `37ecdc75` 接口为起点，重新审视之后任何上游变化。
 
 ## M02 可接入的现有契约
@@ -14,11 +14,18 @@
 - `pyserver/media/contracts.py:13-15,147-164` 已声明 `scrapbook`、`storyboard`、`video` 公共产品 DTO；`pyserver/media/jobs.py:94-104` 仅保存 `status=prepared`、`executionReady=false` 的输入契约。`pyserver/media/job_routes.py:73-105` 的 `POST /api/media/generation-jobs`、状态和结果接口已存在，但 result 在未生成时返回 409。M02 要新增真实手帐 runner、结果与状态闭环，不能把 prepared 当作可生成。
 - 当前可运行队列的 `edit` 与 `memory` 分别是单图 Qwen 重绘和 H3 视频，并非手帐整页：`pyserver/media/jobs.py:55-92,238-335`。提交时冻结选优、工作流、参数与 seed；执行前重验原图及快照，先持久化 prompt UUID 再提交，恢复时查询同一身份。M02 需沿用其单 worker 与 controller，不把新 `scrapbook` 误送进现有 `edit/memory` 分支。
 - Qwen 工作流 `travel.qwen-image-2.1.edit@1.0.0`、ComfyUI `0.37.0@4ef23c34`、前端 `1.53.6`；显式 `aspect_ratio=3:2` 时按 `contain-white-v1` 填入 1536×1024 输入画布。旧默认仍为 `source`，因此 M02 不能省略 3:2 请求或仅根据输入画布推断最终成图比例。快照 schema/哈希及旧参数语义见 `pyserver/media/workflow_versions.py:27-101,104-118`、`workflows/model-manifest.json:2-16`；API/UI 图见 `workflows/qwen-image-2.1-edit-{api,ui}.json`。M02 的 style/preset 版本、最终 3:2 拼版及标题绘制尚须独立实现。
-- H3 工作流 `travel.minimax-h3.i2v@1.0.0`、ComfyUI `0.34.0@e80c1570`、前端 `1.51.9`，1024×576 / 124 帧 / 24 fps 为待真实探针确认的候选。模型/节点文件及参数见 `workflows/model-manifest.json:18-37`、`docs/local-workflows.md:7-36`。APP mode 官方最低前端 `1.41.13`，现装版本满足下限，真实 UI 导入与运行仍待核验。
+- H3 工作流 `travel.minimax-h3.i2v@1.0.0`、ComfyUI `0.34.0@e80c1570`、前端 `1.51.9`，1024×576 / 124 帧 / 24 fps 为待真实探针确认的候选。模型/节点文件及参数见 `workflows/model-manifest.json:18-37`、`docs/local-workflows.md:7-36`。APP mode 官方最低前端 `1.41.13`，现装版本满足下限；其后主会话已实测 Qwen UI 导入与 APP builder 预览（见下方证据），H3 UI 仍待核验。
 - 推理控制 `pyserver/inference/routes.py:18-39` 中 warm 返回 HTTP 202；`pyserver/inference/controller.py:311-326` 暴露 `loadingModel`、`loadProgress` 和模型状态。202 表示开始预热，不表示模型已可生成。
 
 ## 参考与准入
 
 已目视读取 `docs/references/scrapbook-2026-09-28/reference-01.png` 至 `05.png`，并逐一复核其 SHA-256 与 `manifest.json` 一致。五图都是“左侧场景重绘 + 右侧相关元素贴纸 + 浅色纸底 + 底部短文”的目标样式；01 为花店，02/03 为神社，04/05 为河畔城镇。它们不是已授权原始旅行输入，也不是本项目生成证据；五风格（水彩、剪纸、黏土、网点漫画、像素）的真实区分仍须以同一 selected 原图实测。
 
-M01 V3 在本次读取时仍为 `active/blocked`，四项必需 criterion 均为 `accepted`，旧 `session.plan-amend.t1.20260928` 的 unknown 完整性缺口仍在。已有独立公开照片 selected 测试批次可供后续人工验收，但这不代替真实 Qwen 3:2、H3 动态镜头、快照/重启恢复、APP UI 实测或 M01 任务完成。`node.m02.gate` 应继续保持 planned，待 M01 交付与证据满足其 scope 后再启用。
+已有独立公开照片 selected 测试批次可供后续人工验收，但参考图和测试批次本身不代替真实模型产物。M01 与 gate 的最新准入状态见下方补充；`node.m02.gate` 应继续保持 planned，待 M01 交付与证据满足其 scope 后再启用。
+
+## 37ecdc75 补充核对与交接
+
+- 本次复读 V3 `task.m01.931bf5bbc699`：c01 已由主会话依据独立运行的 63 项测试、真实 API selected-original 与 Qwen 探针证据 review 为 `passed`（`evt.64984516-afab-4b3c-942b-abae3cf1942f`）；c02–c04 仍为 `accepted`。M01 整体仍 `active/blocked`，旧 `session.plan-amend.t1.20260928` 的 unknown 完整性缺口仍在。这是 V3 当前事实，覆盖上文基线审查时的“四项 accepted”旧快照。
+- 主会话记录的真实 Qwen 任务 `1c800b6b-2dfe-45c6-93a2-4166c1a22ad6` 成功；其 [探针记录](generated-evidence/m01/qwen-probe.json) 指向 `37ecdc75`、固定 selected original、工作流快照及引擎 seed，输出 `1248×832`。我独立用 `sips` 和 SHA-256 核对了同目录 `qwen-watercolor-probe.jpg`：尺寸 `1248×832`，哈希 `4d19b559459194046b4593b527f0e1c80dfe9d68b21044e4f6df5c4a4969313d` 与记录一致；图片内容、ComfyUI history 和 APP mode 操作是主会话观察，不冒称本 Session 自验。该图是公共 Qwen 基础探针，不是五风格手帐验收。
+- 主会话本轮还提交了 `e18982d`（Qwen 证据、APP UI 图和模型哈希资料），审 `git show` 未见 `pyserver/media` 或 `pyserver/inference` 公共契约变化。Spark 只读 SSH 再核对仍部署 `37ecdc75`、工作树 clean；状态接口当时显示 H3 `running`，队列中 `memory` 任务 `90981311-bf42-47f5-b189-b7fcc62c5202` 正在生成单镜头。这里是运行中快照，不是 H3 成功、16:9 动态画面或重启恢复通过。
+- 因此 M02 后续可按 `37ecdc75` 的 selected-original、快照和产品 DTO 接口设计，但必须待 M01 的其余实证、完成状态及旧 gap 处理后再执行 gate；M02 五预设、整页 3:2、标题与持久结果尚未实施。本补充节点只交接基线，不 review M02 业务 criterion。
