@@ -1,7 +1,7 @@
 {
-  "id": "journal-illustration-qwen21-t2i-v1",
+  "id": "journal-illustration-qwen21-t2i-v3",
   "model": "Qwen-Image-2.1",
   "workflow": "workflows/qwen-image-2.1-sticker-api.json",
   "tags": ["journal", "illustration", "trip-personalized", "text-to-image"],
-  "promptTemplate": "One expressive editorial watercolor travel illustration of {{city}} based on this real journey scene: {{motif}}. Distinctive food, architecture, landscape or transit details only when the scene calls for them; cinematic light, tactile paper texture, natural color variation and a clear focal point. Single complete image filling the square frame, no page layout, no book, no border, no readable text, no letters, no numbers, no logo, no watermark."
+  "promptTemplate": "A watercolor architectural landscape of {{city}}, depicting only this journey scene: {{motif}}. Wide establishing view from across the water or an elevated viewpoint. Buildings, streets, trees, sky and local objects are the sole subjects; keep the foreground as open scenery. Paint a place, not a person or a tourist story. Tactile watercolor pigments, natural light and a clear focal point. Single complete image filling the square frame. No characters, faces, portraits, silhouettes, figures or crowds. No page layout, book, border, readable text, letters, numbers, logo or watermark."
 }
