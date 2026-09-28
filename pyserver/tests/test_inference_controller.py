@@ -67,6 +67,32 @@ def test_media_jobs_are_serialized_and_saved(tmp_path):
     asyncio.run(scenario())
 
 
+def test_media_job_reports_generation_stage(tmp_path):
+    class SlowImage(Image):
+        def __init__(self, event):
+            self.event = event
+
+        async def result(self, _prompt_id):
+            await self.event.wait()
+            return "completed", {"filename": "image.png"}
+
+    async def scenario():
+        event = asyncio.Event()
+        jobs = JobStore(Memory(tmp_path), SlowImage(event), None, Controller())
+        job = jobs.submit("edit", {"photoId": "photo-1", "prompt": "redraw", "seed": 1})
+        for _ in range(50):
+            current = jobs.get(job["id"])
+            if current["progressLabel"] == "图片生成中":
+                break
+            await asyncio.sleep(0.01)
+        assert current["status"] == "running"
+        assert current["progressPercent"] is None
+        event.set()
+        await jobs.worker
+        assert jobs.get(job["id"])["progressPercent"] == 100
+    asyncio.run(scenario())
+
+
 def test_interrupted_job_is_resumed_once(tmp_path):
     async def scenario():
         media = Memory(tmp_path)
