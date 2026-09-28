@@ -8,7 +8,7 @@
 | `providers/` | HTTP clients for the Node.js Docker MCP endpoints on Spark, plus the Spark JS transport API and non-MCP place providers |
 | `trips/` | Durable trip records, status projection, and trip endpoints |
 | `settings/` | YAML configuration, credential and priority schema, and settings endpoints |
-| `media/` | Private photo store, image processing (EXIF / normalize / enhance), the photo curation pipeline (L0 quality, burst dedup, VLM tagging), Spark ComfyUI client, persistent jobs, authentication, and media endpoints |
+| `media/` | Private photo store, image processing (EXIF / normalize / enhance), the photo curation pipeline (L0 quality, burst dedup, VLM tagging), Spark ComfyUI client, persistent jobs, authentication, and media endpoints; selection output feeds the downstream refinement (`selected-photos`) and the recall-editor asset cards—see `docs/photo-curation.md` |
 | `api/` | Cross-feature health and capability endpoints, planning stream, and built frontend files |
 
 Photo curation runs in two stages. On upload, `images.extract_exif` pulls capture time, GPS, device, and exposure into metadata while `images.normalize` strips EXIF and caps the long side at 2560. `quality` + `curate` then do the model-free L0 pass — sharpness / exposure / ISO-noise scoring, dHash burst dedup, ordering — and `store.set_quality` writes the scores back. Once a multimodal endpoint is configured, `vlm` overlays semantic tags and a keep-score on the surviving candidates.
