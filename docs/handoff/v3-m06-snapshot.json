@@ -1,0 +1,213 @@
+{
+  "notice": "只读交接快照，不是V3控制状态；不得导入为事件或据此直接激活节点。恢复执行前查询原控制根中的最新V3。",
+  "project_id": "project.travel-agent.c9c4dc1293865e91",
+  "task_id": "task.m06.d8bc8656e4e9",
+  "exported_at": "2026-09-29",
+  "revisions": {
+    "plan": "3d1e34104514ba289f8cb48be9b9238a53f6118e939698df4a048b830b61d7b7",
+    "criteria": "3d1e34104514ba289f8cb48be9b9238a53f6118e939698df4a048b830b61d7b7"
+  },
+  "plan": [
+    {
+      "criterion_ids": [
+        "criterion.task.m06.d8bc8656e4e9.c01"
+      ],
+      "dependencies": [],
+      "goal": "消除创建期间新上游提交造成的基线歧义，核实实际部署后进入原计划。",
+      "node_id": "node.m06.baseline",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "优先级与原因：本节点补充并覆盖此task原节点中的历史基线0ee6531与文档过时判断，业务目标/原图资格/模型本地边界/验收范围不变。任务创建期间远端新增4c31149，已审diff并ff同步；保留旧节点为历史出处，执行必须同时读此补充。",
+        "当前基线：main=origin/main=4c31149990d01991b785d0a53944be4133df9c63（提交时间2026-09-28 18:45:06 +08:00）；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，9个独有提交仍未合入。任务执行前重新检查远端，若再变化先审影响、记risk/progress并更新计划，不能直接沿用旧假设。",
+        "新代码事实：延续0ee6531 ModelController/单worker/失败retry清prompt；4c31149新增begin_warm后台预热，warm API返回202，status含loadingModel，Web已有加载中和防重复控制，chat冷启动等待加长。复用这些能力，不另建冷启动控制器，也不把202当模型已可推理。",
+        "文档证据边界：SPARK_INFERENCE_SCHEDULING.md已补首版真实代码与Spark启停/健康探针结果，原节点说文档全部过时不适用；仍有历史分析段落须结合代码。上游记载服务启停成功不等于本任务真实图片/视频生成、峰值或恢复验收通过。本地Qwen3.8仍是独立部署/测试范围，不替换Step分镜。",
+        "输入：最新代码diff、实际部署版本、此task原计划及跨task入口依赖；输出：执行时基线记录、差异影响和是否可继续的结论。节点只要求核对，不重复开发业务。",
+        "验收与证据：执行者记录git SHA/部署版本/接口202与loadingModel行为相关性，核验本任务依赖交付仍兼容；任何未就绪项留blocked。此节点completed后原入口节点才可激活；原有criterion仍须按业务实证验证。",
+        "代码/资料：pyserver/inference/controller.py；pyserver/inference/routes.py；src/views/InferenceView.jsx；pyserver/tests/test_inference_controller.py；docs/SPARK_INFERENCE_SCHEDULING.md；父task task.vibehub.d7ea8e8ed4a5",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "planned",
+      "title": "执行前基线核对｜4c31149 补充优先"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m06.d8bc8656e4e9.c03"
+      ],
+      "dependencies": [
+        "node.m06.gate",
+        "node.m06.outputs"
+      ],
+      "goal": "验证用户操作与后端规则一致。",
+      "node_id": "node.m06.clients",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：Web/iOS版本、真实API、可控故障用例",
+        "输出：双端流程证据、输入反例与恢复结果",
+        "实现与理由：走空清单→选优→手帐或分镜确认→生成→预览保存；检查未入选/越行程拒绝、清单变化不换图、重复提交防护、部分镜头重试复用、API重启对账。",
+        "边界与失败：不用大规模压测扩展范围；模拟器/真机分别标记。mock只验证代码逻辑，不能替代生成/保存实证。",
+        "验收与证据：浏览器和iOS运行截图/日志；真实输出下载/分享，关键负例与restart证据。",
+        "代码/资料：M01/M04/M05交付与必要自动化检查",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "planned",
+      "title": "双端闭环与恢复反例"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m06.d8bc8656e4e9.c01",
+        "criterion.task.m06.d8bc8656e4e9.c02",
+        "criterion.task.m06.d8bc8656e4e9.c03",
+        "criterion.task.m06.d8bc8656e4e9.c04"
+      ],
+      "dependencies": [
+        "node.m06.clients",
+        "node.m06.outputs"
+      ],
+      "goal": "让后续工作流微调有明确入口和回退方式。",
+      "node_id": "node.m06.close",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：全部产物、问题记录和验证结果",
+        "输出：操作说明、版本更新/回退指南、完整criterion矩阵及用户确认请求",
+        "实现与理由：说明ComfyUI APP mode内部调参、UI图导出API版、参数schema校验、样片比较、发布新版本以及旧job锁定；记录实际耗时/资源与已知局限，全部必需证据通过后提交completion。",
+        "边界与失败：未过criterion/finding不得以能构建代替完成；不创建新的推理框架/发布App Store；用户确认后按V3 complete归档。",
+        "验收与证据：回读任务/节点/criteria/result一致，说明可按步骤启动、调参、恢复，并有真实操作证据。",
+        "代码/资料：各任务VibeHub evidence与项目运行说明",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "planned",
+      "title": "调参交接与验收闭环"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m06.d8bc8656e4e9.c01"
+      ],
+      "dependencies": [
+        "node.m06.baseline"
+      ],
+      "goal": "建立此次真实联调的可追溯起点。",
+      "node_id": "node.m06.gate",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：task.m01.931bf5bbc699、task.m02.1bfa059ca7f9、task.m03-step-h3.6281d9938b8d、task.m04.2441633ab4e7、task.m05-ios.de98a0ad8365状态和交付",
+        "输出：依赖检查、代码/部署/workflow/model版本清单、输入快照与验收矩阵",
+        "实现与理由：逐一回读任务和criteria而非只看聊天宣称；检查Spark实际服务/资源，选优分支是否后来合并按实记录，变化需重新评估契约。",
+        "边界与失败：前置失败不提前写整体通过；不要为测试自行部署未经授权的外部环境或关停其他用户GPU任务。",
+        "验收与证据：全部前置实际ID+结果证据，现地版本与样片来源核验。",
+        "代码/资料：前置VibeHub任务与私有模型/服务信息",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "planned",
+      "title": "锁定可验收版本与前置证据"
+    },
+    {
+      "criterion_ids": [
+        "criterion.task.m06.d8bc8656e4e9.c02"
+      ],
+      "dependencies": [
+        "node.m06.gate"
+      ],
+      "goal": "确认核心模型能力实际兑现。",
+      "node_id": "node.m06.outputs",
+      "origin": "authored",
+      "origin_contract_version": 1,
+      "role": "execution",
+      "scope": [
+        "输入：M02五样张、M03分镜/镜头/成片及完整追溯",
+        "输出：原图对照、五风格效果记录、短片播放记录与参数清单",
+        "实现与理由：优先复用同版本已验证真实产物；只对新版本/遗漏重跑。手帐看全景重绘/同源贴纸/纸底/3:2/可选标题；视频看真实运动、叙事、16:9、音乐及实测时长。",
+        "边界与失败：参考图不算生成证据；不因单风格困难悄悄缩范围，不把合成静态视频记为H3；实测慢如实记录。",
+        "验收与证据：至少5风格真实样张+1支真实H3短片，模型job与选优快照可追，ffprobe与人工观察。",
+        "代码/资料：M02/M03真实媒体与私有记录",
+        "已确认范围：图片手帐与视频为两个独立功能和独立产物；首版目标真实能跑，不扩展跨年回忆库、全功能编辑器或5000张规模化。",
+        "强制输入：仅已显式提交selected-photos清单内、本行程有效照片；读取original版本（当前私有媒体库的规范化原图，不是手机未压缩原文件），禁止自动改用develop/AI变体。无清单/空清单提示先选优，不能回退全部上传照片。",
+        "输入稳定性：任务保存tripId、selection batchId/source/updatedAt及photoIds快照和清单hash；排队后清单变化不悄悄换素材，删除/不可读素材明确失败，不补用未入选照片。",
+        "生成边界：图片推理完全本地，优先复用现有Qwen-Image-2.1；视频必须本地MiniMax H3。step-5-preview仅用于文本分镜，发送选优素材的文字JSON；默认不上传照片给远端文本模型。",
+        "共享技术：复用FastAPI、MediaStore、ComfyClient、JobStore及0ee6531新增ModelController；ComfyUI+内部APP mode+版本化UI/API工作流；服务端校验参数与素材，前端校验不能代替后端。",
+        "追溯：记录实际模型、workflow/preset/schema版本、seed、prompt、素材快照及产物。敏感prompt仅放私有任务数据，普通日志不打印照片、prompt原文、凭据。",
+        "真实验收：代码/替身测试与本地模型产物分开记录；不得把构建通过当真生成成功，不得把静态缩放当H3动态镜头；验收未过记录failed/blocked。",
+        "基线：origin/main=0ee6531e7854f8efd2b2344a7fce5bcf95dc3c80，2026-09-28重新fetch并ff核实；origin/feat/stage2-photo-curation=c3ecbe19a27e19952c026b4816030326e5c5aac6，仍9个独有提交未合入。执行前重新读上游，若变化先记录影响再replan。",
+        "来源：对齐父task task.vibehub.d7ea8e8ed4a5；用户最终授权创建；参考图docs/references/scrapbook-2026-09-28/reference-01.png至05.png及manifest.json。参考图是目标示例，不是项目生成证据。"
+      ],
+      "state": "planned",
+      "title": "核验五风格与真实H3短片"
+    }
+  ],
+  "criteria": [
+    {
+      "criterion_id": "criterion.task.m06.d8bc8656e4e9.c01",
+      "evidence_ids": [],
+      "required": true,
+      "reviewer": null,
+      "state": "accepted",
+      "title": "所有前置完成或有明确授权waived及替代证据；形成代码/部署/模型/workflow/API版本和选优快照清单。上游未合并能力与当前实际能力分开列明。",
+      "version": 1
+    },
+    {
+      "criterion_id": "criterion.task.m06.d8bc8656e4e9.c02",
+      "evidence_ids": [],
+      "required": true,
+      "reviewer": null,
+      "state": "accepted",
+      "title": "至少5种手帐真实本地成图和1支约4镜头H3横屏短片满足约定效果，Step分镜可编辑确认、音乐/比例/播放正常；证据能关联原图与实际模型任务。",
+      "version": 1
+    },
+    {
+      "criterion_id": "criterion.task.m06.d8bc8656e4e9.c03",
+      "evidence_ids": [],
+      "required": true,
+      "reviewer": null,
+      "state": "accepted",
+      "title": "Web与iOS真实API使用闭环、选优资格反例、快照稳定、失败重试/重启恢复均通过；无图片/视频云端回退，无未入选素材，无静态冒充I2V。",
+      "version": 1
+    },
+    {
+      "criterion_id": "criterion.task.m06.d8bc8656e4e9.c04",
+      "evidence_ids": [],
+      "required": true,
+      "reviewer": null,
+      "state": "accepted",
+      "title": "交付运行/调参/恢复说明、示例与验收矩阵；所有必需criterion具有真实passed证据，缺口failed/blocked，finding闭环后才提请用户完成确认。",
+      "version": 1
+    }
+  ]
+}

@@ -1,5 +1,7 @@
 # 阶段交付与续做清单（2026-09-28）
 
+2026-09-29 接手复核补充：PR 已成功提交为 [#2](https://github.com/LynnGuo666/travel-agent/pull/2)。新接手者先读 [合并后接手步骤](handoff/START_HERE.md)，其中包括环境配置、代码入口和六任务完整只读计划快照。
+
 ## 当前结论
 
 按用户要求暂停业务开发，提交阶段 PR。**M01 公共基础、M02 五风格手帐已完成技术验证；M03 已实现分镜接口并生成真实 Step 草稿，尚未确认或生成完整短片；M04–M06 尚未实施。**
@@ -21,12 +23,12 @@
 
 ## 本次代码与版本
 
-- PR 分支：`feat/m01-local-generation-foundation`；最后业务提交 `9173cde`，之后为交接文档与证据提交。
+- PR 分支：`feat/m01-local-generation-foundation`；阶段业务提交 `9173cde`，交接提交 `d6dc27a`；接手复核另补 `4aa9658`，修复 CI 字体依赖及异常 traceback 传播。该补丁未部署 Spark。
 - PR 基线：`origin/main=24aae844e252fe7cd8606a8f25ede45b66990dc0`（提交 PR 前重新核对）。
 - Spark 最近已验证部署：`6c5fc9b169e7acb69809ac42b393bab7ec5021ee`，部署收据记录工作树 clean。远端采用精确文件部署，提交 SHA 与本地不同；逐文件哈希见 [M03 部署收据](generated-evidence/m03/storyboard-deploy.json)。
 - 最近草稿回读时共享队列为 0。暂停收尾不提交新推理、不重新部署。
 - 选优分支最后核查为 `d368f648f8d5e010fe5c750b16845efcfdb7367b`，**未合并**。其 EXIF/质量/标签等能力不能当作当前已上线能力。
-- 原有 `.gitignore` 修改、`docs/STATUS_AUDIT_2026-09-28.md`、`docs/references/` 保留在本地，未随阶段 PR 提交。参考图是用户视觉目标，不能当生成证据。
+- 原有 `.gitignore` 修改、`docs/STATUS_AUDIT_2026-09-28.md` 保留在本地。首次阶段提交未包含参考图；接手复核已将 `docs/references/scrapbook-2026-09-28/` 五张图及 manifest 原样补入 PR，哈希全部一致。参考图是用户视觉目标，不能当生成证据。
 
 主要入口与说明：
 
@@ -40,10 +42,12 @@
 
 ### 自动化检查
 
-- 最后业务代码 `9173cde`：`.venv/bin/python -m pytest pyserver/tests -q` **83 passed**，7 条既有 Pillow 弃用警告。
+- 业务代码 `9173cde`：`.venv/bin/python -m pytest pyserver/tests -q` **83 passed**；接手复核补丁 `4aa9658` 新增反例后 **84 passed**，7 条既有 Pillow 弃用警告。
 - PR 收尾：`npm run check` **16 个 Node 测试通过，Vite 构建通过**。首次受沙箱回环监听限制失败，允许本机回环后复跑成功；构建仍有依赖包 `use client` 指令警告。
 - Spark 分镜部署定向测试 **12 passed**，详见部署收据。
-- 未执行本轮 iOS 构建、模拟器或真机验收。测试通过不替代真实模型或客户端验收。
+- 首轮 GitHub CI 的 iOS 模拟器目标编译已通过；Ubuntu Python 测试因缺少中文字体失败（82 passed / 1 failed），已补安装 `fonts-noto-cjk`，并修复该错误暴露的 frozen exception traceback 问题。最新 CI 结果以 PR 当前提交 Checks 为准。
+- 修复提交 `4aa9658` 的 [GitHub CI](https://github.com/LynnGuo666/travel-agent/actions/runs/36447615433) 两项均已通过：`web-and-api` 与 `ios-build`。
+- 没有 iOS 模拟器交互或真机验收；CI 编译通过不替代真实模型或客户端业务闭环。
 - 早期 runtime 文档的“72 passed”没有原始日志支持，已在 `ddccf99` 更正；对应 M01 handoff 的真实全量结果是 **71 passed**。
 
 ### M01 / M02 真实本地模型
