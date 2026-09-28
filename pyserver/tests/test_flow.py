@@ -15,6 +15,7 @@ from pyserver.agent.state import initial_state
 from pyserver.agent.discovery import discover_places
 from pyserver.agent.catalog import available
 from pyserver.agent.model_context import result_for_model
+from pyserver.agent import loop
 from pyserver import providers
 from pyserver.providers import amap
 
@@ -155,6 +156,32 @@ def test_model_receives_compact_transport_facts_while_trace_can_keep_full_result
     assert len(compact["outboundTrains"]) == 8
     assert "trainSegments" not in compact["outboundTrains"][0]
     assert len(full["outboundTrains"]) == 12
+
+
+def test_repeated_unavailable_tool_triggers_fallback_instead_of_200_turns(tmp_path, monkeypatch):
+    store = TripStore(tmp_path / "trips")
+    trip = store.create({"query": "深圳旅行", "originCity": "广州", "destination": "深圳", "days": 3,
+                         "startDate": "2026-10-03"})
+
+    async def fake_complete(messages, tools, key, **kwargs):
+        yield {"type": "completion", "message": {"role": "assistant", "content": None,
+               "tool_calls": [call("unknown_tool", {}, f"call-{len(messages)}")]},
+               "finishReason": "tool_calls", "usage": {}, "publicNote": ""}
+
+    async def no_fallback(*args):
+        if False:
+            yield None
+
+    monkeypatch.setattr(agent.step, "complete", fake_complete)
+    monkeypatch.setattr(loop, "complete_with_tools", no_fallback)
+
+    async def scenario():
+        events = [item async for item in loop.run_agent(trip, trip["request"], {"stepfun": "test"}, store)]
+        result = events[-1]["data"]
+        assert result["agentRun"]["modelTurns"] == 3
+        assert any(item["data"].get("type") == "model_stalled" for item in events)
+
+    asyncio.run(scenario())
 
 
 def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, monkeypatch):

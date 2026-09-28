@@ -59,7 +59,9 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
         yield event("run_start", model=step.MODEL, channel="step-plan", mode="model")
     error = None
     empty_turns = 0
-    while turns < MAX_TURNS and calls < MAX_CALLS and not state.get("pendingQuestion") and not state.get("plan"):
+    last_failure = None
+    repeated_failures = 0
+    while turns < MAX_TURNS and calls < MAX_CALLS and not error and not state.get("pendingQuestion") and not state.get("plan"):
         exposed = available(state)
         names = [item["function"]["name"] for item in exposed]
         yield event("model_turn_start", turn=turns + 1, availableTools=names,
@@ -125,6 +127,14 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
                 yield event("trip_memory_updated", turn=turns, fields=args, memory=result)
             messages.append({"role": "tool", "tool_call_id": call["id"],
                              "content": json.dumps(result_for_model(name, result), ensure_ascii=False)[:12000]})
+            failure = (name, result.get("code")) if not result.get("ok") else None
+            repeated_failures = repeated_failures + 1 if failure and failure == last_failure else 1 if failure else 0
+            last_failure = failure
+            if repeated_failures >= 3:
+                error = "repeated_tool_failure"
+                yield event("model_stalled", turn=turns, tool=name, code=result.get("code"),
+                            reason="same_tool_failed_three_times")
+                break
             if state.get("pendingQuestion"):
                 break
     used_fallback = False
