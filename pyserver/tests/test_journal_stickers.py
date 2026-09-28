@@ -1,9 +1,11 @@
 """Journal composition keeps private media private and Qwen jobs text-only."""
 import asyncio
+import io
 import json
 
 import httpx
 from fastapi import FastAPI
+from PIL import Image
 
 from pyserver.accounts import current_user
 from pyserver.inference import ModelController
@@ -32,6 +34,14 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
     trip["plan"] = {"destination": "上海", "itinerary": [{"stops": [{"name": "外滩"}]}]}
     trips.save(trip)
     media = MediaStore(tmp_path / "media")
+    image = io.BytesIO()
+    Image.new("RGB", (64, 64), "#467a91").save(image, format="JPEG")
+    context = current_user.set(user)
+    photo = media.add(image.getvalue(), trip["id"], "2026-09-29")
+    media.set_tags(photo["id"], {"scene": "外滩黄浦江夜景", "objects": ["江边建筑", "游船"],
+                                  "activity": "赏景", "quality": {"highlight": True}})
+    media.set_selected(trip["id"], {"photoIds": [photo["id"]], "batchId": "journal-selected", "source": "test"})
+    current_user.reset(context)
     client = ComfyClient("http://127.0.0.1:8191", "workflows/qwen-image-2.1-sticker-api.json", "image")
     stickers = StickerStore(media.root / "stickers", client, ModelController())
     monkeypatch.setattr(stickers, "schedule", lambda: None)
@@ -42,8 +52,10 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
         assert tools == [] and key == "test-step-key"
         yield {"type": "completion", "message": {"content": json.dumps({
             "templates": ["photo-wall", "book-and-clip"],
+            "photoOrder": [photo["id"]],
             "stickerMotifs": ["绿色电车和银杏", "黄浦江上的小船", "外滩建筑", "旅途美食"],
-            "stampMotif": "外滩江景"})}}
+            "stampMotif": "外滩江景", "postcardMotif": "黄浦江夜景明信片",
+            "illustrationMotif": "江边建筑和游船", "diaryText": "黄浦江边看到了游船。"})}}
 
     monkeypatch.setattr(journal_routes.step, "complete", complete)
     app = FastAPI()
@@ -71,7 +83,11 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             assert response.status_code == 200, response.text
             assert response.json()["source"] == journal_routes.step.MODEL
             assert "photoCount" in captured[0][1]["content"]
+            assert "外滩黄浦江夜景" in captured[0][1]["content"]
+            assert photo["id"] in response.json()["photoOrder"]
+            assert response.json()["diaryText"] == "黄浦江边看到了游船。"
             assert "base64" not in json.dumps(captured)
+            assert "sourceSha256" not in json.dumps(captured)
             created = await http.post(base + "/stickers", json={"motif": "绿色电车和银杏"})
             assert created.status_code == 202, created.text
             body = created.json()
@@ -89,5 +105,31 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             stamp = await http.post(base + "/stickers", json={"motif": "外滩江景", "kind": "stamp"})
             assert stamp.status_code == 202 and stamp.json()["kind"] == "stamp"
             assert stickers.get(stamp.json()["id"])["promptVersion"] == "journal-stamp-qwen21-t2i-v1"
+            postcard = await http.post(base + "/stickers", json={"motif": "黄浦江夜景明信片", "kind": "postcard"})
+            illustration = await http.post(base + "/stickers", json={"motif": "江边建筑和游船", "kind": "illustration"})
+            assert postcard.status_code == illustration.status_code == 202
+            assert stickers.get(postcard.json()["id"])["promptVersion"] == "journal-postcard-scene-qwen21-t2i-v2"
+            assert stickers.get(illustration.json()["id"])["promptVersion"] == "journal-illustration-qwen21-t2i-v1"
+            journal = (await http.get(base + "/journal")).json()
+            edited_page = journal["pages"][0]
+            edited_page["items"] = [{**item, "text": "这页由用户写过"} if item["kind"] == "text" else item
+                                    for item in edited_page["items"]]
+            saved = await http.put(base + "/journal/pages/0", json={"expectedVersion": 0, "page": edited_page})
+            assert saved.status_code == 200 and saved.json()["pages"][0]["protected"]
+            proposed = [journal_routes.JournalStore(tmp_path / "scratch", journal_routes.catalog())._seed_page(
+                "photo-wall", trip, 0), journal_routes.JournalStore(tmp_path / "scratch", journal_routes.catalog())._seed_page(
+                "postcard-collage", trip, 1)]
+            proposed[1]["items"][0]["assetId"] = postcard.json()["id"]
+            applied = await http.post(base + "/journal/apply-ai", json={"pages": proposed})
+            assert applied.status_code == 200, applied.text
+            assert applied.json()["preservedPageIndices"] == [0]
+            assert applied.json()["pages"][0] == saved.json()["pages"][0]
+            proposed[1]["items"].append({"id": "904f3a31-374a-42bb-90f5-af48e9d21a62", "kind": "photo",
+                                         "photoId": "75cac321-cd57-4a7e-9fa3-1509489f01bb",
+                                         "x": 10, "y": 10, "w": 20, "h": 20, "r": 0, "z": 3})
+            assert (await http.post(base + "/journal/apply-ai", json={"pages": proposed})).status_code == 400
+            http.headers["Authorization"] = "Bearer other-test-token"
+            assert (await http.get(base + "/journal")).status_code == 404
+            http.headers["Authorization"] = "Bearer journal-test-token"
             assert (await http.post(base + "/stickers", json={"motif": "x"})).status_code == 400
     asyncio.run(scenario())

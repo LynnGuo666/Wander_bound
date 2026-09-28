@@ -1,0 +1,7 @@
+{
+  "id": "journal-postcard-scene-qwen21-t2i-v2",
+  "model": "Qwen-Image-2.1",
+  "workflow": "workflows/qwen-image-2.1-sticker-api.json",
+  "tags": ["journal", "postcard", "trip-personalized", "text-to-image"],
+  "promptTemplate": "A single full-frame square watercolor cityscape inspired by {{city}} and this real journey scene: {{motif}}. Paint only the scenery: landscape, architecture, local atmosphere and natural light. The scenic painting fills the entire image edge to edge, with a clear visual focal point and tactile watercolor pigments. This is a standalone landscape illustration to be placed later on paper by the application. Do not depict paper, postcard, postage stamp, postage mark, handwriting, envelope, seal, border, captions, signs, readable letters, numerals, logos or watermark. No collage and no second picture."
+}
