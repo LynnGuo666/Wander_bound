@@ -7,13 +7,75 @@ import json
 import os
 import secrets
 import uuid
+from collections import deque
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageChops, ImageFilter
 
 from ..trips import now
 from ..inference import ModelController
 from .comfy import ComfyClient
+
+
+def isolate_sticker(image: Image.Image) -> Image.Image:
+    """Discard distant transparent-background artifacts before cropping the main motif."""
+    if image.mode != "RGBA":
+        raise RuntimeError("Qwen 未返回透明 PNG 贴纸")
+    width, height = image.size
+    alpha = image.getchannel("A")
+    raw = alpha.tobytes()
+    if min(raw) > 16 or max(raw) < 200:
+        raise RuntimeError("Qwen 输出没有可用的透明区域")
+    visited = bytearray(width * height)
+    components: list[tuple[list[int], tuple[int, int, int, int]]] = []
+    for start, value in enumerate(raw):
+        if value <= 16 or visited[start]:
+            continue
+        queue = deque([start])
+        visited[start] = 1
+        points = []
+        left = right = start % width
+        top = bottom = start // width
+        while queue:
+            index = queue.popleft()
+            points.append(index)
+            x, y = index % width, index // width
+            left, right = min(left, x), max(right, x)
+            top, bottom = min(top, y), max(bottom, y)
+            for yy in range(max(0, y - 1), min(height, y + 2)):
+                for xx in range(max(0, x - 1), min(width, x + 2)):
+                    neighbor = yy * width + xx
+                    if raw[neighbor] > 16 and not visited[neighbor]:
+                        visited[neighbor] = 1
+                        queue.append(neighbor)
+        components.append((points, (left, top, right + 1, bottom + 1)))
+    if not components:
+        raise RuntimeError("Qwen 输出没有贴纸主体")
+    components.sort(key=lambda item: len(item[0]), reverse=True)
+    main_points, main_box = components[0]
+    if len(main_points) > width * height * .85:
+        raise RuntimeError("Qwen 输出接近整张不透明背景")
+    if main_box[2] - main_box[0] < 80 or main_box[3] - main_box[1] < 80:
+        raise RuntimeError("Qwen 输出的贴纸主体过小")
+    keep = bytearray(width * height)
+    for point in main_points:
+        keep[point] = 255
+    # Nearby, substantial fragments can belong to the same motif; remote specks do not.
+    for points, box in components[1:]:
+        gap = max(main_box[0] - box[2], box[0] - main_box[2],
+                  main_box[1] - box[3], box[1] - main_box[3], 0)
+        if len(points) >= max(30, len(main_points) * .008) and gap < max(width, height) * .04:
+            for point in points:
+                keep[point] = 255
+    nearby = Image.frombytes("L", (width, height), bytes(keep)).filter(ImageFilter.MaxFilter(5))
+    clean = image.copy()
+    clean.putalpha(ImageChops.multiply(alpha, nearby))
+    bounds = clean.getchannel("A").getbbox()
+    if not bounds:
+        raise RuntimeError("Qwen 输出没有可用的贴纸")
+    padding = round(max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * .045)
+    return clean.crop((max(0, bounds[0] - padding), max(0, bounds[1] - padding),
+                       min(width, bounds[2] + padding), min(height, bounds[3] + padding)))
 
 
 def public(job: dict) -> dict:
@@ -33,7 +95,7 @@ class StickerStore:
             if str(uuid.UUID(sticker_id)) != sticker_id:
                 return None
             return json.loads((self.root / f"{sticker_id}.json").read_text())
-        except (ValueError, FileNotFoundError, json.JSONDecodeError):
+        except (ValueError, TypeError, AttributeError, FileNotFoundError, json.JSONDecodeError):
             return None
 
     def list_for_trip(self, trip_id: str) -> list[dict]:
@@ -57,8 +119,8 @@ class StickerStore:
     def submit(self, trip_id: str, city: str, motif: str, kind: str = "sticker") -> dict:
         if not self.client or not self.client.configured:
             raise ValueError("Qwen 贴纸工作流尚未配置")
-        if kind not in {"sticker", "stamp"}:
-            raise ValueError("素材类型必须为 sticker 或 stamp")
+        if kind not in {"sticker", "stamp", "postcard", "illustration"}:
+            raise ValueError("素材类型必须为 sticker、stamp、postcard 或 illustration")
         if (not isinstance(motif, str) or not 2 <= len(motif.strip()) <= 80
                 or any(ord(char) < 32 for char in motif)):
             raise ValueError("贴纸主题须为 2–80 个字符")
@@ -67,8 +129,8 @@ class StickerStore:
                          and item["status"] in {"queued", "running", "succeeded"}), None)
         if existing:
             return existing
-        if len(self.list_for_trip(trip_id)) >= 40:
-            raise ValueError("每趟旅程最多保存 40 枚 AI 素材")
+        if len(self.list_for_trip(trip_id)) >= 60:
+            raise ValueError("每趟旅程最多保存 60 枚 AI 素材")
         spec_file = self.prompt_dir / f"journal-{kind}.qwen-image-2.1.json"
         spec = json.loads(spec_file.read_text())
         graph = json.loads(self.client.workflow_file.read_text())
@@ -141,20 +203,12 @@ class StickerStore:
                 raise TimeoutError("Qwen 贴纸生成超时")
             data = await self.client.download(file)
             with Image.open(io.BytesIO(data)) as image:
-                if image.format != "PNG" or image.mode != "RGBA" or max(image.size) > 2048:
-                    raise RuntimeError("Qwen 未返回透明 PNG 贴纸")
-                minimum, maximum = image.getchannel("A").getextrema()
-                if minimum > 16 or maximum < 200:
-                    raise RuntimeError("Qwen 输出没有可用的透明区域")
-                visible = image.getchannel("A").point(lambda value: 255 if value > 16 else 0)
-                bounds = visible.getbbox()
-                if not bounds or (bounds[2] - bounds[0]) < 80 or (bounds[3] - bounds[1]) < 80:
-                    raise RuntimeError("Qwen 输出的贴纸主体过小")
-                padding = round(max(bounds[2] - bounds[0], bounds[3] - bounds[1]) * 0.045)
-                bounds = (max(0, bounds[0] - padding), max(0, bounds[1] - padding),
-                          min(image.width, bounds[2] + padding), min(image.height, bounds[3] + padding))
+                if image.format != "PNG" or max(image.size) > 2048:
+                    raise RuntimeError("Qwen 未返回可用的 PNG 素材")
+                if job["kind"] in {"sticker", "stamp"}:
+                    image = isolate_sticker(image)
                 rendered = io.BytesIO()
-                image.crop(bounds).save(rendered, format="PNG", optimize=True)
+                image.save(rendered, format="PNG", optimize=True)
             output = self.root / f"{job['id']}.png"
             temporary = self.root / f"{job['id']}.{uuid.uuid4().hex}.tmp"
             try:
