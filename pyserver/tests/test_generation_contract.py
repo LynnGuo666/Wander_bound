@@ -11,6 +11,8 @@ from pyserver.media import MediaStore
 from pyserver.media.contracts import original_from_snapshot
 from pyserver.media.job_routes import router_for
 from pyserver.media.jobs import JobStore
+from pyserver.media import workflow_versions
+from pathlib import Path
 from pyserver.trips import TripStore
 
 
@@ -23,11 +25,16 @@ def jpeg(color):
 class Adapter:
     configured = True
 
-    def __init__(self):
+    def __init__(self, kind="image"):
+        self.kind = kind
         self.queued = []
         self.result_calls = 0
 
-    async def queue(self, *args):
+    def freeze_workflow(self):
+        name = "qwen-image-2.1-edit-api.json" if self.kind == "image" else "minimax-h3-i2v-api.json"
+        return workflow_versions.freeze_workflow(Path(__file__).resolve().parents[2] / "workflows" / name, self.kind)
+
+    async def queue(self, *args, **kwargs):
         self.queued.append(args)
         return "prompt-id"
 
@@ -48,7 +55,7 @@ def fixture(tmp_path, monkeypatch):
     chosen = media.add(jpeg("red"), first["id"], None)
     other = media.add(jpeg("blue"), first["id"], None)
     foreign = media.add(jpeg("yellow"), second["id"], None)
-    image, video = Adapter(), Adapter()
+    image, video = Adapter(), Adapter("video")
     jobs = JobStore(media, image, video, object())
     jobs._schedule = lambda: None
     app = FastAPI()

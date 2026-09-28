@@ -1,7 +1,6 @@
 """Private Spark media job endpoints."""
 from __future__ import annotations
 
-import secrets
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
 from ..trips import TripStore
@@ -31,7 +30,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
     @router.post("/api/media/memories")
     async def create_memory(request: Request, payload: dict):
         require_media_auth(request)
-        _fields(payload, {"tripId", "photoIds", "title"})
+        _fields(payload, {"tripId", "photoIds", "title", "seed", "parameters"})
         trip_id = payload.get("tripId")
         photo_ids = payload.get("photoIds")
         _require_trip(trips, trip_id)
@@ -40,17 +39,18 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
             raise HTTPException(400, {"code": "TITLE_INVALID", "message": "title 必须是 1–80 字符"})
         try:
             job = jobs.submit("memory", {"tripId": trip_id, "photoIds": photo_ids,
-                                         "title": title.strip()})
+                                         "title": title.strip(),
+                                         **{key: payload[key] for key in ("seed", "parameters") if key in payload}})
         except ContractError as exc:
             raise _contract_error(exc) from exc
         except ValueError as exc:
             raise HTTPException(503, str(exc)) from exc
-        return JSONResponse({key: job[key] for key in ("id", "status", "backend")}, status_code=202)
+        return JSONResponse({key: job[key] for key in ("id", "status", "backend", "seed", "parameters")}, status_code=202)
 
     @router.post("/api/media/photos/{photo_id}/redraw")
     async def redraw(photo_id: str, request: Request, payload: dict):
         require_media_auth(request)
-        _fields(payload, {"prompt", "seed"})
+        _fields(payload, {"prompt", "seed", "parameters"})
         photo = media.get(photo_id)
         if not photo:
             raise HTTPException(404, {"code": "PHOTO_NOT_FOUND", "message": "照片不存在"})
@@ -59,16 +59,16 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= MAX_PROMPT_LENGTH:
             raise HTTPException(400, {"code": "PROMPT_INVALID", "message": f"prompt 必须是 1–{MAX_PROMPT_LENGTH} 字符"})
         seed = payload.get("seed")
-        if seed is not None and (type(seed) is not int or not 0 <= seed <= 0xFFFFFFFF):
-            raise HTTPException(400, {"code": "SEED_INVALID", "message": "seed 必须是 0–4294967295 的整数"})
+        if seed is not None and (type(seed) is not int or not 0 <= seed <= (1 << 64) - 1):
+            raise HTTPException(400, {"code": "SEED_INVALID", "message": "seed 必须是 0–18446744073709551615 的整数"})
         try:
             job = jobs.submit("edit", {"photoId": photo_id, "prompt": prompt.strip(),
-                                       "seed": seed if seed is not None else secrets.randbits(32)})
+                                       **{key: payload[key] for key in ("seed", "parameters") if key in payload}})
         except ContractError as exc:
             raise _contract_error(exc) from exc
         except ValueError as exc:
             raise HTTPException(503, str(exc)) from exc
-        return JSONResponse({key: job[key] for key in ("id", "status", "backend", "seed")}, status_code=202)
+        return JSONResponse({key: job[key] for key in ("id", "status", "backend", "seed", "parameters")}, status_code=202)
 
     @router.post("/api/media/generation-jobs")
     async def prepare_generation_job(request: Request, payload: dict):

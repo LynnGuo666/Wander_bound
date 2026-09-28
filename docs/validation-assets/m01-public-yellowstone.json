@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "fixture_key": "m01-public-yellowstone-20260928",
+  "batch_id": "m01-public-yellowstone-20260928-v1",
+  "source": "manual-acceptance-20260928",
+  "purpose": "Independent multi-date public-photo acceptance collection; not one real itinerary or automated curation result",
+  "photos": [
+    {
+      "page_id": 50246552,
+      "file": "50246552.jpg",
+      "source_sha256": "d6ae9810268fcf182b415e8fe6497863a312a9eb932725310eae70f5af463dfe",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Looking_south_over_Yellowstone_from_Gallatin_National_Forest_(14924610824).jpg",
+      "creator": "Diane Renkin / Yellowstone National Park",
+      "license": "Public domain — National Park Service work, per Wikimedia Commons file page",
+      "captured_day": "2014-10-10",
+      "description": "October mountains and golden trees viewed south toward Yellowstone from Eagle Creek Road."
+    },
+    {
+      "page_id": 24352222,
+      "file": "24352222.jpg",
+      "source_sha256": "02022d6901a88b8803dc0532f7a36fd6603ceaa7db66a7a294c0365b689d90fb",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Yellowstone_National_Park_YELL4574.jpg",
+      "creator": "National Park Service Digital Image Archives (individual photographer not identified)",
+      "license": "Public domain — National Park Service work, per Wikimedia Commons file page",
+      "captured_day": null,
+      "description": "Elk grazing beside a river in Yellowstone; historical slide with visible dark border."
+    },
+    {
+      "page_id": 326389,
+      "file": "326389.jpg",
+      "source_sha256": "42a205ce99697791715d9854a79e5aa830732261fef5c43181e902568581817f",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Grand_prismatic_spring.jpg",
+      "creator": "Jim Peaco / National Park Service",
+      "license": "Public domain — National Park Service work, per Wikimedia Commons file page",
+      "captured_day": null,
+      "description": "Aerial view of Grand Prismatic Spring and its multicolored geothermal rim; Commons reports July 2001, without a day."
+    },
+    {
+      "page_id": 50247083,
+      "file": "50247083.jpg",
+      "source_sha256": "dae03e44fda948f8e97246938670a0b0f71a8a4cb60c424c61cf019b836724da",
+      "commons_page": "https://commons.wikimedia.org/wiki/File:Lower_Falls_of_the_Yellowstone_(13699489084).jpg",
+      "creator": "Jim Peaco / Yellowstone National Park",
+      "license": "Public domain — National Park Service work, per Wikimedia Commons file page",
+      "captured_day": "2014-04-03",
+      "description": "Snowy Lower Falls of the Yellowstone, portrait framing, with the water descending into the canyon."
+    }
+  ]
+}

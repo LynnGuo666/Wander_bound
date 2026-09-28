@@ -5,15 +5,26 @@ import asyncio
 import copy
 import json
 import os
+import secrets
 import uuid
 from pathlib import Path
 
+import httpx
+
 from .comfy import ComfyClient
+from . import workflow_versions
 from .store import MediaStore
 from .contracts import (ContractError, original_from_snapshot, product_contract,
                         selected_original_snapshot, validate_snapshot)
 from ..inference import ModelController
 from ..trips import now
+
+MAX_RESOURCE_RETRIES = 3
+RESOURCE_RETRY_DELAY_SECONDS = 30
+MAX_JOB_ATTEMPTS = 3
+MAX_MISSING_POLLS = 3
+POLL_DELAY_SECONDS = 5
+SEED_MASK = (1 << 64) - 1
 
 
 class JobStore:
@@ -54,9 +65,28 @@ class JobStore:
         adapter = self.image if kind == "edit" else self.video
         if not adapter or not adapter.configured:
             raise ValueError("Spark 工作流未配置")
+        try:
+            workflow_snapshot = adapter.freeze_workflow()
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ValueError(f"Spark 工作流快照不可用：{exc}") from exc
+        seed_input = payload["seed"] if "seed" in payload else secrets.randbits(64)
+        try:
+            parameters, seed = workflow_versions.validate_parameters(
+                workflow_snapshot, payload.get("parameters"), seed_input)
+        except ValueError as exc:
+            raise ContractError("WORKFLOW_PARAMETERS_INVALID", str(exc), 400) from exc
+        if kind == "memory":
+            clips = [{"photoId": photo_id, "seed": (seed + index) & SEED_MASK}
+                     for index, photo_id in enumerate(payload["photoIds"])]
+        else:
+            clips = None
         job = {"id": str(uuid.uuid4()), "kind": kind, "status": "queued", "backend": "dgx-spark-qwen-image-2.1" if kind == "edit" else "dgx-spark-minimax-h3",
                "createdAt": now(), "attempt": 1, "progressPercent": 0, "progressLabel": "等待调度",
-               **payload, "selectionSnapshot": copy.deepcopy(snapshot)}
+               **payload, "selectionSnapshot": copy.deepcopy(snapshot),
+               "workflowSnapshot": copy.deepcopy(workflow_snapshot),
+               "parameters": copy.deepcopy(parameters), "seed": seed}
+        if clips is not None:
+            job["clips"] = clips
         self.save(job)
         self._schedule()
         return job
@@ -94,6 +124,22 @@ class JobStore:
         validate_snapshot(snapshot)
         for photo_id in expected:
             original_from_snapshot(self.media, snapshot, photo_id)
+        adapter_kind = "image" if job["kind"] == "edit" else "video"
+        try:
+            workflow = workflow_versions.validate_snapshot(job.get("workflowSnapshot"), adapter_kind)
+            parameters, seed = workflow_versions.validate_parameters(
+                workflow, job.get("parameters"), job.get("seed"))
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ContractError("WORKFLOW_SNAPSHOT_INVALID", f"任务工作流快照无效：{exc}", 409) from exc
+        if parameters != job.get("parameters") or seed != job.get("seed"):
+            raise ContractError("WORKFLOW_SNAPSHOT_INVALID", "任务工作流参数与快照不一致", 409)
+        if job["kind"] == "memory":
+            clips = job.get("clips")
+            if (not isinstance(clips, list) or len(clips) != len(expected)
+                    or any(not isinstance(clip, dict) or clip.get("photoId") != photo_id
+                           or clip.get("seed") != (seed + index) & SEED_MASK
+                           for index, (clip, photo_id) in enumerate(zip(clips, expected)))):
+                raise ContractError("WORKFLOW_SNAPSHOT_INVALID", "视频镜头与固定 seed 不一致", 409)
 
     def _fail(self, job: dict, exc: Exception) -> None:
         job["status"] = "failed"
@@ -119,12 +165,21 @@ class JobStore:
                 self._fail(self.get(job["id"]) or job, exc)
             except Exception as exc:
                 job = self.get(job["id"]) or job
+                if job["status"] == "succeeded":
+                    continue
+                retries = job.get("resourceRetries", 0) + 1
+                job["resourceRetries"] = retries
+                if retries >= MAX_RESOURCE_RETRIES:
+                    self._fail(job, exc)
+                    job["errorCode"] = "RESOURCE_RETRY_EXHAUSTED"
+                    self.save(job)
+                    continue
                 job["status"] = "queued"
                 job["error"] = str(exc)[:300]
                 job["progressLabel"] = "等待资源后重试"
                 job["progressPercent"] = 0
                 self.save(job)
-                await asyncio.sleep(30)
+                await asyncio.sleep(RESOURCE_RETRY_DELAY_SECONDS)
         if getattr(self.controller, "primary_chat", False) and not self.controller.primary_paused:
             self.controller.begin_warm("chat")
 
@@ -142,13 +197,37 @@ class JobStore:
                 pass
 
     async def _wait(self, adapter: ComfyClient, prompt_id: str) -> bytes:
+        missing_polls = 0
+        transient_polls = 0
+        download_polls = 0
         for _ in range(360):
-            status, file = await adapter.result(prompt_id)
+            try:
+                status, file = await adapter.result(prompt_id)
+            except (httpx.HTTPError, OSError) as exc:
+                transient_polls += 1
+                if transient_polls >= MAX_MISSING_POLLS:
+                    raise RuntimeError("Spark 队列/历史持续不可达") from exc
+                await asyncio.sleep(POLL_DELAY_SECONDS)
+                continue
+            transient_polls = 0
             if status == "completed" and file:
-                return await adapter.download(file)
-            if status in {"failed", "missing"}:
-                raise RuntimeError(f"Spark 工作流{status}")
-            await asyncio.sleep(5)
+                try:
+                    return await adapter.download(file)
+                except (httpx.HTTPError, OSError) as exc:
+                    download_polls += 1
+                    if download_polls >= MAX_MISSING_POLLS:
+                        raise RuntimeError("Spark 已完成产物持续无法下载") from exc
+                    await asyncio.sleep(POLL_DELAY_SECONDS)
+                    continue
+            if status == "failed":
+                raise RuntimeError("Spark 工作流失败；旧 prompt 不会自动重提交")
+            if status == "missing":
+                missing_polls += 1
+                if missing_polls >= MAX_MISSING_POLLS:
+                    raise RuntimeError("Spark 队列/历史中持续找不到 prompt")
+            else:
+                missing_polls = 0
+            await asyncio.sleep(POLL_DELAY_SECONDS)
         raise TimeoutError("Spark 工作流执行超时")
 
     async def _run(self, job_id: str):
@@ -157,6 +236,17 @@ class JobStore:
             return
         try:
             self._validate_job_inputs(job)
+            if job["kind"] == "edit":
+                variant = f"ai-{job['id']}"
+                photo = self.media.get(job["photoId"]) or {}
+                if variant in photo.get("variants", []) and self.media.bytes(job["photoId"], variant):
+                    job["variant"] = variant
+                    job["status"] = "succeeded"
+                    job["progressLabel"] = "已恢复已有图片产物"
+                    job["progressPercent"] = 100
+                    job["completedAt"] = now()
+                    self.save(job)
+                    return
             job["status"] = "running"
             job.setdefault("startedAt", now())
             job["progressLabel"] = "上传输入并提交工作流"
@@ -165,7 +255,9 @@ class JobStore:
             if job["kind"] == "edit":
                 if not job.get("promptId"):
                     source = original_from_snapshot(self.media, job.get("selectionSnapshot"), job["photoId"])
-                    job["promptId"] = await self.image.queue(source, job["prompt"], job["seed"])
+                    job["promptId"] = await self.image.queue(
+                        source, job["prompt"], job["seed"],
+                        workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
                     self.save(job)
                 job["progressLabel"] = "图片生成中"
                 job["progressPercent"] = None
@@ -179,10 +271,22 @@ class JobStore:
             else:
                 job_dir = self.root / job_id
                 job_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-                clips = job.setdefault("clips", [{"photoId": photo_id} for photo_id in job["photoIds"]])
+                clips = job["clips"]
+                final_video = job_dir / "memory.mp4"
+                if final_video.exists() and all(clip.get("done") for clip in clips):
+                    job["status"] = "succeeded"
+                    job["progressLabel"] = "已恢复已有视频产物"
+                    job["progressPercent"] = 100
+                    job["completedAt"] = now()
+                    self.save(job)
+                    return
                 for index, clip in enumerate(clips):
                     output = job_dir / f"{index}.mp4"
-                    if clip.get("done") and output.exists():
+                    if output.exists():
+                        if not clip.get("done"):
+                            clip["done"] = True
+                            job["completedClips"] = max(job.get("completedClips", 0), index + 1)
+                            self.save(job)
                         continue
                     job["progressLabel"] = f"生成镜头 {index + 1}/{len(clips)}"
                     job["progressPercent"] = None
@@ -190,9 +294,13 @@ class JobStore:
                     if not clip.get("promptId"):
                         prompt = f"旅行回忆短片第 {index + 1} 个镜头。保留输入照片的主体与真实场景，缓慢平稳的电影感运镜，自然光影。画面里不要出现文字、字幕或标志，不要虚构人物。"
                         source = original_from_snapshot(self.media, job.get("selectionSnapshot"), clip["photoId"])
-                        clip["promptId"] = await self.video.queue(source, prompt)
+                        clip["promptId"] = await self.video.queue(
+                            source, prompt, clip["seed"],
+                            workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
                         self.save(job)
-                    output.write_bytes(await self._wait(self.video, clip["promptId"]))
+                    temporary_clip = job_dir / f"{index}.pending.mp4"
+                    temporary_clip.write_bytes(await self._wait(self.video, clip["promptId"]))
+                    os.replace(temporary_clip, output)
                     clip["done"] = True
                     job["completedClips"] = index + 1
                     job["progressPercent"] = round((index + 1) / (len(clips) + 1) * 95)
@@ -202,12 +310,14 @@ class JobStore:
                 self.save(job)
                 concat = job_dir / "clips.txt"
                 concat.write_text("\n".join(f"file '{(job_dir / f'{index}.mp4').as_posix()}'" for index in range(len(clips))))
+                temporary_video = job_dir / "memory.pending.mp4"
                 process = await asyncio.create_subprocess_exec("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat",
                                 "-safe", "0", "-i", str(concat), "-c:v", "libx264", "-c:a", "aac", "-movflags", "+faststart",
-                                str(job_dir / "memory.mp4"), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
+                                str(temporary_video), stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.PIPE)
                 _, stderr = await process.communicate()
                 if process.returncode:
                     raise RuntimeError(f"视频合成失败：{stderr.decode(errors='replace')[:200]}")
+                os.replace(temporary_video, final_video)
             job["status"] = "succeeded"
             job["progressLabel"] = "已完成"
             job["progressPercent"] = 100
@@ -219,7 +329,7 @@ class JobStore:
 
     def retry(self, job_id: str, *, expected_kind: str | None = None) -> dict | None:
         job = self.get(job_id)
-        if (not job or job["status"] != "failed"
+        if (not job or job["status"] != "failed" or job.get("attempt", 1) >= MAX_JOB_ATTEMPTS
                 or (expected_kind is not None and job["kind"] != expected_kind)):
             return None
         job["status"] = "queued"
@@ -228,6 +338,7 @@ class JobStore:
         job["progressLabel"] = "等待调度"
         job["progressPercent"] = 0
         job["attempt"] += 1
+        job["resourceRetries"] = 0
         job.pop("promptId", None)
         for clip in job.get("clips", []):
             if not clip.get("done"):
