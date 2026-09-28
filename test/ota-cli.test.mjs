@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeFlyaiAttractions, normalizeFlyaiTransport, normalizeTuniuFlights, normalizeTuniuTrains, searchFlyai, searchFlyaiAttractions, searchTuniu, searchTuniuTickets, unwrapTuniu } from '../server/ota-cli.mjs';
+import { normalizeFlyaiAttractions, normalizeFlyaiTransport, searchFlyai, searchFlyaiAttractions } from '../server/ota/flyai.mjs';
+import { normalizeTuniuFlights, normalizeTuniuTrains, searchTuniu, searchTuniuTickets, unwrapTuniu } from '../server/ota/tuniu.mjs';
 
 test('official CLI commands use documented read-only tool names and arguments', async () => {
   const calls = [];

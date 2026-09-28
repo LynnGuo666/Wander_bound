@@ -34,7 +34,7 @@ struct SourcesView: View {
                             .autocorrectionDisabled()
                             .keyboardType(.URL)
                             .textFieldStyle(.roundedBorder)
-                        Text("模拟器可用 http://127.0.0.1:4174；加入本队 Tailscale 私网的真机可用 http://spark-82.tailb7a50b.ts.net:7000；其他部署请使用 HTTPS。")
+                        Text("模拟器可用 http://127.0.0.1:4176；真机请填写可访问的 Python FastAPI 地址。")
                             .font(.caption2).foregroundStyle(Palette.muted)
                     }
                 }

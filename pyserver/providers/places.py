@@ -3,30 +3,16 @@ from __future__ import annotations
 
 import os
 import httpx
-from .mcp import mcp_call
+from .mcp import data_endpoint, mcp_call
 
 async def search_places(city: str, key: str | None) -> list[dict]:
     if not city:
         return []
     if not key:
-        endpoint = os.getenv("TRAVEL_OTA_MCP_URL")
-        if not endpoint:
-            return []
-        payload = await mcp_call(endpoint, "flyai_search_poi", {"city": city})
-        if payload.get("status") != 0:
-            raise RuntimeError(str(payload.get("message") or "飞猪地点查询失败"))
-        places = []
-        for row in (payload.get("data") or {}).get("itemList") or []:
-            try:
-                lat, lng = float(row["latitude"]), float(row["longitude"])
-            except (KeyError, TypeError, ValueError):
-                continue
-            if not row.get("id") or not row.get("name"):
-                continue
-            places.append({"id": f"flyai-{row['id']}", "name": str(row["name"]), "lat": lat, "lng": lng,
-                           "area": city, "category": str(row.get("category") or "景点"), "duration": None,
-                           "description": str(row.get("address") or ""), "source": "飞猪 FlyAI"})
-        return places
+        payload = await mcp_call(data_endpoint(), "travel_search_places", {"city": city})
+        if not payload.get("ok") or not isinstance(payload.get("places"), list):
+            raise RuntimeError("飞猪地点查询响应无效")
+        return payload["places"]
     async with httpx.AsyncClient(timeout=15) as client:
         response = await client.get("https://restapi.amap.com/v3/place/text", params={"key": key, "keywords": "景点", "city": city,
                         "citylimit": "true", "offset": 20, "page": 1, "extensions": "all"})

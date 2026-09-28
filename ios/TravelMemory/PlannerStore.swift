@@ -25,7 +25,7 @@ final class PlannerStore: ObservableObject {
         memory = savedMemory
         plan = Self.load(TravelPlan.self, key: "travel-plan-v1")
         originCity = savedMemory.homeCity
-        serverURL = UserDefaults.standard.string(forKey: "travel-api-url") ?? "http://127.0.0.1:4174"
+        serverURL = UserDefaults.standard.string(forKey: "travel-api-url") ?? "http://127.0.0.1:4176"
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: Date())
         let daysUntilFriday = (6 - weekday + 7) % 7 == 0 ? 7 : (6 - weekday + 7) % 7
