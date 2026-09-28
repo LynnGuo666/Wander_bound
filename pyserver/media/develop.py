@@ -10,6 +10,7 @@ import time
 import httpx
 
 from .images import DEFAULT_DEVELOP, normalize_develop
+from .vision import vision_base_url, vision_model, vision_token
 
 CATEGORY_GUIDANCE = {
     "landscape": "Landscape: use a vivid, anime-inspired travel illustration style while preserving the original scene and all subjects. Push ocean blue and sky cyan toward a clear, high-saturation look, add lively separation between water, foam, vegetation, and warm sand, and use a confident but smooth curve. Keep highlight detail in clouds and waves, retain shadow texture, and avoid muddy blacks, clipped skies, neon colors, or content changes.",
@@ -25,9 +26,9 @@ def _content_json(content: str) -> dict:
 
 async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
     started = time.monotonic()
-    base_url = os.getenv("DGX_VISION_BASE_URL", "http://127.0.0.1:18192/v1").rstrip("/")
-    model = os.getenv("DGX_VISION_MODEL", "Qwen3-VL-8B-Instruct")
-    token = os.getenv("DGX_VISION_TOKEN", "")
+    base_url = vision_base_url()
+    model = vision_model()
+    token = vision_token()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     encoded = base64.b64encode(image_bytes).decode("ascii")
     payload = {"model": model, "temperature": 0.1, "max_tokens": 6000,
@@ -59,9 +60,9 @@ async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
 
 async def review(original: bytes, edited: bytes, settings: dict) -> dict:
     started = time.monotonic()
-    base_url = os.getenv("DGX_VISION_BASE_URL", "http://127.0.0.1:18192/v1").rstrip("/")
-    model = os.getenv("DGX_VISION_MODEL", "Qwen3-VL-8B-Instruct")
-    token = os.getenv("DGX_VISION_TOKEN", "")
+    base_url = vision_base_url()
+    model = vision_model()
+    token = vision_token()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     def image_part(data: bytes):
         return {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(data).decode("ascii")}}

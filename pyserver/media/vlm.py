@@ -19,9 +19,22 @@ import time
 import httpx
 from PIL import Image, ImageOps
 
-DEFAULT_BASE_URL = os.getenv("PYSERVER_VLM_BASE_URL", "http://127.0.0.1:9000/v1")
-DEFAULT_MODEL = os.getenv("PYSERVER_VLM_MODEL", "qwen2.5-vl-7b-instruct")
+from .vision import vision_base_url, vision_model
+
 DEFAULT_TIMEOUT = float(os.getenv("PYSERVER_VLM_TIMEOUT", "60"))
+
+
+def _first_env(*names: str) -> str | None:
+    """按顺序取第一个已设置的环境变量。
+
+    选优和精修打的是 Spark 上同一台 vLLM，默认值集中在 `vision` 里，避免两边各写
+    一份、改了端口忘了改模型名；这里允许用 `PYSERVER_VLM_*` 单独覆盖选优那一侧。
+    """
+    for name in names:
+        value = os.getenv(name)
+        if value:
+            return value
+    return None
 
 
 class VLMError(RuntimeError):
@@ -138,9 +151,9 @@ def tag_image(
     网络抖动 / 429 / 5xx / 输出解析失败按 retries 指数退避后仍失败则抛 VLMError。
     注入 client 便于用 MockTransport 测试，不发真实请求。
     """
-    model = model or os.getenv("PYSERVER_VLM_MODEL") or DEFAULT_MODEL
+    model = model or _first_env("PYSERVER_VLM_MODEL") or vision_model()
     image_bytes = compress_for_vlm(image_bytes, max_side or int(os.getenv("PYSERVER_VLM_MAX_SIDE", "768")))
-    base_url = (base_url or os.getenv("PYSERVER_VLM_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
+    base_url = (base_url or _first_env("PYSERVER_VLM_BASE_URL") or vision_base_url()).rstrip("/")
     if api_key is None:
         api_key = os.getenv("PYSERVER_VLM_API_KEY")
     headers = {"Content-Type": "application/json"}
