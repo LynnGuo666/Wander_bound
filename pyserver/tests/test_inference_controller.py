@@ -1,12 +1,16 @@
 """The media worker must preserve jobs and never overlap heavy inference."""
 import asyncio
+import io
 from contextlib import asynccontextmanager
 
 import httpx
+from PIL import Image as PillowImage
 
 from pyserver.app import create_app
 from pyserver.inference.controller import ModelController, ModelSpec
 from pyserver.media.jobs import JobStore
+from pyserver.media import workflow_versions
+from pathlib import Path
 from pyserver.media import MediaStore
 from pyserver.settings import ConfigStore
 from pyserver.trips import TripStore
@@ -16,9 +20,20 @@ class Memory:
     def __init__(self, root):
         self.root = root
         self.saved = []
+        self.trip_id = "11111111-1111-4111-8111-111111111111"
 
-    def bytes(self, _photo_id):
-        return b"photo"
+    def get(self, photo_id):
+        return {"id": photo_id, "tripId": self.trip_id}
+
+    def selection_record(self, trip_id):
+        return {"tripId": trip_id, "batchId": "controller-test", "source": "fixture",
+                "photoIds": ["photo-0", "photo-1", "photo-2"], "updatedAt": "2026-09-28T00:00:00Z"}
+
+    def bytes(self, _photo_id, variant="original"):
+        assert variant == "original"
+        output = io.BytesIO()
+        PillowImage.new("RGB", (8, 8), "red").save(output, format="JPEG")
+        return output.getvalue()
 
     def save_variant(self, photo_id, variant, content):
         self.saved.append((photo_id, variant, content))
@@ -27,8 +42,11 @@ class Memory:
 class Image:
     configured = True
 
-    async def queue(self, *_args):
-        return "prompt-id"
+    def freeze_workflow(self):
+        return workflow_versions.freeze_workflow(Path(__file__).resolve().parents[2] / "workflows/qwen-image-2.1-edit-api.json", "image")
+
+    async def queue(self, *_args, **_kwargs):
+        return _kwargs["prompt_id"]
 
     async def result(self, _prompt_id):
         await asyncio.sleep(0.02)

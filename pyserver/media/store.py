@@ -37,14 +37,22 @@ class MediaStore:
                       key=lambda item: item.get("capturedDay") or "")
 
     def selected(self, trip_id: str) -> dict:
+        selection = self.selection_record(trip_id)
+        if selection is None:
+            selection = {"tripId": trip_id, "batchId": None, "source": None, "photoIds": [], "updatedAt": None}
+        selection = {**selection}
+        selection["photos"] = [photo for photo_id in selection["photoIds"]
+                               if (photo := self.get(photo_id)) and photo.get("tripId") == trip_id]
+        return selection
+
+    def selection_record(self, trip_id: str) -> dict | None:
+        """Return only a real committed selection, without response-only photo data."""
         try:
             uuid.UUID(trip_id)
             selection = json.loads((self.selections_dir / f"{trip_id}.json").read_text())
         except (ValueError, FileNotFoundError, json.JSONDecodeError):
-            selection = {"tripId": trip_id, "batchId": None, "source": None, "photoIds": [], "updatedAt": None}
-        selection["photos"] = [photo for photo_id in selection["photoIds"]
-                               if (photo := self.get(photo_id)) and photo.get("tripId") == trip_id]
-        return selection
+            return None
+        return selection if isinstance(selection, dict) else None
 
     def is_selected(self, photo: dict) -> bool:
         return photo["id"] in self.selected(photo["tripId"])["photoIds"]

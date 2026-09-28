@@ -2,6 +2,10 @@
 
 旅行规划应用：React 网页、SwiftUI iOS 客户端、Python FastAPI 主服务，以及在 DGX Spark 上运行的 Node.js Docker MCP 数据适配器。
 
+## 本地生成阶段交接
+
+接续手帐与旅行视频开发，请先读 [当前进度、证据和剩余任务](docs/delivery-handoff-2026-09-28.md) 与 [合并后接手步骤](docs/handoff/START_HERE.md)。M01/M02 已完成技术验证，M03 停在真实分镜草稿，Web/iOS 新业务入口和完整 H3 短片仍待实现。
+
 ## 本地启动
 
 1. 安装 Python 3.12+、Node.js 22+、npm 和 ffmpeg。首次运行会自动创建 `.venv`、安装 Python/Node 依赖并构建网页。

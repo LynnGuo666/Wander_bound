@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import re
 import uuid
@@ -10,6 +9,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
+
+from . import workflow_versions
 
 FILE = re.compile(r"^[\w. -]{1,180}$")
 
@@ -45,9 +46,41 @@ class ComfyClient:
         except (httpx.HTTPError, ValueError):
             return False
 
-    async def queue(self, image: bytes, prompt: str, seed: int | None = None) -> str:
+    def freeze_workflow(self) -> dict:
         if not self.configured:
             raise RuntimeError("工作流文件未配置")
+        return workflow_versions.freeze_workflow(self.workflow_file, self.kind)
+
+    async def queue(self, image: bytes, prompt: str, seed: int | None = None, *,
+                    workflow_snapshot: dict | None = None, parameters: dict | None = None,
+                    prompt_id: str | None = None) -> str:
+        # Validate before uploading private input. A frozen graph never reads the
+        # current workflow file, even when that file has since been replaced.
+        if prompt_id is not None:
+            try:
+                canonical = str(uuid.UUID(prompt_id))
+            except (ValueError, TypeError, AttributeError):
+                raise ValueError("prompt_id 必须是规范 UUID") from None
+            if canonical != prompt_id:
+                raise ValueError("prompt_id 必须是规范 UUID")
+        snapshot = (workflow_versions.validate_snapshot(workflow_snapshot, self.kind)
+                    if workflow_snapshot is not None else self.freeze_workflow())
+        settings, seed = workflow_versions.validate_parameters(snapshot, parameters, seed)
+        workflow = snapshot["api_graph"]
+        if self.kind == "video":
+            node = workflow.get("6", {})
+            if node.get("class_type") != "MiniMaxH3ImageToVideo" or node.get("inputs", {}).get("width") != 1024 or node["inputs"].get("height") != 576:
+                raise ValueError("视频工作流 API 图不满足目标 16:9 画布")
+            node["inputs"]["length"] = settings["frames"]
+            workflow["14"]["inputs"]["fps"] = settings["fps"]
+            if workflow.get("7", {}).get("inputs", {}).get("noise_seed") != "__TRAVEL_SEED__":
+                raise ValueError("视频工作流未绑定任务 seed")
+        else:
+            node = workflow.get("5", {})
+            if node.get("class_type") != "TextEncodeQwenImage21" or node.get("inputs", {}).get("resolution") != 1024:
+                raise ValueError("图片工作流 API 图分辨率不符合当前策略")
+        image = workflow_versions.prepare_image(image, settings["aspect_ratio"],
+                                                snapshot["input_policy"], settings.get("fit_mode"))
         async with httpx.AsyncClient(timeout=35) as client:
             upload = await client.post(f"{self.base_url}/upload/image", files={"image": (f"travel-{uuid.uuid4()}.jpg", image, "image/jpeg")},
                                        data={"overwrite": "false"})
@@ -55,15 +88,19 @@ class ComfyClient:
             name = upload.json().get("name", "")
             if not FILE.fullmatch(name):
                 raise RuntimeError("ComfyUI 未返回有效图片名")
-            workflow = json.loads(self.workflow_file.read_text())
             text = f"<image1> {prompt}" if self.kind == "image" and "<image1>" not in prompt else prompt
             workflow = _replace(workflow, {"__TRAVEL_IMAGE__": name, "__TRAVEL_PROMPT__": text,
                                            "__TRAVEL_SEED__": seed if seed is not None else 0})
-            queued = await client.post(f"{self.base_url}/prompt", json={"prompt": workflow, "client_id": str(uuid.uuid4())})
+            submission = {"prompt": workflow, "client_id": str(uuid.uuid4())}
+            if prompt_id is not None:
+                submission["prompt_id"] = prompt_id
+            queued = await client.post(f"{self.base_url}/prompt", json=submission)
             queued.raise_for_status()
             body = queued.json()
             if not body.get("prompt_id") or body.get("error"):
                 raise RuntimeError(f"ComfyUI 拒绝工作流：{body.get('error')}")
+            if prompt_id is not None and body["prompt_id"] != prompt_id:
+                raise RuntimeError("ComfyUI 返回的任务编号不匹配；请核对已保存的提交编号")
             return body["prompt_id"]
 
     async def result(self, prompt_id: str) -> tuple[str, dict | None]:

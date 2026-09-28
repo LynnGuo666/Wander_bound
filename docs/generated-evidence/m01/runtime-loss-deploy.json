@@ -1,0 +1,26 @@
+{
+  "observedAtUtc": "2026-09-28T13:30:43.399054+00:00",
+  "priorHead": "a25a09ffaafca790c0363bb041f99046189c47d8",
+  "deployedHead": "d055caed1c290b81baad1d57dcfab46cc25621db",
+  "branch": "codex/m01-validation-20260928",
+  "clean": true,
+  "priorFileSha256": {
+    "pyserver/media/jobs.py": "8d102cd72c978a37e95c894ece9b7dc7471473b684249f8c1b51421450f7d0f0",
+    "pyserver/media/job_routes.py": "a0cb42f30b66539db43df0bbc5a3ca19443a7f77cd558a355b22b4beb26f24e3",
+    "pyserver/tests/test_local_runtime.py": "e1581669b528c912abf0670b6d28bcbb3cce65fd75c6db648f7a27beece9b8bd"
+  },
+  "deployedFileSha256": {
+    "pyserver/media/jobs.py": "a68aedb7de64f39f828f842326d4e9f60a61da45f0d9af08c1e9825e4fa096b3",
+    "pyserver/media/job_routes.py": "ec4b112b33d2c4f0624c36272fbc9a7dcf125c5bfa12e6d99c5f917f68d9996e",
+    "pyserver/tests/test_local_runtime.py": "6a3f8cf6722033e5899799c19dce605689aeb2f32a75a54c9490383933af2026"
+  },
+  "local64a5875FileSha256": {
+    "pyserver/media/jobs.py": "a68aedb7de64f39f828f842326d4e9f60a61da45f0d9af08c1e9825e4fa096b3",
+    "pyserver/media/job_routes.py": "ec4b112b33d2c4f0624c36272fbc9a7dcf125c5bfa12e6d99c5f917f68d9996e",
+    "pyserver/tests/test_local_runtime.py": "6a3f8cf6722033e5899799c19dce605689aeb2f32a75a54c9490383933af2026"
+  },
+  "exactMapping": true,
+  "remoteRuntimeTest": "14 passed in 0.33s",
+  "apiPidBeforeDeployRestart": "1160143",
+  "apiPidAfterDeployRestart": "1162125"
+}
