@@ -24,6 +24,13 @@ def _content_json(content: str) -> dict:
     text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.I)
     return json.loads(text)
 
+def _client_timeout() -> httpx.Timeout:
+    """读超时 180 秒：实测一次精修建议 100.3 秒，写死 90 秒正好卡在边缘，时好时坏。
+    连接超时单独给 8 秒，连不上多半是本机隧道没起，等再久也没用。"""
+    read = float(os.getenv("DGX_VISION_TIMEOUT", "180"))
+    return httpx.Timeout(read, connect=8)
+
+
 async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
     started = time.monotonic()
     base_url = vision_base_url()
@@ -39,7 +46,7 @@ async def suggest(image_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
                 {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}},
             ]}]}
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(90, connect=8)) as client:
+        async with httpx.AsyncClient(timeout=_client_timeout()) as client:
             response = await client.post(f"{base_url}/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
             content = response.json()["choices"][0]["message"]["content"]
@@ -73,7 +80,7 @@ async def review(original: bytes, edited: bytes, settings: dict) -> dict:
         "messages": [{"role": "system", "content": "Compare the original and edited travel photo. Return only JSON with keys approved (boolean), note (short text). Reject blown highlights, blocked shadows, unnatural skin/color, excessive sharpening, or a crop that removes important content. Do not suggest content generation."},
             {"role": "user", "content": [{"type": "text", "text": f"Original then edited. Settings: {json.dumps(settings)}"}, image_part(original), image_part(edited)]}]}
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(90, connect=8)) as client:
+        async with httpx.AsyncClient(timeout=_client_timeout()) as client:
             response = await client.post(f"{base_url}/chat/completions", headers=headers, json=payload)
             response.raise_for_status()
             result = _content_json(response.json()["choices"][0]["message"]["content"])

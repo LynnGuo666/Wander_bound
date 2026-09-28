@@ -24,11 +24,12 @@ Content-Type: application/json
 
 DGX 视觉建议通过 OpenAI 兼容的聊天接口工作：
 
-- `DGX_VISION_BASE_URL`：默认 `http://127.0.0.1:18192/v1`（团队约定入口，Spark 上 vLLM 听 8192，由 `spark-tunnel.sh` 转发）
+- `DGX_VISION_BASE_URL`：默认 `http://127.0.0.1:18192/v1`（Spark 上 vLLM 听 8192，由 `spark-tunnel.sh` 转发）
 - `DGX_VISION_MODEL`：默认 `qwen38-27b`，对应服务端 `--served-model-name`，对不上会 400
 - `DGX_VISION_TOKEN`：可选；仅在模型服务启用鉴权时设置
+- `DGX_VISION_TIMEOUT`：默认 180 秒。实测一次建议 100.3 秒，写死 90 秒会时好时坏
 
-这三个变量由 `pyserver/media/vision.py` 统一解析，照片选优的打标（`vlm`）用的是同一份默认值，两边不会各指一个模型。选优侧想单独覆盖，另设 `PYSERVER_VLM_BASE_URL` / `PYSERVER_VLM_MODEL` / `PYSERVER_VLM_API_KEY`。
+这四个变量由 `pyserver/media/vision.py` 统一解析，照片选优的打标（`vlm`）用的是同一份默认值，两边不会各指一个模型。选优侧想单独覆盖，另设 `PYSERVER_VLM_BASE_URL` / `PYSERVER_VLM_MODEL` / `PYSERVER_VLM_API_KEY` / `PYSERVER_VLM_TIMEOUT`。
 
 | 接口 | 请求 | 成功响应 |
 |---|---|---|
