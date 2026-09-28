@@ -1,7 +1,25 @@
 """Post-plan non-MCP dining and ground data from Amap."""
 from __future__ import annotations
 
+from .. import providers
 from ..providers import amap
+
+
+async def search_attractions(plan: dict, credentials: dict, priorities: dict) -> dict:
+    selected = [{"id": stop["id"], "name": stop["name"], "visitDate": day["date"]}
+                for day in plan["itinerary"] for stop in day["stops"]]
+    try:
+        offers = await providers.search_attractions(plan["destination"], selected, credentials, priorities) if selected else []
+        plan["attractionOffers"] = offers
+        plan["providerStatus"]["attractions"] = {"configured": True,
+            "result": "ok" if offers else "本次无景区产品", "label": "飞猪/途牛景区产品"}
+        return {"ok": True, "products": [{field: offer.get(field) for field in ("name", "provider", "productName", "price", "priceDate")}
+                                          for offer in offers]}
+    except Exception as exc:
+        plan["attractionOffers"] = []
+        plan["providerStatus"]["attractions"] = {"configured": True, "error": True,
+            "result": str(exc)[:160], "label": "飞猪/途牛景区产品"}
+        return {"ok": False, "code": "attractions_failed", "message": str(exc)[:160]}
 
 
 async def search_dining(plan: dict, key: str | None) -> dict:

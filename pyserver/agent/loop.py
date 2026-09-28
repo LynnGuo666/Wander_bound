@@ -137,6 +137,11 @@ async def run_agent(trip: dict, request: dict, credentials: dict, store: TripSto
         if state.get("plan"):
             yield event("fallback_end", status="completed")
     if state.get("plan") and not state.get("enrichmentDone"):
+        yield event("tool_start", turn=turns, source="server_enrichment", tool="search_attractions", input={"destination": state["destination"]})
+        result = await enrichment.search_attractions(state["plan"], credentials, priorities or {})
+        yield event("tool_end", turn=turns, source="server_enrichment", tool="search_attractions",
+                    input={"destination": state["destination"]}, output=result,
+                    ok=result.get("ok", False), code=result.get("code", "ok"))
         for name, operation in (("search_dining", enrichment.search_dining), ("explore_ground", enrichment.explore_ground)):
             yield event("tool_start", turn=turns, source="server_enrichment", tool=name, input={"destination": state["destination"]})
             result = await operation(state["plan"], credentials.get("amap"))

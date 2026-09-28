@@ -173,6 +173,37 @@ export function createRequestHandler({
         return respond(res, error.status || 502, { error: error.status ? error.message : '住宿数据服务失败' }, origin);
       }
     }
+    if (req.method === 'POST' && req.url === '/api/data/attractions') {
+      try {
+        const input = await readJson(req);
+        const city = typeof input.city === 'string' && input.city.trim() && input.city.length <= 100 ? input.city.trim() : null;
+        const places = input.places;
+        if (!city || !Array.isArray(places) || places.length > 7 || places.some(place =>
+          !place || typeof place !== 'object' || typeof place.id !== 'string' || !place.id || place.id.length > 100
+          || typeof place.name !== 'string' || !place.name.trim() || place.name.length > 100
+          || typeof place.visitDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(place.visitDate))) {
+          throw httpError(400, '景区产品查询参数无效');
+        }
+        const config = await configStore.read();
+        const credentials = { ...config.credentials, ...extractCredentials(input) };
+        const priorities = input.priorities === undefined ? config.priorities : mergeConfig(config, { priorities: input.priorities }).priorities;
+        const providers = createRequestProviders(credentials);
+        const found = await providers.searchAttractionProducts(city, places);
+        const names = new Set(places.map(place => place.name));
+        const rank = item => {
+          const order = priorities.attractions || [];
+          const source = item.sourceId || (/飞猪/.test(item.provider) ? 'flyai' : /途牛/.test(item.provider) ? 'tuniu' : '');
+          const index = order.indexOf(source);
+          return index < 0 ? order.length : index;
+        };
+        const offers = (Array.isArray(found) ? found : []).filter(item => item?.provider && names.has(item.name)
+          && (item.price === null || (Number.isFinite(item.price) && item.price >= 0))
+          && (!item.bookingUrl || /^https:\/\//.test(item.bookingUrl))).slice(0, 60).sort((a, b) => rank(a) - rank(b));
+        return respond(res, 200, { ok: true, offers, source: 'OTA Docker MCP' }, origin);
+      } catch (error) {
+        return respond(res, error.status || 502, { error: error.status ? error.message : '景区产品数据服务失败' }, origin);
+      }
+    }
     if (req.method === 'POST' && (req.url === '/api/plan' || req.url === '/api/plan/stream')) {
       const stream = req.url.endsWith('/stream');
       let session = null;
