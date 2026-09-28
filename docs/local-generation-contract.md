@@ -38,4 +38,6 @@
 
 请求错误放在 HTTP JSON 的 `detail: {code, message}`，资格错误返回 400/404/409；仅真实后端未配置的旧生成入口返回 503。核心错误码有 `SELECTION_MISSING`、`SELECTION_EMPTY`、`SELECTION_INVALID`、`PHOTO_IDS_INVALID`、`PHOTO_IDS_DUPLICATE`、`PHOTO_NOT_FOUND`、`PHOTO_WRONG_TRIP`、`PHOTO_NOT_SELECTED`、`ORIGINAL_UNREADABLE`、`ORIGINAL_CHANGED`、`SNAPSHOT_INVALID`、`REQUEST_INVALID`、`PROMPT_INVALID`。旧 job 状态增加 `errorCode` 字段，已有 `error` 文本保留。错误类型的 retry 路由在修改 job 前核对存在、类型和 failed 状态，不能排队另一类任务。
 
-当前节点的验证使用临时合成 JPEG、内存 HTTP 客户端和替身生成适配器；它不代表真实 Qwen/H3 生成、模型工作流、视频合成或重启恢复验收。
+契约层测试使用临时合成 JPEG、内存 HTTP 客户端和替身生成适配器，只证明资格/DTO/错误合同；后续 M01 节点另取得真实 Qwen、H3、API 重启及恢复证据，分别见 [版本化工作流](local-workflows.md)、[运行与恢复](local-runtime.md) 和 [公共交接](local-generation-handoff.md)。这些探针仍不代表 M02 五风格整页手帐或 M03 Step 分镜及约 20 秒配乐成片已实现。
+
+客户端应区分合同异常和旧路由异常：上述结构化 `ContractError` 经过 FastAPI `HTTPException` 后为 `{"detail":{"code":"...","message":"..."}}`；部分旧路由的 404 `detail` 仍是字符串。当前产品 DTO 的 `prepared` 记录没有 workflow/seed/parameters 冻结或产品 retry/下载接口；冻结 workflow、seed、参数及 prompt UUID 对账是现有可执行 `redraw/memories` 的运行基础，后续产品 runner 必须显式接线，不能因为同处 JobStore 就推断它已执行。

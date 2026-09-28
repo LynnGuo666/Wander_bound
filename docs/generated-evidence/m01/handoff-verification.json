@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "local_head_before_commit": "7528734d4411b219aece99fe39074f82de3c5593",
+  "remote_head_read_only": "f4aea97abb70bc044708cba32990218b10217257",
+  "commands": [
+    {
+      "command": ".venv/bin/python -m pytest pyserver/tests -q",
+      "exit_code": 0,
+      "result": "71 passed, 7 Pillow Image.getdata deprecation warnings"
+    },
+    {
+      "command": "npm run check",
+      "first_attempt": "sandbox listen EPERM on 127.0.0.1 in travel-data-mcp test; 15 passed, 1 blocked",
+      "rerun_exit_code": 0,
+      "result": "Node test suite passed; Vite build passed",
+      "note": "Rerun allowed local loopback listener; no source changes between attempts"
+    }
+  ],
+  "remote_checks": "handoff-api-readonly.json",
+  "cpu_ffmpeg": "handoff-ffmpeg-compare.json",
+  "gpu_jobs_submitted": 0,
+  "remote_deployment_changed": false,
+  "remote_service_restarted": false,
+  "selection_or_job_mutated": false,
+  "limits": [
+    "No new M02/M03 product runner was exercised; prepared remains non-executable",
+    "No new Step storyboard call or licensed music verification",
+    "H3 cover clip online Comfy history was not obtained in the earlier probe; persisted job/clip metadata and output are separate evidence"
+  ]
+}
