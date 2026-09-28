@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import io
+import hashlib
 import json
 import os
 import secrets
@@ -15,7 +16,7 @@ import httpx
 from PIL import Image
 
 from .comfy import ComfyClient
-from . import workflow_versions
+from . import workflow_versions, scrapbook
 from .store import MediaStore
 from .contracts import (ContractError, original_from_snapshot, product_contract,
                         selected_original_snapshot, validate_snapshot)
@@ -60,16 +61,16 @@ class JobStore:
         os.replace(temporary, filename)
 
     def submit(self, kind: str, payload: dict) -> dict:
-        if kind not in {"edit", "memory"}:
+        if kind not in {"edit", "memory", "scrapbook"}:
             raise ValueError("不支持的生成任务类型")
-        if kind == "edit":
+        if kind in {"edit", "scrapbook"}:
             photo = self.media.get(payload["photoId"])
             if photo is None:
                 raise ContractError("PHOTO_NOT_FOUND", "照片不存在", 404)
             snapshot = selected_original_snapshot(self.media, photo.get("tripId"), [payload["photoId"]], maximum=1)
         else:
             snapshot = selected_original_snapshot(self.media, payload.get("tripId"), payload.get("photoIds"), maximum=8)
-        adapter = self.image if kind == "edit" else self.video
+        adapter = self.image if kind in {"edit", "scrapbook"} else self.video
         if not adapter or not adapter.configured:
             raise ValueError("Spark 工作流未配置")
         try:
@@ -87,16 +88,33 @@ class JobStore:
                      for index, photo_id in enumerate(payload["photoIds"])]
         else:
             clips = None
-        job = {"id": str(uuid.uuid4()), "kind": kind, "status": "queued", "backend": "dgx-spark-qwen-image-2.1" if kind == "edit" else "dgx-spark-minimax-h3",
+        job = {"id": str(uuid.uuid4()), "kind": kind, "status": "queued", "backend": "dgx-spark-qwen-image-2.1" if kind in {"edit", "scrapbook"} else "dgx-spark-minimax-h3",
                "createdAt": now(), "attempt": 1, "progressPercent": 0, "progressLabel": "等待调度",
                **payload, "selectionSnapshot": copy.deepcopy(snapshot),
                "workflowSnapshot": copy.deepcopy(workflow_snapshot),
                "parameters": copy.deepcopy(parameters), "seed": seed}
         if clips is not None:
             job["clips"] = clips
+        if kind == "scrapbook":
+            job.update(productKind="scrapbook", resultKind="image", executionReady=True, result=None)
         self.save(job)
         self._schedule()
         return job
+
+    def submit_scrapbook(self, payload: dict) -> dict:
+        photo = self.media.get(payload.get("photoId"))
+        if not photo:
+            raise ContractError("PHOTO_NOT_FOUND", "照片不存在", 404)
+        if photo.get("tripId") != payload.get("tripId"):
+            raise ContractError("PHOTO_WRONG_TRIP", "照片不属于该行程", 409)
+        style = scrapbook.style_snapshot(payload.get("styleId"))
+        title, font = scrapbook.title_contract(payload.get("title", ""))
+        return self.submit("scrapbook", {
+            "tripId": payload["tripId"], "photoId": photo["id"],
+            "styleSnapshot": style, "styleId": style["id"], "title": title,
+            "fontSnapshot": font, "prompt": style["prompt"],
+            "seed": payload.get("seed", style["recommendedSeed"]),
+            "parameters": {"aspect_ratio": "3:2"}})
 
     def prepare_product(self, payload: dict) -> dict:
         """Persist a validated product DTO; later feature tasks provide actual runners."""
@@ -121,17 +139,17 @@ class JobStore:
 
     def _validate_job_inputs(self, job: dict) -> None:
         snapshot = job.get("selectionSnapshot")
-        expected = [job.get("photoId")] if job.get("kind") == "edit" else job.get("photoIds")
-        if (job.get("kind") not in {"edit", "memory"} or not isinstance(snapshot, dict)
+        expected = [job.get("photoId")] if job.get("kind") in {"edit", "scrapbook"} else job.get("photoIds")
+        if (job.get("kind") not in {"edit", "memory", "scrapbook"} or not isinstance(snapshot, dict)
                 or not isinstance(expected, list) or not expected
                 or any(not isinstance(photo_id, str) for photo_id in expected)
                 or snapshot.get("inputPhotoIds") != expected
-                or (job.get("kind") == "memory" and snapshot.get("tripId") != job.get("tripId"))):
+                or (job.get("kind") in {"memory", "scrapbook"} and snapshot.get("tripId") != job.get("tripId"))):
             raise ContractError("SNAPSHOT_INVALID", "任务缺少有效的输入快照", 409)
         validate_snapshot(snapshot)
         for photo_id in expected:
             original_from_snapshot(self.media, snapshot, photo_id)
-        adapter_kind = "image" if job["kind"] == "edit" else "video"
+        adapter_kind = "image" if job["kind"] in {"edit", "scrapbook"} else "video"
         try:
             workflow = workflow_versions.validate_snapshot(job.get("workflowSnapshot"), adapter_kind)
             parameters, seed = workflow_versions.validate_parameters(
@@ -140,6 +158,15 @@ class JobStore:
             raise ContractError("WORKFLOW_SNAPSHOT_INVALID", f"任务工作流快照无效：{exc}", 409) from exc
         if parameters != job.get("parameters") or seed != job.get("seed"):
             raise ContractError("WORKFLOW_SNAPSHOT_INVALID", "任务工作流参数与快照不一致", 409)
+        if job["kind"] == "scrapbook":
+            style = job.get("styleSnapshot")
+            if not isinstance(style, dict):
+                raise ContractError("PRESET_SNAPSHOT_INVALID", "任务缺少风格快照", 409)
+            digest = hashlib.sha256(json.dumps({k: v for k, v in style.items() if k != "sha256"},
+                ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+            if (style.get("sha256") != digest or style.get("id") != job.get("styleId")
+                    or style.get("prompt") != job.get("prompt") or parameters.get("aspect_ratio") != "3:2"):
+                raise ContractError("PRESET_SNAPSHOT_INVALID", "任务风格或画幅快照不一致", 409)
         if job["kind"] == "memory":
             clips = job.get("clips")
             if (not isinstance(clips, list) or len(clips) != len(expected)
@@ -157,10 +184,14 @@ class JobStore:
 
     def _image_result_valid(self, job: dict) -> bool:
         variant = f"ai-{job['id']}"
-        photo = self.media.get(job["photoId"]) or {}
-        if variant not in photo.get("variants", []):
-            return False
-        content = self.media.bytes(job["photoId"], variant)
+        if job["kind"] == "scrapbook":
+            path = self.root / job["id"] / "generated.jpg"
+            content = path.read_bytes() if path.is_file() else None
+        else:
+            photo = self.media.get(job["photoId"]) or {}
+            if variant not in photo.get("variants", []):
+                return False
+            content = self.media.bytes(job["photoId"], variant)
         if not content:
             return False
         try:
@@ -191,7 +222,7 @@ class JobStore:
             return False
 
     def _can_finish_without_model(self, job: dict) -> bool:
-        if job["kind"] == "edit":
+        if job["kind"] in {"edit", "scrapbook"}:
             return self._image_result_valid(job)
         job_dir = self.root / job["id"]
         clips = job["clips"]
@@ -213,7 +244,7 @@ class JobStore:
                 job["progressLabel"] = "加载模型服务"
                 job["progressPercent"] = 5
                 self.save(job)
-                async with self.controller.use("image" if job["kind"] == "edit" else "video"):
+                async with self.controller.use("image" if job["kind"] in {"edit", "scrapbook"} else "video"):
                     await self._run(job["id"])
             except asyncio.CancelledError:
                 raise
@@ -296,10 +327,13 @@ class JobStore:
             # current outcome once this run has acquired the controller.
             job["error"] = None
             job.pop("errorCode", None)
-            if job["kind"] == "edit":
+            if job["kind"] in {"edit", "scrapbook"}:
                 variant = f"ai-{job['id']}"
                 if self._image_result_valid(job):
-                    job["variant"] = variant
+                    if job["kind"] == "scrapbook":
+                        self._finish_scrapbook(job)
+                    else:
+                        job["variant"] = variant
                     job["status"] = "succeeded"
                     job["progressLabel"] = "已恢复已有图片产物"
                     job["progressPercent"] = 100
@@ -311,7 +345,7 @@ class JobStore:
             job["progressLabel"] = "上传输入并提交工作流"
             job["progressPercent"] = 10
             self.save(job)
-            if job["kind"] == "edit":
+            if job["kind"] in {"edit", "scrapbook"}:
                 if not job.get("promptId"):
                     source = original_from_snapshot(self.media, job.get("selectionSnapshot"), job["photoId"])
                     job["promptId"] = str(uuid.uuid4())
@@ -351,8 +385,19 @@ class JobStore:
                 job["progressLabel"] = "保存图片"
                 job["progressPercent"] = 95
                 self.save(job)
-                job["variant"] = f"ai-{job['id']}"
-                self.media.save_variant(job["photoId"], job["variant"], image)
+                if job["kind"] == "scrapbook":
+                    directory = self.root / job["id"]
+                    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+                    temporary = directory / "generated.pending.jpg"
+                    with Image.open(io.BytesIO(image)) as generated:
+                        generated.load()
+                        generated.convert("RGB").save(temporary, "JPEG", quality=95)
+                    os.chmod(temporary, 0o600)
+                    os.replace(temporary, directory / "generated.jpg")
+                    self._finish_scrapbook(job)
+                else:
+                    job["variant"] = f"ai-{job['id']}"
+                    self.media.save_variant(job["photoId"], job["variant"], image)
             else:
                 job_dir = self.root / job_id
                 job_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -442,6 +487,21 @@ class JobStore:
             self._fail(job, exc)
             return
         self.save(job)
+
+    def _finish_scrapbook(self, job: dict) -> None:
+        directory = self.root / job["id"]
+        full, thumb, info = scrapbook.render_page(
+            (directory / "generated.jpg").read_bytes(), job["title"], job.get("fontSnapshot"))
+        for name, data in (("scrapbook.jpg", full), ("thumbnail.jpg", thumb)):
+            temporary = directory / (name + ".tmp")
+            temporary.write_bytes(data)
+            os.chmod(temporary, 0o600)
+            os.replace(temporary, directory / name)
+        base = f"/api/media/generation-jobs/{job['id']}"
+        job["result"] = {**info, "imageUrl": base + "/image", "thumbnailUrl": base + "/thumbnail",
+                         "sha256": hashlib.sha256(full).hexdigest(), "title": job["title"],
+                         "styleId": job["styleId"], "styleVersion": job["styleSnapshot"]["version"],
+                         "presetSha256": job["styleSnapshot"]["sha256"], "seed": job["seed"]}
 
     def retry(self, job_id: str, *, expected_kind: str | None = None) -> dict | None:
         job = self.get(job_id)

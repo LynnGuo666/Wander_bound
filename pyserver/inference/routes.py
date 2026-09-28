@@ -19,7 +19,7 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
     async def status():
         result = await controller.status()
         pending = jobs.pending()
-        result["queue"] = {"total": len(pending), "image": sum(job["kind"] == "edit" for job in pending),
+        result["queue"] = {"total": len(pending), "image": sum(job["kind"] in {"edit", "scrapbook"} for job in pending),
                            "video": sum(job["kind"] == "memory" for job in pending),
                            "jobs": [{key: job.get(key) for key in ("id", "kind", "status", "progressLabel", "progressPercent", "completedClips")}
                                     for job in pending]}
@@ -41,7 +41,8 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
     @router.post("/api/inference/models/{name}/release")
     async def release(name: str, request: Request):
         require_media_auth(request)
-        if any(job["kind"] == ("edit" if name == "image" else "memory") for job in jobs.pending()) and name in {"image", "video"}:
+        kinds = {"image": {"edit", "scrapbook"}, "video": {"memory"}}.get(name, set())
+        if any(job["kind"] in kinds for job in jobs.pending()):
             raise HTTPException(409, "该模型仍有待处理任务")
         try:
             await controller.release(name)

@@ -8,6 +8,7 @@ from .store import MediaStore
 from .jobs import JobStore
 from .auth import require_media_auth
 from .contracts import ContractError, MAX_PROMPT_LENGTH, PRODUCT_KINDS
+from .scrapbook import style_catalog
 
 
 def _contract_error(exc: ContractError) -> HTTPException:
@@ -27,6 +28,59 @@ def _require_trip(trips: TripStore, trip_id: object) -> None:
 
 def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter:
     router = APIRouter()
+    @router.get("/api/media/scrapbook-styles")
+    async def scrapbook_styles(request: Request):
+        require_media_auth(request)
+        return {"styles": style_catalog()}
+
+    @router.post("/api/media/scrapbooks")
+    async def create_scrapbook(request: Request, payload: dict):
+        require_media_auth(request)
+        _fields(payload, {"tripId", "photoId", "styleId", "title", "seed"})
+        _require_trip(trips, payload.get("tripId"))
+        if not isinstance(payload.get("photoId"), str):
+            raise HTTPException(400, {"code": "PHOTO_ID_INVALID", "message": "photoId 无效"})
+        try:
+            job = jobs.submit_scrapbook(payload)
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
+        except ValueError as exc:
+            raise HTTPException(503, {"code": "WORKFLOW_UNAVAILABLE", "message": str(exc)}) from exc
+        return JSONResponse({key: job[key] for key in
+                             ("id", "productKind", "resultKind", "status", "executionReady", "seed", "selectionSnapshot")},
+                            status_code=202)
+
+    @router.post("/api/media/generation-jobs/{job_id}/retry")
+    async def retry_scrapbook(job_id: str, request: Request):
+        require_media_auth(request)
+        current = jobs.get(job_id)
+        if not current or current.get("kind") != "scrapbook" or current.get("status") != "failed":
+            raise HTTPException(409, {"code": "JOB_NOT_RETRYABLE", "message": "此任务不能重试"})
+        try:
+            job = jobs.retry(job_id, expected_kind="scrapbook")
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
+        if not job:
+            raise HTTPException(409, {"code": "RETRY_LIMIT_REACHED", "message": "已达到重试上限"})
+        return JSONResponse({"id": job_id, "status": job["status"], "attempt": job["attempt"]}, status_code=202)
+
+    @router.get("/api/media/generation-jobs/{job_id}/image")
+    async def scrapbook_image(job_id: str, request: Request):
+        return scrapbook_file(job_id, request, "scrapbook.jpg")
+
+    @router.get("/api/media/generation-jobs/{job_id}/thumbnail")
+    async def scrapbook_thumbnail(job_id: str, request: Request):
+        return scrapbook_file(job_id, request, "thumbnail.jpg")
+
+    def scrapbook_file(job_id: str, request: Request, name: str):
+        require_media_auth(request)
+        job = jobs.get(job_id)
+        if not job or job.get("kind") != "scrapbook":
+            raise HTTPException(404, {"code": "JOB_NOT_FOUND", "message": "手帐不存在"})
+        path = jobs.root / job_id / name
+        if job["status"] != "succeeded" or not path.is_file():
+            raise HTTPException(409, {"code": "RESULT_NOT_READY", "message": "手帐尚未生成"})
+        return FileResponse(path, media_type="image/jpeg", filename=name)
     @router.post("/api/media/memories")
     async def create_memory(request: Request, payload: dict):
         require_media_auth(request)
@@ -91,7 +145,12 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
             raise HTTPException(404, {"code": "JOB_NOT_FOUND", "message": "任务不存在"})
         return {key: job.get(key) for key in
                 ("id", "productKind", "resultKind", "status", "executionReady", "backend",
-                 "createdAt", "startedAt", "completedAt", "selectionSnapshot", "result", "error")}
+                 "createdAt", "startedAt", "completedAt", "selectionSnapshot", "result", "error", "errorCode",
+                 "styleId", "seed", "parameters", "title", "attempt", "progressLabel", "progressPercent")} | {
+                    "styleVersion": (job.get("styleSnapshot") or {}).get("version"),
+                    "presetSha256": (job.get("styleSnapshot") or {}).get("sha256"),
+                    "workflowVersion": (job.get("workflowSnapshot") or {}).get("workflow_version"),
+                    "workflowSnapshotSha256": (job.get("workflowSnapshot") or {}).get("snapshot_hash")}
 
     @router.get("/api/media/generation-jobs/{job_id}/result")
     async def generation_job_result(job_id: str, request: Request):
