@@ -1,0 +1,395 @@
+{
+  "pid": "1177996",
+  "items": [
+    {
+      "styleId": "watercolor",
+      "title": "黄石的秋天",
+      "intent": true,
+      "http": 202,
+      "response": {
+        "id": "9b1609cb-362b-433e-9479-1610e02f0869",
+        "productKind": "scrapbook",
+        "resultKind": "image",
+        "status": "queued",
+        "executionReady": true,
+        "seed": 2026092901,
+        "selectionSnapshot": {
+          "schemaVersion": 1,
+          "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+          "selection": {
+            "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+            "batchId": "m01-public-yellowstone-20260928-v1",
+            "source": "manual-acceptance-20260928",
+            "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+            "photoIds": [
+              "199b155d-0c14-4673-8d25-5de27f175676",
+              "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+              "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+              "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+            ],
+            "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+          },
+          "inputPhotoIds": [
+            "199b155d-0c14-4673-8d25-5de27f175676"
+          ],
+          "originals": [
+            {
+              "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+              "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+            }
+          ],
+          "inputVariant": "original"
+        }
+      }
+    },
+    {
+      "styleId": "papercut",
+      "title": "Autumn in Yellowstone",
+      "intent": true,
+      "http": 202,
+      "response": {
+        "id": "e3af1e3e-31db-4fa5-8a92-d5ec92f6c8ff",
+        "productKind": "scrapbook",
+        "resultKind": "image",
+        "status": "queued",
+        "executionReady": true,
+        "seed": 2026092902,
+        "selectionSnapshot": {
+          "schemaVersion": 1,
+          "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+          "selection": {
+            "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+            "batchId": "m01-public-yellowstone-20260928-v1",
+            "source": "manual-acceptance-20260928",
+            "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+            "photoIds": [
+              "199b155d-0c14-4673-8d25-5de27f175676",
+              "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+              "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+              "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+            ],
+            "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+          },
+          "inputPhotoIds": [
+            "199b155d-0c14-4673-8d25-5de27f175676"
+          ],
+          "originals": [
+            {
+              "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+              "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+            }
+          ],
+          "inputVariant": "original"
+        }
+      }
+    },
+    {
+      "styleId": "clay",
+      "title": "",
+      "intent": true,
+      "http": 202,
+      "response": {
+        "id": "e6c0c55c-2eea-462d-91bd-37fb6fb2f99e",
+        "productKind": "scrapbook",
+        "resultKind": "image",
+        "status": "queued",
+        "executionReady": true,
+        "seed": 2026092903,
+        "selectionSnapshot": {
+          "schemaVersion": 1,
+          "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+          "selection": {
+            "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+            "batchId": "m01-public-yellowstone-20260928-v1",
+            "source": "manual-acceptance-20260928",
+            "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+            "photoIds": [
+              "199b155d-0c14-4673-8d25-5de27f175676",
+              "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+              "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+              "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+            ],
+            "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+          },
+          "inputPhotoIds": [
+            "199b155d-0c14-4673-8d25-5de27f175676"
+          ],
+          "originals": [
+            {
+              "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+              "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+            }
+          ],
+          "inputVariant": "original"
+        }
+      }
+    }
+  ],
+  "negativeChecks": [
+    {
+      "http": 409,
+      "body": {
+        "detail": {
+          "code": "PHOTO_NOT_SELECTED",
+          "message": "照片未在选优清单中"
+        }
+      }
+    },
+    {
+      "http": 400,
+      "body": {
+        "detail": {
+          "code": "STYLE_INVALID",
+          "message": "请选择水彩、层叠剪纸、黏土、网点漫画或像素"
+        }
+      }
+    },
+    {
+      "http": 400,
+      "body": {
+        "detail": {
+          "code": "TITLE_INVALID",
+          "message": "标题最多32字符，不能包含换行或控制字符"
+        }
+      }
+    }
+  ],
+  "catalog": {
+    "styles": [
+      {
+        "id": "watercolor",
+        "version": "1.1.0",
+        "layoutVersion": "1.0.0",
+        "name": "水彩",
+        "description": "柔和渗色与细腻纸纹",
+        "recommendedSeed": 2026092901,
+        "sha256": "a65dabb4438996c1270554e10a90c9f1cda2f30b0e78f166ee395842c7a60870"
+      },
+      {
+        "id": "papercut",
+        "version": "1.1.0",
+        "layoutVersion": "1.0.0",
+        "name": "层叠剪纸",
+        "description": "纸层、切边与浅浮雕投影",
+        "recommendedSeed": 2026092902,
+        "sha256": "66dc270e8fbb757c5c0db1ffcb5cb333f4376ff68c2f3ebcde2b8988c215a14e"
+      },
+      {
+        "id": "clay",
+        "version": "1.0.0",
+        "layoutVersion": "1.0.0",
+        "name": "黏土",
+        "description": "圆润塑形与细小手工压痕",
+        "recommendedSeed": 2026092903,
+        "sha256": "47d0eca65041affdbc0751c8e84024e4c15a8441c3ca21dbd6171417a06d8648"
+      },
+      {
+        "id": "halftone",
+        "version": "1.0.0",
+        "layoutVersion": "1.0.0",
+        "name": "网点漫画",
+        "description": "墨线、套色与印刷网点",
+        "recommendedSeed": 2026092904,
+        "sha256": "2b4b88898fb96c74e0822f193da3986f9b0dfb490cb4738f1c50c60b76522df8"
+      },
+      {
+        "id": "pixel",
+        "version": "1.0.0",
+        "layoutVersion": "1.0.0",
+        "name": "像素",
+        "description": "方形网格与有限调色板",
+        "recommendedSeed": 2026092905,
+        "sha256": "ddd51a0f71369b118cb2a47402aa415d3c311869b6c70bda5ebe326c0684a394"
+      }
+    ]
+  },
+  "selectionBefore": {
+    "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+    "batchId": "m01-public-yellowstone-20260928-v1",
+    "source": "manual-acceptance-20260928",
+    "photoIds": [
+      "199b155d-0c14-4673-8d25-5de27f175676",
+      "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+      "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+      "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+    ],
+    "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+    "photos": [
+      {
+        "id": "199b155d-0c14-4673-8d25-5de27f175676",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": "2014-10-10",
+        "width": 1920,
+        "height": 1179,
+        "analysis": {
+          "width": 1920,
+          "height": 1179
+        },
+        "variants": [
+          "ai-055f8f6e-8fa6-445c-a008-43f6053059b8",
+          "ai-1c800b6b-2dfe-45c6-93a2-4166c1a22ad6",
+          "ai-2a96c54f-d019-4611-9069-a38384a32af9",
+          "ai-377e9b50-1f05-44d6-a728-0e1043675468",
+          "ai-4b3e4e47-636c-410b-b523-e868202dfdc0",
+          "ai-6d6b9ece-6d9d-4ea3-a6ba-df07cfcaddac",
+          "ai-6d8bde76-95ed-4887-b1fb-b2d459d32861",
+          "ai-92e48610-b124-46c2-a4bd-07a4a31ad2ec",
+          "ai-a246014b-f591-4c83-a560-06c0036a6885",
+          "ai-e991e93f-6b60-46a9-8f62-e44fb771e047"
+        ],
+        "createdAt": "2026-09-28T20:10:41.457987+08:00"
+      },
+      {
+        "id": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": null,
+        "width": 1920,
+        "height": 1280,
+        "analysis": {
+          "width": 1920,
+          "height": 1280
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.519029+08:00"
+      },
+      {
+        "id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": null,
+        "width": 1920,
+        "height": 1227,
+        "analysis": {
+          "width": 1920,
+          "height": 1227
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.564275+08:00"
+      },
+      {
+        "id": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": "2014-04-03",
+        "width": 1707,
+        "height": 2560,
+        "analysis": {
+          "width": 1707,
+          "height": 2560
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.762021+08:00"
+      }
+    ]
+  },
+  "unselectedPhoto": "6c8ca29d-1fbd-440b-8e46-df05bff41a8e",
+  "releaseWhileQueued": {
+    "http": 409
+  },
+  "queue": {
+    "total": 3,
+    "image": 3,
+    "video": 0,
+    "jobs": [
+      {
+        "id": "9b1609cb-362b-433e-9479-1610e02f0869",
+        "kind": "scrapbook",
+        "status": "loading_model",
+        "progressLabel": "加载模型服务",
+        "progressPercent": 5,
+        "completedClips": null
+      },
+      {
+        "id": "e3af1e3e-31db-4fa5-8a92-d5ec92f6c8ff",
+        "kind": "scrapbook",
+        "status": "queued",
+        "progressLabel": "等待调度",
+        "progressPercent": 0,
+        "completedClips": null
+      },
+      {
+        "id": "e6c0c55c-2eea-462d-91bd-37fb6fb2f99e",
+        "kind": "scrapbook",
+        "status": "queued",
+        "progressLabel": "等待调度",
+        "progressPercent": 0,
+        "completedClips": null
+      }
+    ]
+  },
+  "selectionAfter": {
+    "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+    "batchId": "m01-public-yellowstone-20260928-v1",
+    "source": "manual-acceptance-20260928",
+    "photoIds": [
+      "199b155d-0c14-4673-8d25-5de27f175676",
+      "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+      "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+      "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+    ],
+    "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+    "photos": [
+      {
+        "id": "199b155d-0c14-4673-8d25-5de27f175676",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": "2014-10-10",
+        "width": 1920,
+        "height": 1179,
+        "analysis": {
+          "width": 1920,
+          "height": 1179
+        },
+        "variants": [
+          "ai-055f8f6e-8fa6-445c-a008-43f6053059b8",
+          "ai-1c800b6b-2dfe-45c6-93a2-4166c1a22ad6",
+          "ai-2a96c54f-d019-4611-9069-a38384a32af9",
+          "ai-377e9b50-1f05-44d6-a728-0e1043675468",
+          "ai-4b3e4e47-636c-410b-b523-e868202dfdc0",
+          "ai-6d6b9ece-6d9d-4ea3-a6ba-df07cfcaddac",
+          "ai-6d8bde76-95ed-4887-b1fb-b2d459d32861",
+          "ai-92e48610-b124-46c2-a4bd-07a4a31ad2ec",
+          "ai-a246014b-f591-4c83-a560-06c0036a6885",
+          "ai-e991e93f-6b60-46a9-8f62-e44fb771e047"
+        ],
+        "createdAt": "2026-09-28T20:10:41.457987+08:00"
+      },
+      {
+        "id": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": null,
+        "width": 1920,
+        "height": 1280,
+        "analysis": {
+          "width": 1920,
+          "height": 1280
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.519029+08:00"
+      },
+      {
+        "id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": null,
+        "width": 1920,
+        "height": 1227,
+        "analysis": {
+          "width": 1920,
+          "height": 1227
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.564275+08:00"
+      },
+      {
+        "id": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": "2014-04-03",
+        "width": 1707,
+        "height": 2560,
+        "analysis": {
+          "width": 1707,
+          "height": 2560
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.762021+08:00"
+      }
+    ]
+  }
+}
