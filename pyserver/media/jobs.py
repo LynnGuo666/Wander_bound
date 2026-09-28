@@ -52,6 +52,19 @@ class JobStore:
         except (ValueError, FileNotFoundError, json.JSONDecodeError):
             return None
 
+    def list_for_trip(self, trip_id: str) -> list[dict]:
+        """Return only display fields for a trip's generated keepsakes."""
+        if not self.root.exists():
+            return []
+        works = []
+        for path in self.root.glob("*.json"):
+            job = self.get(path.stem)
+            if not job or job.get("tripId") != trip_id or job.get("kind") not in {"scrapbook", "memory"}:
+                continue
+            works.append({key: job.get(key) for key in
+                          ("id", "kind", "status", "title", "styleId", "createdAt", "progressLabel", "error")})
+        return sorted(works, key=lambda item: item.get("createdAt") or "", reverse=True)[:100]
+
     def save(self, job: dict):
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         filename = self.root / f"{job['id']}.json"
