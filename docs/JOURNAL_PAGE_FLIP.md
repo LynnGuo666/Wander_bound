@@ -6,16 +6,19 @@
 
 不同图像关键帧之间的纸边、装订环和阴影无法保持严格一致；直接补帧会产生重影。页面里还有可编辑文字、照片和视频，整图序列也无法让这些内容随纸面一起翻动。
 
-## 参考实现
+## 参考实现与取舍
 
 - [StPageFlip](https://github.com/Nodlik/StPageFlip) 把 HTML 页面作为可翻动页，支持软页、阴影、触摸和翻页事件。源码通过连续计算折线、裁切区域和阴影，而不是切换整张书图；本客户端采用其 `page-flip` 引擎。
 - [React PageFlip 文档](https://nodlik.github.io/react-pageflip/) 展示了可翻动的 React 页面、翻动时间、阴影强度和上一页/下一页 API。我们直接使用同一引擎，避免另建一套静态图片播放器。
 - [Turn.js](https://turnjs.com/) 也通过 HTML 页面和动态过渡实现翻书；依赖 jQuery，故这里未引入。
-- 对更复杂的立体纸张，可用 [Three.js SkinnedMesh](https://threejs.org/docs/pages/SkinnedMesh.html) 给高细分纸面绑定骨骼，让顶点弯曲并映射正反面纹理。当前手账优先保留 HTML 元素的编辑能力。
+- [book-flip](https://github.com/shiarauzo/book-flip) 展示更真实的 WebGL 方案：把页面画到纹理上，用细分网格和顶点着色器连续弯曲纸张，并随进度调整正反面、叠放次序和光照。代价是需把可编辑 HTML 先渲染为纹理，再处理纹理刷新与交互映射。
+
+本项目的症结并非缺少帧数：之前 CSS 让活页本宽度铺满容器，却把高度压到不足原比例的一半；翻页层又使用与实际纸页不一致的宽高比，还把底下两页同时隐藏。结果是折痕位置错位、内容闪白、前后页跳变。
 
 ## 当前方案
 
 - 活页本、纸张纹理、装订环、相框和贴纸素材来自 Spark 上的 Qwen-Image-2.1。模型不接收用户照片。
-- 翻页时复制当前活页上的 HTML 内容进入 `PageFlip`；纸面上的照片、贴纸、文字随页折叠。引擎实时绘制纸面裁切与阴影，结束后切换行程。
+- 翻页时预加载相邻行程的两页，把当前页和目标页的 HTML 一起放入 `PageFlip`；纸面上的照片、贴纸、文字随页折叠。
+- 活页本保持素材原比例，翻页引擎按实际纸页尺寸初始化；折叠层内的内容对齐静止页。引擎通知翻页完成后才切换行程，超时只作故障兜底。
 - 保留 30 张从千问底图渲染的连续纸页图作为素材序列和回退方案；交互端以实时翻页为主。
 - 生成提示词保存在 `prompts/journal-page-turn.qwen-image-2.1.json`。静态图序列可运行 `scripts/generate-binder-turn-frames.py` 重建，生成环境需 Pillow、NumPy 和 OpenCV。
