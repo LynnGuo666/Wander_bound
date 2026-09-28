@@ -6,7 +6,7 @@ import { PrivateMedia } from './PrivateMedia.jsx';
 import BinderFlipTransition from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 import { addStickerAccents } from '../lib/journalLayout.js';
-import { recalledJournalPages, rememberJournalPages } from '../lib/journalPageCache.js';
+import { recalledJournalPages, recalledJournalVisuals, rememberJournalPages, rememberJournalVisuals } from '../lib/journalPageCache.js';
 
 const STORE_PREFIX = 'travel-journal-layout-v1:';
 const DRAFT_PREFIX = 'travel-journal-pending-v1:';
@@ -85,14 +85,16 @@ function itineraryMotifs(trip) {
   };
 }
 
-export default function JournalStudio({ trip, photos: providedPhotos = [], selectedIds: providedSelectedIds = [], works = [], token, onOpenSettings, onCreateWork, onSameCity, sameCityCount = 0, rememberedStops = [], turnDirection = "", onTurnComplete, note = "", onNoteChange, previewOnly = false, sourceRef, nextTrip, previousTrip }) {
+export default function JournalStudio({ trip, photos: providedPhotos = [], selectedIds: providedSelectedIds = [], works = [], detailReady = false, privateReady = false, token, onOpenSettings, onCreateWork, onSameCity, sameCityCount = 0, rememberedStops = [], turnDirection = "", onTurnComplete, note = "", onNoteChange, previewOnly = false, sourceRef, nextTrip, previousTrip }) {
+  const cachedVisuals = useRef(recalledJournalVisuals(token, trip.id) || {});
   const [pages, setPages] = useState(() => loadLayout(trip, token));
-  const [previewPhotos, setPreviewPhotos] = useState([]);
-  const [previewSelectedIds, setPreviewSelectedIds] = useState([]);
+  const [previewPhotos, setPreviewPhotos] = useState(cachedVisuals.current.photos || []);
+  const [previewSelectedIds, setPreviewSelectedIds] = useState(cachedVisuals.current.selectedIds || []);
+  const [previewWorks, setPreviewWorks] = useState(cachedVisuals.current.works || []);
   const [previewDataReady, setPreviewDataReady] = useState(!token);
   const [previewAssetsReady, setPreviewAssetsReady] = useState(!token);
-  const photos = previewOnly ? previewPhotos : providedPhotos;
-  const selectedIds = previewOnly ? previewSelectedIds : providedSelectedIds;
+  const photos = previewOnly || !detailReady ? previewPhotos : providedPhotos;
+  const selectedIds = previewOnly || !privateReady ? previewSelectedIds : providedSelectedIds;
   const pagesRef = useRef(pages);
   const versionRef = useRef(0);
   const serverPagesRef = useRef([]);
@@ -101,7 +103,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const [ready, setReady] = useState(!token);
   const [spreadIndex, setSpreadIndex] = useState(0);
   const [selected, setSelected] = useState(null);
-  const [stickerJobs, setStickerJobs] = useState([]);
+  const [stickerJobs, setStickerJobs] = useState(cachedVisuals.current.stickers || []);
+  const stickerJobsRef = useRef(stickerJobs);
   const [motif, setMotif] = useState('');
   const [toolTab, setToolTab] = useState('layout');
   const [busy, setBusy] = useState(false);
@@ -114,7 +117,15 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const nextPreviewRef = useRef(null);
   const previousPreviewRef = useRef(null);
   const noteApplied = useRef(false);
-  const videos = works.filter(work => work.kind === 'memory' && work.status === 'succeeded');
+  const videos = (previewOnly || !privateReady ? previewWorks : works)
+    .filter(work => work.kind === 'memory' && work.status === 'succeeded');
+
+  function updateStickerJobs(next) {
+    const resolved = typeof next === 'function' ? next(stickerJobsRef.current) : next;
+    stickerJobsRef.current = resolved;
+    setStickerJobs(resolved);
+    rememberJournalVisuals(token, trip.id, { stickers: resolved });
+  }
 
   function acceptDocument(document) {
     pagesRef.current = document.pages;
@@ -256,8 +267,14 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     Promise.all([
       mediaRequest(`/api/trips/${trip.id}`, token),
       mediaRequest(`/api/media/trips/${trip.id}/selected-photos`, token),
-    ]).then(([detail, selection]) => {
-      if (alive) { setPreviewPhotos(detail.photos || []); setPreviewSelectedIds(selection.photoIds || []); setPreviewDataReady(true); }
+      mediaRequest(`/api/media/trips/${trip.id}/works`, token),
+    ]).then(([detail, selection, result]) => {
+      if (alive) {
+        const visuals = { photos: detail.photos || [], selectedIds: selection.photoIds || [], works: result.works || [] };
+        setPreviewPhotos(visuals.photos); setPreviewSelectedIds(visuals.selectedIds); setPreviewWorks(visuals.works);
+        rememberJournalVisuals(token, trip.id, visuals);
+        setPreviewDataReady(true);
+      }
     }).catch(() => { if (alive) setPreviewDataReady(false); });
     return () => { alive = false; };
   }, [previewOnly, trip.id, token]);
@@ -279,17 +296,17 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     setPages(next);
   }, [note, ready, trip.id]);
   useEffect(() => {
-    if (!token) { setStickerJobs([]); return; }
+    if (!token) { updateStickerJobs([]); return; }
     let alive = true;
     const refresh = () => mediaRequest(`/api/media/trips/${trip.id}/stickers`, token)
-      .then(result => { if (alive) { setStickerJobs(result.stickers || []); if (previewOnly) setPreviewAssetsReady(true); } })
+      .then(result => { if (alive) { updateStickerJobs(result.stickers || []); if (previewOnly) setPreviewAssetsReady(true); } })
       .catch(reason => { if (alive) { setError(reason.message); if (previewOnly) setPreviewAssetsReady(false); } });
     async function seedTripAssets() {
       try {
         const result = await mediaRequest(`/api/media/trips/${trip.id}/stickers`, token);
         if (!alive) return;
         const current = result.stickers || [];
-        setStickerJobs(current);
+        updateStickerJobs(current);
         const motifs = itineraryMotifs(trip);
         const wanted = [...motifs.stickers.map(next => ({ kind: 'sticker', motif: next })),
           { kind: 'stamp', motif: motifs.stamp }];
@@ -299,7 +316,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
           const created = await mediaRequest(`/api/media/trips/${trip.id}/stickers`, token,
             { method: 'POST', body: JSON.stringify(item) });
           current.push(created);
-          setStickerJobs([...current]);
+          updateStickerJobs([...current]);
         }
       } catch (reason) { if (alive) setError(reason.message); }
     }
@@ -360,7 +377,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   async function queueSticker(nextMotif, kind = 'sticker') {
     const created = await mediaRequest(`/api/media/trips/${trip.id}/stickers`, token,
       { method: 'POST', body: JSON.stringify({ motif: nextMotif, kind }) });
-    setStickerJobs(previous => [created, ...previous]);
+    updateStickerJobs(previous => [created, ...previous]);
     return created.id;
   }
   async function generateSticker(event) {
