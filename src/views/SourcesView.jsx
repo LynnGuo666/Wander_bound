@@ -16,7 +16,7 @@ const ROWS = [
   { id: '12306-transfer', ability: '中转换乘', provider: '12306 社区 MCP', protocol: 'Docker 12306 MCP', tool: 'get-interline-tickets', source: 'rail12306', data: 'trains', label: '12306 MCP（社区）' },
   { id: 'flyai-poi', ability: '景点与门票', provider: '飞猪 FlyAI', protocol: 'Docker OTA MCP', tool: 'flyai_search_poi', source: 'flyai', data: 'attractionOffers', label: '飞猪 FlyAI' },
   { id: 'tuniu-ticket', ability: '景点与门票', provider: '途牛', protocol: 'Docker OTA MCP → 途牛 MCP', tool: 'tuniu_search_ticket', source: 'tuniu', data: 'attractionOffers', label: '途牛 MCP' },
-  { id: 'dida-hotel', ability: '酒店', provider: '道旅', protocol: '道旅 MCP', tool: 'searchHotels', source: 'dida', data: 'hotels', label: '道旅', description: '按目的地、入住日期和预算查询酒店；连接后通过 tools/list 展示上游描述。' },
+  { id: 'dida-hotel', ability: '酒店', provider: '道旅', protocol: 'Docker 道旅 MCP', tool: 'dida_search_hotels', source: 'dida', data: 'hotels', label: '道旅' },
   { id: 'amap-place', ability: '地点', provider: '高德', protocol: 'Web REST API', tool: '/v3/place/text', source: 'amap', data: 'itinerary', label: '高德', description: '搜索目的地 POI；未配置 Key 时无法核实地点，规划会明确失败。' },
   { id: 'amap-food', ability: '餐饮', provider: '高德', protocol: 'Web REST API', tool: '/v3/place/around', source: 'amap', data: 'dining', label: '高德', description: '按行程末站周边查询餐饮 POI，保留评分与人均的来源。' },
   { id: 'amap-route', ability: '地面交通', provider: '高德', protocol: 'Web REST API', tool: '/v3/direction/*', source: 'amap', data: 'groundJourneys', label: '高德', description: '查询步行和公交线路、时长、换乘信息。' },

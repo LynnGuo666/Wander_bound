@@ -6,6 +6,7 @@ import asyncio
 from fastapi import APIRouter
 from ..settings import ConfigStore
 from ..providers import list_mcp_tools
+from ..providers.js_api import get_configured
 from ..trips import now
 
 def router_for(config: ConfigStore) -> APIRouter:
@@ -24,11 +25,15 @@ def router_for(config: ConfigStore) -> APIRouter:
 
     @router.post("/api/capabilities")
     async def capabilities(payload: dict):
-        keys = config.credentials(payload.get("credentials"))
-        ota, rail, dida = await asyncio.gather(list_mcp_tools(os.getenv("TRAVEL_OTA_MCP_URL")),
-                                               list_mcp_tools(os.getenv("TRAVEL_12306_MCP_URL")),
-                                               list_mcp_tools(os.getenv("TRAVEL_DIDA_MCP_URL")))
+        ota, rail, dida, remote = await asyncio.gather(list_mcp_tools(os.getenv("TRAVEL_OTA_MCP_URL")),
+                                                       list_mcp_tools(os.getenv("TRAVEL_12306_MCP_URL")),
+                                                       list_mcp_tools(os.getenv("TRAVEL_DIDA_MCP_URL")),
+                                                       get_configured("TRAVEL_SPARK_HEALTH_URL"), return_exceptions=True)
         current = await health()
+        if isinstance(remote, dict):
+            for name, status in remote.get("providers", {}).items():
+                if name in current["providers"] and isinstance(status, dict) and status.get("configured"):
+                    current["providers"][name]["configured"] = True
         return {"checkedAt": now(), "providers": current["providers"], "connections": {"ota": ota, "rail": rail, "dida": dida}}
 
     return router
