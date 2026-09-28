@@ -1,7 +1,6 @@
 import React, { Suspense, useEffect, useState } from 'react';
 import { Activity, Compass, Database, Heart, MapPinned, Server, Settings2, ShieldCheck, Luggage } from 'lucide-react';
-import { DEFAULT_MEMORY } from '../shared/catalog.mjs';
-import { normalizeMemory } from '../shared/planner.mjs';
+import { DEFAULT_MEMORY, normalizeMemory } from './lib/memory.js';
 import { readStored } from './browser-state.mjs';
 import JourneyForm from './workbench/JourneyForm.jsx';
 import AgentTimeline from './workbench/AgentTimeline.jsx';
