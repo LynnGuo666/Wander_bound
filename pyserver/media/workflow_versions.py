@@ -101,18 +101,28 @@ def validate_parameters(snapshot: dict, parameters: dict | None, seed: int | Non
     return result, seed
 
 
-def prepare_image(image: bytes, ratio: str, policy: str) -> bytes:
-    if ratio == "source":
-        return image
-    if policy != "contain-white-v1":
+def prepare_image(image: bytes, ratio: str, policy: str, fit_mode: str | None = None) -> bytes:
+    if policy == "contain-white-v1":
+        if fit_mode is not None:
+            raise ValueError("旧工作流不支持 fit_mode")
+        if ratio == "source":
+            return image
+    elif policy == "contain-or-cover-v2":
+        if ratio != "16:9" or fit_mode not in {"contain", "cover"}:
+            raise ValueError("视频输入画布策略或 fit_mode 不受支持")
+    else:
         raise ValueError("工作流输入画布策略不受支持")
     target = (1536, 1024) if ratio == "3:2" else (1024, 576)
     with Image.open(io.BytesIO(image)) as source:
         source = ImageOps.exif_transpose(source).convert("RGB")
-        fitted = ImageOps.contain(source, target, method=Image.Resampling.LANCZOS)
-        canvas = Image.new("RGB", target, "white")
-        canvas.paste(fitted, ((target[0] - fitted.width) // 2,
-                              (target[1] - fitted.height) // 2))
+        if policy == "contain-or-cover-v2" and fit_mode == "cover":
+            canvas = ImageOps.fit(source, target, method=Image.Resampling.LANCZOS,
+                                  centering=(0.5, 0.5))
+        else:
+            fitted = ImageOps.contain(source, target, method=Image.Resampling.LANCZOS)
+            canvas = Image.new("RGB", target, "white")
+            canvas.paste(fitted, ((target[0] - fitted.width) // 2,
+                                  (target[1] - fitted.height) // 2))
         output = io.BytesIO()
         canvas.save(output, format="JPEG", quality=92)
         return output.getvalue()

@@ -79,7 +79,8 @@ class ComfyClient:
             node = workflow.get("5", {})
             if node.get("class_type") != "TextEncodeQwenImage21" or node.get("inputs", {}).get("resolution") != 1024:
                 raise ValueError("图片工作流 API 图分辨率不符合当前策略")
-        image = workflow_versions.prepare_image(image, settings["aspect_ratio"], snapshot["input_policy"])
+        image = workflow_versions.prepare_image(image, settings["aspect_ratio"],
+                                                snapshot["input_policy"], settings.get("fit_mode"))
         async with httpx.AsyncClient(timeout=35) as client:
             upload = await client.post(f"{self.base_url}/upload/image", files={"image": (f"travel-{uuid.uuid4()}.jpg", image, "image/jpeg")},
                                        data={"overwrite": "false"})
