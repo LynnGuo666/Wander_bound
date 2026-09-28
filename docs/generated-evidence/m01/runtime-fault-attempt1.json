@@ -1,0 +1,54 @@
+{
+  "observedAtUtc": "2026-09-28T13:05:10.418350+00:00",
+  "jobId": "bfc7977b-a31d-4edf-9814-dfb9f3126afd",
+  "status": "failed",
+  "attempt": 1,
+  "promptId": "a9181990-6e79-431f-82c0-2fda84028365",
+  "submissionState": "unknown",
+  "error": "Spark 队列/历史中持续找不到 prompt",
+  "errorCode": "JOB_FAILED",
+  "startedAt": "2026-09-28T21:04:00.983954+08:00",
+  "workflowVersion": "1.0.1-fault-validation",
+  "workflowHash": "360738283950d5f691920d630168623905eaeb973fca98a9f8dede9642e0150a",
+  "snapshotHash": "85d14cb9db9a072552e5c08026f5aa3b3b60634d2567a6a2bdf9f8f84ffe45a2",
+  "frozenSampler": "__invalid_sampler_fault_injection__",
+  "seed": 2026092899,
+  "parameters": {
+    "aspect_ratio": "3:2"
+  },
+  "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+  "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+  "selection": {
+    "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+    "batchId": "m01-public-yellowstone-20260928-v1",
+    "source": "manual-acceptance-20260928",
+    "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+    "photoIds": [
+      "199b155d-0c14-4673-8d25-5de27f175676",
+      "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+      "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+      "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+    ],
+    "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+  },
+  "originals": [
+    {
+      "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+      "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+    }
+  ],
+  "comfyHistoryContainsUuid": false,
+  "comfyQueueRunningIds": [],
+  "comfyQueuePendingIds": [],
+  "apiQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "comfyValidationLog": [
+    "[ERROR] Failed to validate prompt for output 8:",
+    "[ERROR]   - Value not in list: sampler_name: '__invalid_sampler_fault_injection__' not in (list of length 45)",
+    "[WARNING] invalid prompt: {'type': 'prompt_outputs_failed_validation', 'message': 'Prompt outputs failed validation', 'details': '', 'extra_info': {}}"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "observedAtUtc": "2026-09-28T13:07:55.065407+00:00",
+  "deploymentSha": "a25a09ffaafca790c0363bb041f99046189c47d8",
+  "gitClean": true,
+  "apiPid": "1160143",
+  "fourthRetry": {
+    "http": 404,
+    "body": "{\"detail\":\"无法重试\"}"
+  },
+  "before": {
+    "status": "failed",
+    "attempt": 3,
+    "promptId": "4b68e1e7-81bc-4b78-a910-cda5d84a21ca",
+    "submissionState": "unknown",
+    "error": "Spark 队列/历史中持续找不到 prompt"
+  },
+  "after": {
+    "status": "failed",
+    "attempt": 3,
+    "promptId": "4b68e1e7-81bc-4b78-a910-cda5d84a21ca",
+    "submissionState": "unknown",
+    "error": "Spark 队列/历史中持续找不到 prompt"
+  },
+  "jobJsonUnchanged": true,
+  "frozenWorkflowHash": "360738283950d5f691920d630168623905eaeb973fca98a9f8dede9642e0150a",
+  "frozenSnapshotHash": "85d14cb9db9a072552e5c08026f5aa3b3b60634d2567a6a2bdf9f8f84ffe45a2",
+  "frozenSelectionHash": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7",
+  "frozenOriginalHash": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+  "frozenSeed": 2026092899,
+  "defaultFileHashes": {
+    "qwen-image-2.1-edit-api.json": "60839fac6a38e81c9fe12d7ff0af16e2a95f0f8179603cdfdb035df33c3cc907",
+    "model-manifest.json": "9eeb8703b6a21e1b787719009d442cb6523c9c4903d547798c6055572539589d"
+  },
+  "apiQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "imageModel": {
+    "id": "image",
+    "label": "Qwen-Image-2.1",
+    "service": "qwen21-comfy.service",
+    "state": "ready",
+    "active": false,
+    "idleTimeoutSeconds": 600,
+    "idleSeconds": 31
+  },
+  "videoModel": {
+    "id": "video",
+    "label": "MiniMax H3",
+    "service": "minimax-h3-comfy.service",
+    "state": "stopped_on_demand",
+    "active": false,
+    "idleTimeoutSeconds": 600,
+    "idleSeconds": 745
+  },
+  "comfyHistoryContainsUuid": false,
+  "comfyQueueRunningIds": [],
+  "comfyQueuePendingIds": []
+}

@@ -30,6 +30,10 @@ POLL_DELAY_SECONDS = 5
 SEED_MASK = (1 << 64) - 1
 
 
+class PromptExecutionFailed(RuntimeError):
+    """Comfy history confirms that this prompt has terminated with an error."""
+
+
 class JobStore:
     def __init__(self, media: MediaStore, image: ComfyClient | None, video: ComfyClient | None,
                  controller: ModelController):
@@ -272,7 +276,7 @@ class JobStore:
                     await asyncio.sleep(POLL_DELAY_SECONDS)
                     continue
             if status == "failed":
-                raise RuntimeError("Spark 工作流失败；旧 prompt 不会自动重提交")
+                raise PromptExecutionFailed("Spark 工作流失败；旧 prompt 不会自动重提交")
             if status == "missing":
                 missing_polls += 1
                 if missing_polls >= MAX_MISSING_POLLS:
@@ -317,6 +321,14 @@ class JobStore:
                         accepted = await self.image.queue(
                             source, job["prompt"], job["seed"], prompt_id=job["promptId"],
                             workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
+                    except httpx.HTTPStatusError as exc:
+                        # An explicit validation rejection cannot have entered the
+                        # engine queue. Other HTTP failures may follow acceptance.
+                        job["submissionState"] = ("rejected" if exc.response.status_code in {400, 422}
+                                                  else "unknown")
+                        self.save(job)
+                        if job["submissionState"] == "rejected":
+                            raise RuntimeError("Spark 工作流提交被参数校验拒绝") from exc
                     except (httpx.HTTPError, OSError, RuntimeError):
                         # The server may have queued this UUID before its HTTP response was lost.
                         job["submissionState"] = "unknown"
@@ -328,7 +340,12 @@ class JobStore:
                 job["progressLabel"] = "图片生成中"
                 job["progressPercent"] = None
                 self.save(job)
-                image = await self._wait(self.image, job["promptId"])
+                try:
+                    image = await self._wait(self.image, job["promptId"])
+                except PromptExecutionFailed:
+                    job["submissionState"] = "failed"
+                    self.save(job)
+                    raise
                 job["submissionState"] = "completed"
                 self.save(job)
                 job["progressLabel"] = "保存图片"
@@ -372,6 +389,12 @@ class JobStore:
                             accepted = await self.video.queue(
                                 source, prompt, clip["seed"], prompt_id=clip["promptId"],
                                 workflow_snapshot=job["workflowSnapshot"], parameters=job["parameters"])
+                        except httpx.HTTPStatusError as exc:
+                            clip["submissionState"] = ("rejected" if exc.response.status_code in {400, 422}
+                                                       else "unknown")
+                            self.save(job)
+                            if clip["submissionState"] == "rejected":
+                                raise RuntimeError("Spark 镜头提交被参数校验拒绝") from exc
                         except (httpx.HTTPError, OSError, RuntimeError):
                             clip["submissionState"] = "unknown"
                         else:
@@ -380,7 +403,12 @@ class JobStore:
                             clip["submissionState"] = "accepted"
                         self.save(job)
                     temporary_clip = job_dir / f"{index}.pending.mp4"
-                    temporary_clip.write_bytes(await self._wait(self.video, clip["promptId"]))
+                    try:
+                        temporary_clip.write_bytes(await self._wait(self.video, clip["promptId"]))
+                    except PromptExecutionFailed:
+                        clip["submissionState"] = "failed"
+                        self.save(job)
+                        raise
                     if not self._video_file_valid(temporary_clip):
                         temporary_clip.unlink(missing_ok=True)
                         raise RuntimeError("Spark 镜头文件不可解码或不是 16:9 视频")
@@ -420,6 +448,11 @@ class JobStore:
         if (not job or job["status"] != "failed" or job.get("attempt", 1) >= MAX_JOB_ATTEMPTS
                 or (expected_kind is not None and job["kind"] != expected_kind)):
             return None
+        uncertain = {"intent_recorded", "accepted", "unknown"}
+        if (job.get("submissionState") in uncertain
+                or any(not clip.get("done") and clip.get("submissionState") in uncertain
+                       for clip in job.get("clips", []))):
+            raise ContractError("PROMPT_OUTCOME_UNKNOWN", "旧生成请求结果未确认，不能分配新请求编号重试", 409)
         job["status"] = "queued"
         job["error"] = None
         job.pop("errorCode", None)
