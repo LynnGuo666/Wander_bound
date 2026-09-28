@@ -53,6 +53,6 @@ Spark API 验证分支 `codex/m01-validation-20260928` 部署 `37ecdc75`。主�
 
 历史排队任务的 `1.0.0` 快照仍固定 `contain-white-v1`，不读取新版 manifest 的 `fit_mode` 默认值。新旧 API 节点图本身可以相同，但版本号、参数 schema、输入策略与 `snapshot_hash` 不同；旧图哈希相同不意味着旧任务自动采用新构图。内部 ComfyUI UI/APP 直接上传照片运行图时**不会**经过业务适配器的 cover/contain 预处理；只有正式 API 提交路径会应用这个策略。UI 调参若要复现实效，须先准备同样的输入画布并记录模式，不能把 UI 图称为自动 cover。
 
-经正式 selected-only API 和共享 controller 提交的 `1.1.0` / `cover` 单镜头作业 `ad2e7823-3ecb-4de0-b1d4-e15312ef6da5` 已成功，HTTP 200 成片为 **1024×576、24 fps、5.216 秒**，完整 CPU 解码通过。[实测收据](generated-evidence/m01/framing-real-probe.json)和[成片](generated-evidence/m01/framing-cover-probe.mp4)记录了原图、冻结快照、输出哈希及旧任务不变证据。首中尾与 1–4 秒画面未见旧版左右人工白边；温泉与栈道仍可见，蒸汽和镜头有动态，但上下边缘确按上述比例裁去。AAC 音轨非静音，内容及授权来源未确认。
+经正式 selected-only API 和共享 controller 提交的 `1.1.0` / `cover` 单镜头作业 `ad2e7823-3ecb-4de0-b1d4-e15312ef6da5` 已成功，HTTP 200 成片为 **1024×576、24 fps、容器 5.216 秒**，完整 CPU 解码通过。引擎单镜头 `0.mp4` 实测 **124 帧 / 5.166667 秒**，正式合成 `memory.mp4` 为 **125 帧 / 视频流 5.208333 秒**；合成多出的 1 帧原因尚未定位，不应把请求的 124 帧误报为最终成片帧数。[实测收据](generated-evidence/m01/framing-real-probe.json)和[成片](generated-evidence/m01/framing-cover-probe.mp4)记录了原图、冻结快照、输出哈希及旧任务不变证据。首中尾与 1–4 秒画面未见旧版左右人工白边；温泉与栈道仍可见，蒸汽和镜头有动态，但上下边缘确按上述比例裁去。AAC 音轨非静音，内容及授权来源未确认。
 
 运行中读取 Comfy `/history/{promptId}` 时记录尚未就绪，作业完成后 controller 已停止 H3 服务，故本次**未取得在线 history 图**。成片嵌入元数据含 1024×576、124 帧、24 fps、seed `2026092802`，仅作为辅助证据，不冒充在线 history。此单镜头也不代表 M03 完整成片或 M02 五风格验收；主审仍需独立评估 criterion。
