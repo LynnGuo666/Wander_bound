@@ -14,7 +14,7 @@ if [[ ! "$local_port" =~ ^[0-9]+$ ]] || (( local_port < 1024 || local_port > 655
   exit 1
 fi
 
-echo "Spark 网页/API 隧道：http://127.0.0.1:${local_port}/ → Spark 127.0.0.1:4174（Ctrl+C 关闭）"
+echo "Spark 隧道：网页/API http://127.0.0.1:${local_port}/、OTA 14176、12306 14177、道旅 14178、聚合数据 14179、视觉模型 18192（Ctrl+C 关闭）"
 exec ssh -N \
   -i "$ssh_key" \
   -o IdentitiesOnly=yes \
@@ -24,4 +24,9 @@ exec ssh -N \
   -o ServerAliveCountMax=3 \
   -p 6082 \
   -L "127.0.0.1:${local_port}:127.0.0.1:4174" \
+  -L 127.0.0.1:14176:127.0.0.1:4176 \
+  -L 127.0.0.1:14177:127.0.0.1:4177 \
+  -L 127.0.0.1:14178:127.0.0.1:4178 \
+  -L 127.0.0.1:14179:127.0.0.1:4179 \
+  -L 127.0.0.1:18192:127.0.0.1:8192 \
   Developer@106.13.186.155
