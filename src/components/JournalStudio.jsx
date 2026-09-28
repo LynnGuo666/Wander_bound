@@ -37,7 +37,7 @@ function fromTemplate(template, trip, pageIndex, stickerIds = [], stampId = '', 
     ...(slot.kind === 'photo' ? { photoIndex, ...(photoIds.length ? { photoId: photoIds[photoIndex % photoIds.length] } : {}) } : {}),
     ...(slot.kind === 'text' ? { text: assets.diaryText || defaultText(trip) } : {}),
     ...(slot.kind === 'postcard' ? { text: assets.postcardText || `${tripTitle(trip)}\n寄给未来的自己`, stampId, ...(assets.postcardId ? { assetId: assets.postcardId } : {}) } : {}),
-    ...(slot.kind === 'cover' && assets.illustrationId ? { assetId: assets.illustrationId } : {}),
+    ...(['cover', 'illustration'].includes(slot.kind) && assets.illustrationId ? { assetId: assets.illustrationId } : {}),
     ...(slot.kind === 'sticker' && stickerIds.length ? { stickerId: stickerIds[(pageIndex + sticker++) % stickerIds.length] } : {}),
     };
   });
@@ -61,13 +61,18 @@ function loadLayout(trip, token) {
 }
 function customizedLegacyPage(page, trip, pageIndex) {
   const template = templates.find(item => item.id === page.templateId);
-  if (!template || !Array.isArray(page.items) || page.items.length !== template.slots.length) return true;
+  if (!template || !Array.isArray(page.items)) return true;
+  const oldPhotoCollage = template.id === 'book-and-clip' && page.items.length === template.slots.length - 1
+    && template.slots.at(-1).kind === 'illustration';
+  if (page.items.length !== template.slots.length && !oldPhotoCollage) return true;
+  const serverTitle = trip.plan?.destination || trip.title || '旅途';
   let photoIndex = pageIndex * 2;
   return page.items.some((item, index) => {
     const slot = template.slots[index];
     const expectedPhoto = slot.kind === 'photo' ? photoIndex++ : null;
     return item.kind !== slot.kind || ['x', 'y', 'w', 'h', 'r', 'z'].some(key => item[key] !== slot[key])
-      || (item.kind === 'text' && item.text !== defaultText(trip))
+      || (item.kind === 'text' && ![defaultText(trip), `${serverTitle}\n写下旅途中最想留住的一刻。`].includes(item.text))
+      || (item.kind === 'postcard' && ![`${tripTitle(trip)}\n寄给未来的自己`, `${serverTitle}\n寄给未来的自己`].includes(item.text))
       || (item.kind === 'photo' && item.photoIndex !== expectedPhoto);
   });
 }
@@ -419,7 +424,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
         const template = templates.find(item => item.id === id);
         const items = fromTemplate(template, trip, index, stickerIds, stampId,
           plan.photoOrder, { postcardId, illustrationId, diaryText: plan.diaryText, postcardText: plan.postcardText });
-        if (index === 0 && !items.some(item => item.kind === 'cover'))
+        if (index === 0 && !items.some(item => ['cover', 'illustration'].includes(item.kind)))
           items.push({ id: itemId(), kind: 'illustration', assetId: illustrationId, x: 74, y: 6, w: 20, h: 19, r: 7, z: 1 });
         return { templateId: id, items };
       });
