@@ -34,3 +34,26 @@ def test_resume_analysis_keeps_selection_explicit(tmp_path, monkeypatch):
         assert media.selected(trip_id)["photoIds"] == []
 
     asyncio.run(scenario())
+
+
+def test_resume_uses_existing_visual_tags(tmp_path, monkeypatch):
+    media = MediaStore(tmp_path / "media")
+    output = io.BytesIO()
+    Image.new("RGB", (64, 48), "blue").save(output, format="JPEG")
+    trip_id = "abfba2e7-6a13-4cba-8d7a-b75190ea0e2a"
+    photo = media.add(output.getvalue(), trip_id, None)
+    media.set_tags(photo["id"], {"scene": "已分析的照片", "quality": {"keep": 4}})
+    monkeypatch.setattr(module, "curate_trip", lambda _media, _trip, _target, _ids: {
+        "keep": [photo["id"]], "verdicts": {photo["id"]: "keep"}})
+    monkeypatch.setattr(module, "tag_image", lambda _bytes: (_ for _ in ()).throw(AssertionError("must not analyze again")))
+
+    async def scenario():
+        jobs = module.AnalysisJobs(media)
+        jobs.schedule = lambda: None
+        queued = jobs.submit(trip_id, [photo["id"]], "batch-1")
+        await jobs.run_one(queued)
+        finished = jobs.get(queued["id"])
+        assert finished["status"] == "succeeded"
+        assert finished["results"][photo["id"]]["tags"]["scene"] == "已分析的照片"
+
+    asyncio.run(scenario())

@@ -15,7 +15,22 @@ private struct HistoryEvent: Decodable, Identifiable {
 }
 private struct HistoryDay: Decodable { let date: String; let events: [HistoryEvent] }
 private struct PossibleCity: Decodable { let name: String; let reason: String? }
-private struct HistoryDraft: Decodable { let days: [HistoryDay]; let status: String; let notice: String?; let possibleCity: PossibleCity? }
+private struct JourneyCity: Decodable { let name: String; let role: String }
+private struct JourneyLeg: Decodable { let date: String; let from: String; let to: String; let mode: String; let confidence: String }
+private struct JourneyHypothesis: Decodable {
+    let summary: String
+    let status: String
+    let cities: [JourneyCity]
+    let legs: [JourneyLeg]
+    let unknowns: [String]
+}
+private struct HistoryDraft: Decodable {
+    let days: [HistoryDay]
+    let status: String
+    let notice: String?
+    let possibleCity: PossibleCity?
+    let journeyHypothesis: JourneyHypothesis?
+}
 private struct HistoryDetail: Decodable { let id: String; let title: String; let history: HistoryDraft? }
 private struct HistoryChatResponse: Decodable { let reply: String; let history: HistoryDraft }
 
@@ -77,9 +92,8 @@ struct HistoryDiscoveryView: View {
                 from: await api.data("/api/history/trips", method: "POST", body: payload))
             activeId = created.id
             let all = library.photos(for: candidate).sorted { ($0.asset.creationDate ?? .distantPast) < ($1.asset.creationDate ?? .distantPast) }
-            let selected = all.count <= 40 ? all : (0..<40).map { all[$0 * (all.count - 1) / 39] }
-            for (index, photo) in selected.enumerated() {
-                progress = "准备照片 \(index + 1)/\(selected.count)；每段先分析前 40 张，可在相册补充。"
+            for (index, photo) in all.enumerated() {
+                progress = "准备照片 \(index + 1)/\(all.count)"
                 do {
                     let data = try await library.uploadJPEG(for: photo)
                     try queue.enqueue(data, ownerId: account.user?.id ?? "", tripId: created.id, assetKey: photo.id, capturedDay: photo.capturedDay)
@@ -119,6 +133,26 @@ struct HistoryDetailView: View {
                 if let city = detail?.history?.possibleCity {
                     Text("可能去过：\(city.name) · AI 推断 · \(city.reason ?? "需要你确认")")
                         .font(.caption).foregroundStyle(.secondary)
+                }
+                if let hypothesis = detail?.history?.journeyHypothesis {
+                    Surface {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("可能的行程").font(.headline)
+                            Text(hypothesis.summary)
+                            if !hypothesis.cities.isEmpty {
+                                Text(hypothesis.cities.map { "\($0.name)（\($0.role)）" }.joined(separator: " → "))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                            ForEach(Array(hypothesis.legs.enumerated()), id: \.offset) { _, leg in
+                                Text("\(leg.date) · \(leg.from) → \(leg.to) · \(leg.mode) · \(leg.confidence)")
+                                    .font(.caption)
+                            }
+                            if !hypothesis.unknowns.isEmpty {
+                                Text("待确认：\(hypothesis.unknowns.joined(separator: "、"))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
                 Text(detail?.history?.notice ?? "照片记录的是观测点，旅途中间的路线仍需补充。")
                     .font(.caption).foregroundStyle(.secondary)

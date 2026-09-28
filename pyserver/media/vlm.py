@@ -157,10 +157,12 @@ def tag_image(
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
-    max_tokens = max_tokens or int(os.getenv("PYSERVER_VLM_MAX_TOKENS", "4096"))
+    max_tokens = max_tokens or int(os.getenv("PYSERVER_VLM_MAX_TOKENS", "900" if model == "qwen38-27b" else "4096"))
     reasoning_effort = reasoning_effort or os.getenv("PYSERVER_VLM_REASONING_EFFORT")
     payload = {"model": model, "messages": build_messages(image_bytes),
                "temperature": 0, "max_tokens": max_tokens}
+    if model == "qwen38-27b":
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
     if reasoning_effort:  # 推理强度（如 stepfun step-5 的 "low"）：推理模型先思考后出 content，max_tokens 需容纳二者
         payload["reasoning_effort"] = reasoning_effort
 

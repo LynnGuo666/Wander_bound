@@ -17,12 +17,23 @@ from ..inference import ModelController
 
 
 def reconstruct(photos: list[dict], previous: dict | None = None) -> dict:
-    by_day = defaultdict(list)
-    for photo in photos:
-        by_day[photo.get("capturedDay") or "日期未知"].append(photo)
-    days = []
     confirmed = {item["id"]: item for day in (previous or {}).get("days") or []
                  for item in day.get("events") or [] if item.get("source") == "user_confirmed"}
+    by_day = defaultdict(list)
+    context_count = 0
+    unresolved_count = 0
+    for photo in photos:
+        tags = photo.get("tags") or {}
+        scene = str(tags.get("scene") or "")
+        event_id = f"photo-{photo['id']}"
+        if event_id not in confirmed and any(term in scene for term in ("截图", "屏幕", "界面", "二维码", "支付")):
+            context_count += 1
+            continue
+        if event_id not in confirmed and not photo.get("gps") and not (scene or tags.get("location_clue")):
+            unresolved_count += 1
+            continue
+        by_day[photo.get("capturedDay") or "日期未知"].append(photo)
+    days = []
     for date, group in sorted(by_day.items()):
         events = []
         for photo in sorted(group, key=lambda item: item.get("capturedAt") or ""):
@@ -58,34 +69,66 @@ def reconstruct(photos: list[dict], previous: dict | None = None) -> dict:
             target["events"].append(event)
     days.sort(key=lambda day: day["date"])
     return {"days": days, "status": "draft", "updatedAt": now(),
+            "contextPhotoCount": context_count, "unresolvedPhotoCount": unresolved_count,
             "notice": "照片间的空白、住宿与交通保持未知；地图连线只表示照片顺序"}
 
 
 def router_for(trips: TripStore, media: MediaStore, controller: ModelController) -> APIRouter:
     router = APIRouter()
 
-    async def guess_city(photos: list[dict]) -> dict | None:
-        evidence = [{"locationClue": (photo.get("tags") or {}).get("location_clue"),
+    async def infer_journey(photos: list[dict]) -> dict | None:
+        ordered = sorted(photos, key=lambda photo: photo.get("capturedAt") or "")
+        selected = ordered if len(ordered) <= 80 else [ordered[index * (len(ordered) - 1) // 79] for index in range(80)]
+        evidence = [{"id": photo["id"], "observedAt": photo.get("capturedAt"),
+                     "scene": (photo.get("tags") or {}).get("scene"),
+                     "locationClue": (photo.get("tags") or {}).get("location_clue"),
                      "ocr": ((photo.get("tags") or {}).get("ocr") or [])[:3], "gps": photo.get("gps")}
-                    for photo in photos[:25] if photo.get("gps") or (photo.get("tags") or {}).get("location_clue")]
+                    for photo in selected if photo.get("gps") or photo.get("tags")]
         if not evidence:
             return None
-        prompt = ("根据旅行照片的位置与画面线索推断可能城市。只返回 JSON："
-                  "{\"city\":\"城市名或空字符串\",\"reason\":\"证据简述\"}。"
-                  "没有足够证据必须返回空字符串，不要猜测交通、酒店或完整行程。"
+        prompt = ("根据照片观测点推断可能的跨城行程，只返回 JSON："
+                  "{\"summary\":\"一句谨慎的中文概述\",\"status\":\"plausible_trip 或 insufficient_evidence\","
+                  "\"cities\":[{\"name\":\"城市\",\"role\":\"出发地/途经/到达地/未知\",\"reason\":\"照片证据\"}],"
+                  "\"legs\":[{\"date\":\"YYYY-MM-DD\",\"from\":\"城市或站点\",\"to\":\"城市或站点\","
+                  "\"mode\":\"已见证据支持的交通方式或未知\",\"evidencePhotoIds\":[\"照片ID\"],\"confidence\":\"low/medium/high\"}],"
+                  "\"unknowns\":[\"仍不知道的关键环节\"]}。"
+                  "照片时间只是观测时间；截图中的目的地不等于实际到达。"
+                  "若出现多个城市，必须保留多个城市，不能强选一个。"
+                  "没有照片证据的航班、酒店、景点、精确出发到达时间不能补造。"
                   f"\n线索：{json.dumps(evidence, ensure_ascii=False)}")
         try:
             async with controller.use("chat") as spec:
                 async with httpx.AsyncClient(timeout=180) as client:
                     response = await client.post(spec.url.rstrip("/") + "/v1/chat/completions", json={
                         "model": os.getenv("SPARK_QWEN38_MODEL", "qwen38-27b"),
-                        "messages": [{"role": "user", "content": prompt}], "max_tokens": 160,
+                        "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": 1100,
                         "response_format": {"type": "json_object"}, "stream": False,
                         "chat_template_kwargs": {"enable_thinking": False}})
                 response.raise_for_status()
                 result = json.loads((response.json().get("choices") or [{}])[0].get("message", {}).get("content") or "{}")
-            city = str(result.get("city") or "").strip()[:40]
-            return {"name": city, "reason": str(result.get("reason") or "")[:160], "source": "private_ai_inference"} if city else None
+            if not isinstance(result, dict):
+                return None
+            cities = []
+            for item in (result.get("cities") or [])[:8]:
+                if isinstance(item, dict) and isinstance(item.get("name"), str) and item["name"].strip():
+                    cities.append({"name": item["name"].strip()[:40], "role": str(item.get("role") or "未知")[:20],
+                                   "reason": str(item.get("reason") or "")[:160]})
+            valid_ids = {photo["id"] for photo in selected}
+            legs = []
+            for item in (result.get("legs") or [])[:12]:
+                if not isinstance(item, dict):
+                    continue
+                ids = [value for value in (item.get("evidencePhotoIds") or []) if value in valid_ids]
+                if not ids:
+                    continue
+                legs.append({"date": str(item.get("date") or "")[:10], "from": str(item.get("from") or "未知")[:80],
+                             "to": str(item.get("to") or "未知")[:80], "mode": str(item.get("mode") or "未知")[:30],
+                             "evidencePhotoIds": ids[:10],
+                             "confidence": item.get("confidence") if item.get("confidence") in {"low", "medium", "high"} else "low"})
+            return {"summary": str(result.get("summary") or "")[:300],
+                    "status": result.get("status") if result.get("status") in {"plausible_trip", "insufficient_evidence"} else "insufficient_evidence",
+                    "cities": cities, "legs": legs, "unknowns": [str(value)[:120] for value in (result.get("unknowns") or [])[:8]],
+                    "source": "private_ai_inference", "evidencePhotoCount": len(evidence), "totalPhotoCount": len(photos)}
         except (RuntimeError, httpx.HTTPError, ValueError, json.JSONDecodeError):
             return None
 
@@ -122,10 +165,14 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
         if old and old.get("days"):
             trip.setdefault("historyVersions", []).append(old)
         trip["history"] = reconstruct(photos, old)
-        if old and old.get("possibleCity", {}).get("source") == "user_confirmed":
+        hypothesis = await infer_journey(photos)
+        trip["history"]["journeyHypothesis"] = hypothesis
+        if old and (old.get("possibleCity") or {}).get("source") == "user_confirmed":
             trip["history"]["possibleCity"] = old["possibleCity"]
         else:
-            trip["history"]["possibleCity"] = await guess_city(photos)
+            cities = (hypothesis or {}).get("cities") or []
+            trip["history"]["possibleCity"] = ({"name": cities[0]["name"], "reason": cities[0]["reason"],
+                                                 "source": "private_ai_inference"} if len(cities) == 1 else None)
         trips.save(trip)
         return trip["history"]
 

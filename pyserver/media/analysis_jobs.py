@@ -120,8 +120,10 @@ class AnalysisJobs:
             for pid in job["photoIds"]:
                 if job["results"][pid]["verdict"] == "keep":
                     try:
-                        tags = await asyncio.to_thread(tag_image, self.media.bytes(pid))
-                        self.media.set_tags(pid, tags)
+                        tags = (self.media.get(pid) or {}).get("tags")
+                        if not tags:
+                            tags = await asyncio.to_thread(tag_image, self.media.bytes(pid))
+                            self.media.set_tags(pid, tags)
                         job["results"][pid]["tags"] = tags
                         visual = tags.get("quality") or {}
                         if visual.get("trash") is True or (
