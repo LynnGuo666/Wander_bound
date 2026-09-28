@@ -6,6 +6,7 @@ import { PrivateMedia } from './PrivateMedia.jsx';
 import BinderFlipTransition from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 import { addStickerAccents } from '../lib/journalLayout.js';
+import { itineraryMotifs, selectJournalAsset } from '../lib/journalMotifs.js';
 import { recalledJournalPages, recalledJournalVisuals, rememberJournalPages, rememberJournalVisuals } from '../lib/journalPageCache.js';
 
 const STORE_PREFIX = 'travel-journal-layout-v1:';
@@ -73,19 +74,9 @@ function customizedLegacyPage(page, trip, pageIndex) {
 function labelFor(kind) {
   return { cover: '城市插画', illustration: '旅途插画', photo: '旅途照片', video: '旅途短片', text: '日记', sticker: '千问贴纸', stamp: '行程邮票', postcard: '明信片', clip: '曲别针', ticket: '车票', boarding: '登机牌' }[kind] || kind;
 }
-function itineraryMotifs(trip) {
-  const city = trip.plan?.destination || tripTitle(trip);
-  const stops = (trip.plan?.itinerary || []).flatMap(day => day.stops || [])
-    .map(stop => stop.name).filter(Boolean);
-  const place = index => stops[index % Math.max(stops.length, 1)] || city;
-  return {
-    stickers: stickerCategories.slice(0, 5).map((category, index) => category.motif
-      .replaceAll('{{city}}', city).replaceAll('{{place}}', place(index))),
-    stamp: `${city}${place(0)}的微型风景`,
-  };
-}
-
 export default function JournalStudio({ trip, photos: providedPhotos = [], selectedIds: providedSelectedIds = [], works = [], detailReady = false, privateReady = false, token, onOpenSettings, onCreateWork, onSameCity, sameCityCount = 0, rememberedStops = [], turnDirection = "", onTurnComplete, note = "", onNoteChange, previewOnly = false, sourceRef, nextTrip, previousTrip }) {
+  const itineraryAssets = itineraryMotifs(trip, stickerCategories);
+  const itineraryAssetKey = JSON.stringify(itineraryAssets);
   const cachedVisuals = useRef(recalledJournalVisuals(token, trip.id) || {});
   const [pages, setPages] = useState(() => loadLayout(trip, token));
   const [previewPhotos, setPreviewPhotos] = useState(cachedVisuals.current.photos || []);
@@ -307,9 +298,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
         if (!alive) return;
         const current = result.stickers || [];
         updateStickerJobs(current);
-        const motifs = itineraryMotifs(trip);
-        const wanted = [...motifs.stickers.map(next => ({ kind: 'sticker', motif: next })),
-          { kind: 'stamp', motif: motifs.stamp }];
+        const wanted = [...itineraryAssets.stickers.map(next => ({ kind: 'sticker', motif: next })),
+          { kind: 'stamp', motif: itineraryAssets.stamp },
+          { kind: 'illustration', motif: itineraryAssets.illustration },
+          { kind: 'postcard', motif: itineraryAssets.postcard }];
         for (const item of wanted) {
           if (!alive) return;
           if (current.some(job => job.kind === item.kind && job.motif === item.motif)) continue;
@@ -327,7 +319,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     else seedTripAssets();
     const timer = setInterval(refresh, 5000);
     return () => { alive = false; clearInterval(timer); };
-  }, [trip.id, token]);
+  }, [trip.id, token, itineraryAssetKey]);
   function updateItem(pageIndex, id, patch, persist = true) {
     if (pageIndex === 0 && typeof patch.text === 'string' && pages[pageIndex]?.items.some(item => item.id === id && item.kind === 'text'))
       onNoteChange?.(patch.text);
@@ -471,9 +463,9 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     };
     editPage(pageIndex, page => ({ ...page, items: [...page.items, item] }));
   }
-  function renderItem(item) {
+  function renderItem(item, page) {
     if (item.kind === 'cover' || item.kind === 'illustration') {
-      const asset = stickerJobs.find(job => job.id === item.assetId);
+      const asset = selectJournalAsset(page, item.assetId, stickerJobs, 'illustration', itineraryAssets.illustration);
       return asset?.status === 'succeeded'
         ? <PrivateMedia url={`/api/media/stickers/${asset.id}/image`} token={token} loading="eager" alt={`${asset.motif}，千问生成的旅途插画`} />
         : item.assetId ? <span className="studio-sticker-pending">{asset?.status === 'failed' ? '插画生成失败' : '千问绘制中…'}</span>
@@ -502,14 +494,14 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     }
     if (item.kind === 'clip') return <img className="studio-clip-art" src="/art/paperclip.png" alt="千问绘制的曲别针插图" />;
     if (item.kind === 'postcard') {
-      const stampId = item.stampId || stickerJobs.find(job => job.kind === 'stamp')?.id;
-      const stamp = stickerJobs.find(job => job.id === stampId);
-      const artwork = stickerJobs.find(job => job.id === item.assetId);
+      const stamp = selectJournalAsset(page, item.stampId, stickerJobs, 'stamp', itineraryAssets.stamp);
+      const stampId = item.stampId || stamp?.id;
+      const artwork = selectJournalAsset(page, item.assetId, stickerJobs, 'postcard', itineraryAssets.postcard);
       return <div className="studio-prop-wrap"><img className="studio-prop" src="/art/postcard-blank.png" alt="千问生成的明信片模板" />{artwork?.status === 'succeeded'
         ? <span className="studio-postcard-scene"><PrivateMedia url={`/api/media/stickers/${artwork.id}/image`} token={token} loading="eager" alt={`${artwork.motif}，千问绘制的旅途风景`} /></span>
-        : null}<span className="studio-postcard-text">{item.text}</span><span className="studio-stamp">{stamp?.status === 'succeeded'
+        : null}<span className="studio-postcard-text">{item.text}</span>{stampId ? <span className="studio-stamp">{stamp?.status === 'succeeded'
         ? <PrivateMedia url={`/api/media/stickers/${stampId}/image`} token={token} loading="eager" alt={`${stamp.motif}，千问生成的邮票`} />
-        : <span>{stamp?.status === 'failed' ? '邮票失败' : '行程邮票绘制中'}</span>}</span></div>;
+        : <span>{stamp?.status === 'failed' ? '邮票失败' : '行程邮票绘制中'}</span>}</span> : null}</div>;
     }
     if (item.kind === 'ticket' || item.kind === 'boarding') return <div className="studio-prop-wrap"><img className="studio-prop" src={`/art/${item.kind === 'ticket' ? 'rail-ticket-blank' : 'boarding-pass-blank'}.png`} alt={`千问生成的${labelFor(item.kind)}模板`} /><span className="studio-ticket-text">{trip.plan?.originCity || '旅途起点'} → {trip.plan?.destination || tripTitle(trip)}<br />{trip.plan?.startDate || '启程日期'}</span></div>;
     return <div className="studio-text">{item.text}</div>;
@@ -518,7 +510,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     <div className="studio-page" key={pageIndex}><div className="studio-canvas">{page.items.map(item =>
       <div className={`studio-item studio-${item.kind}`} key={item.id}
         style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z,
-          transform: `rotate(${item.r}deg)` }}>{renderItem(item)}</div>)}</div></div>)}</div>;
+          transform: `rotate(${item.r}deg)` }}>{renderItem(item, page)}</div>)}</div></div>)}</div>;
   if (!ready) return <section className="studio-shell" aria-label="可编辑的旅途手账"><p role="status" className="studio-message">正在打开手账…</p></section>;
   return <section className="studio-shell" aria-label="可编辑的旅途手账">
     <div className="studio-toolbar"><strong>{tripTitle(trip)} <small>{tripDate(trip)}</small></strong><div className="studio-spread-nav"><button type="button" disabled={spreadIndex === 0} onClick={() => { setSpreadIndex(index => index - 1); setSelected(null); }}>‹</button><small>{spreadIndex + 1} / {Math.ceil(pages.length / 2)}</small><button type="button" disabled={spreadIndex >= pages.length / 2 - 1} onClick={() => { setSpreadIndex(index => index + 1); setSelected(null); }}>›</button><button type="button" disabled={!token || busy || pages.length >= 12} onClick={addSpread}>＋两页</button></div><div><button className="solid-button" disabled={!token || busy || !ready} onClick={aiCompose}>{busy ? <LoaderCircle className="spin" size={15} /> : <Sparkles size={15} />}AI 排版</button>{!token ? <button className="text-button" onClick={onOpenSettings}>连接相册</button> : null}</div></div>
@@ -529,7 +521,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
           onClick={() => { setSelected({ pageIndex, id: item.id }); setToolTab('edit'); }}
           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected({ pageIndex, id: item.id }); setToolTab('edit'); } }}
           onPointerDown={event => onPointerDown(event, pageIndex, item)} onPointerMove={onPointerMove} onPointerUp={() => { if (drag.current?.moved) persistPage(drag.current.pageIndex); drag.current = null; }} onPointerCancel={() => { if (drag.current?.moved) persistPage(drag.current.pageIndex); drag.current = null; }}
-          style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z, transform: `rotate(${item.r}deg)` }}>{renderItem(item)}</div>)}
+          style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z, transform: `rotate(${item.r}deg)` }}>{renderItem(item, page)}</div>)}
       </div></div>; })}{turnDirection ? <BinderFlipTransition direction={turnDirection} stageRef={stageRef}
         incomingRef={turnDirection === 'next' ? nextPreviewRef : previousPreviewRef} onComplete={onTurnComplete} /> : null}</div>
       {nextTrip ? <JournalStudio key={nextTrip.id} trip={nextTrip} token={token} previewOnly sourceRef={nextPreviewRef} /> : null}
