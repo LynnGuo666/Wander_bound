@@ -1,0 +1,60 @@
+{
+  "id": "journal-props-qwen21-t2i-v1",
+  "model": "Qwen-Image-2.1",
+  "mode": "text-to-image, no reference image",
+  "workflow": "workflows/qwen-image-2.1-sticker-api.json",
+  "generatedAt": "2026-09-29",
+  "tags": [
+    "手账底图",
+    "相卡",
+    "相框",
+    "车票",
+    "登机牌",
+    "明信片",
+    "书页",
+    "胶片",
+    "便签"
+  ],
+  "assets": [
+    {
+      "file": "public/art/polaroid-frame.png",
+      "sourcePng": "data/qwen-polaroid-frame-original.png",
+      "prompt": "A single vintage cream instant-photo paper frame, portrait orientation, large perfectly blank pale center window taking up 75 percent of width and 65 percent of height, thick bottom caption border, subtle real paper fibers and corner wear. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/ornate-photo-frame.png",
+      "sourcePng": "data/qwen-ornate-photo-frame-original.png",
+      "prompt": "A single thin vintage brass travel photo frame, landscape orientation, large perfectly blank pale center window taking up 78 percent of width and 72 percent of height, elegant corner embossing and subtle metallic highlights. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/postcard-blank.png",
+      "sourcePng": "data/qwen-postcard-blank-original.png",
+      "prompt": "A single vintage blank travel postcard, landscape orientation, warm textured cream paper, faint ruled address lines on right half, small empty stamp square at top right, blank left half for user diary, slightly worn deckle edges. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/rail-ticket-blank.png",
+      "sourcePng": "data/qwen-rail-ticket-blank-original.png",
+      "prompt": "A single vintage Chinese rail journey ticket shaped paper card, landscape orientation, pale sage and cream paper, blank fields and thin dividing rules, perforated right stub and subtle railway graphic accents, no train picture. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/boarding-pass-blank.png",
+      "sourcePng": "data/qwen-boarding-pass-blank-original.png",
+      "prompt": "A single elegant blank airline boarding pass shaped paper card, landscape orientation, warm ivory and light blue, clean blank fields with fine rules, perforated left stub and tiny plane silhouette decoration, no readable text. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/film-frame.png",
+      "sourcePng": "data/qwen-film-frame-original.png",
+      "prompt": "A single vintage photographic film strip frame, landscape orientation, one large perfectly blank pale center window for a real travel video, dark olive film border with small perforations along top and bottom, analog texture. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/note-paper.png",
+      "sourcePng": "data/qwen-note-paper-original.png",
+      "prompt": "A single blank torn handwritten travel diary note page, portrait orientation, warm ivory paper with very faint horizontal ruled lines, slightly irregular edges and subtle paper fiber texture, enough blank space for real user text. This is an RGBA image with transparency. One isolated blank travel scrapbook prop, centered and viewed straight-on from above. Empty inner surface reserved for a real user photograph or itinerary text, absolutely no scene or imagery inside, no readable letters, no numerals, no logo, no watermark. Transparent outer background."
+    },
+    {
+      "file": "public/art/binder-spread.png",
+      "sourcePng": "data/qwen-binder-spread-original.png",
+      "prompt": "This is an RGBA image with transparency. A single open loose-leaf travel scrapbook binder seen straight-on from above, wide landscape spread, two large completely blank ivory paper pages side by side, six realistic brass binder rings running vertically exactly through the center gutter, subtle tan cloth edge and natural paper shadows. No book inside, no objects on pages, no lines, no photos, no stickers, no text, no letters, no logo, no watermark. Entire binder isolated on a transparent outer background, generous margin. Elegant nostalgic editorial watercolor with believable physical depth."
+    }
+  ]
+}
