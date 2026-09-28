@@ -69,6 +69,24 @@ def test_reconstruction_preserves_user_confirmed_date_and_unknown_gaps():
     assert "未知" in result["notice"]
 
 
+def test_reconstruction_uses_screen_content_as_context_not_a_stop():
+    photos = [
+        {"id": "screen", "capturedDay": "2026-08-03", "capturedAt": "2026-08-03T19:00",
+         "gps": None, "tags": {"scene": "手机地图导航界面截图", "ocr": ["镇江南站"]}},
+        {"id": "station", "capturedDay": "2026-08-03", "capturedAt": "2026-08-03T21:00",
+         "gps": {"lat": 32.15, "lng": 119.41}, "tags": {"scene": "镇江南站站台候车"}},
+        {"id": "unknown", "capturedDay": "2026-08-03", "capturedAt": "2026-08-03T22:00",
+         "gps": None, "tags": {}},
+    ]
+    result = reconstruct(photos)
+    assert [event["label"] for event in result["days"][0]["events"]] == ["镇江南站站台候车"]
+    assert result["contextPhotoCount"] == 1
+    assert result["unresolvedPhotoCount"] == 1
+    confirmed = {"days": [{"date": "2026-08-03", "events": [{"id": "photo-screen", "date": "2026-08-03",
+        "label": "用户确认的路段", "source": "user_confirmed", "photoIds": ["screen"]}]}]}
+    assert any(event["label"] == "用户确认的路段" for event in reconstruct(photos, confirmed)["days"][0]["events"])
+
+
 def test_amap_and_device_coordinates_round_trip_without_double_shift():
     device = {"lat": 30.25, "lng": 120.15}
     amap_point = wgs_to_gcj(**device)

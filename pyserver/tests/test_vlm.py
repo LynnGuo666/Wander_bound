@@ -45,12 +45,15 @@ def test_tag_image_success():
 
     def handler(request):
         seen["n"] += 1
+        seen["payload"] = json.loads(request.read())
         return httpx.Response(200, json=_completion(json.dumps({"scene": "机场", "quality": {"keep": 4}})))
 
     client = httpx.Client(transport=httpx.MockTransport(handler))
     out = vlm.tag_image(_jpeg_bytes(), client=client, sleep=_NOOP)
     assert out["scene"] == "机场" and out["quality"]["keep"] == 4
     assert seen["n"] == 1
+    assert seen["payload"]["max_tokens"] == 900
+    assert seen["payload"]["chat_template_kwargs"] == {"enable_thinking": False}
 
 
 def test_extract_json_tolerates_fence_and_noise():
