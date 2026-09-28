@@ -27,3 +27,9 @@
 主会话在 H3 运行期间提交另一 Qwen job `92e48610-b124-46c2-a4bd-07a4a31ad2ec`。20:36:20 +08 的 [并发读数](generated-evidence/m01/runtime-concurrency-observation.json)显示 H3 仍运行，Qwen `queued/startedAt=null`，API queue 为一条 video 加一条 image，Comfy queue 只有原 H3 prompt。H3 完成后的 Qwen 启动顺序、最终 MP4 与下载哈希尚待追踪；这些中间读数不构成 c03 完整通过。
 
 真实 H3 在两次资源等待后进入 `running` 时，旧 busy `error` 文本仍在 job 中。本地后续提交 `fa9c197` 清正常运行/成功状态下的当前 `error/errorCode`，保留历史 `resourceRetries`；全量 pyserver 测试 64 passed。Spark 当前任务仍使用已部署 `37ecdc75`，本轮未部署这项修复。
+
+### 镜头成功后的合成故障与本地修复
+
+H3 引擎原 prompt 实际生成并保存 `0.mp4`，大小 1,087,931 字节、SHA-256 `30c75a8a287b295fcaa925ac6adb477541a0cf1f0bb36403cd117a19a7dff773`；ffprobe 为 H.264 `1024×576`、24 fps、5.167 秒，带 AAC 音轨。job 记录 `completedClips=1`、`done=true`，但最终 `failed/JOB_FAILED`，原因是 concat 列表写入 `data/media/jobs/.../0.mp4`，FFmpeg 又相对 `clips.txt` 所在目录解析，使路径重复。完整脱敏元数据见 [H3 结果](generated-evidence/m01/runtime-h3-outcome.json)。主会话排队的 Qwen job 在 20:39:50 +08 才开始、20:40:25 成功；[交接结果](generated-evidence/m01/runtime-handoff-outcome.json)同时保留两个任务的终态及哈希，观察时 API queue 为 0。H3 最终 `memory.mp4` 尚不存在，不能把镜头成功称作成片成功。
+
+本地修复将 concat 条目写成同目录 basename `file '0.mp4'`；已有图片变体及所有已存在有效镜头可不加载模型直接恢复，镜头与最终 MP4 在复用/发布前需经 ffprobe 检查非空、可解码、16:9 和正时长。对于坏文件，不以 `done` 标志冒充完成。Spark `/tmp` 中用合成蓝色 160×90、24 fps、0.5 秒小片段运行了真实 FFmpeg 回归：旧路径返回 254 且出现重复目录，新 basename 成功并由 ffprobe 确认输出；见 [FFmpeg 回归](generated-evidence/m01/runtime-ffmpeg-regression.json)。本地 pyserver 全量测试 **68 passed**。修复提交尚未部署，原 H3 job 的正式 retry 与最终 MP4 下载仍待主会话部署后验证。

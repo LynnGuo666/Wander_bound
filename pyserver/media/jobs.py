@@ -3,13 +3,16 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import io
 import json
 import os
 import secrets
+import subprocess
 import uuid
 from pathlib import Path
 
 import httpx
+from PIL import Image
 
 from .comfy import ComfyClient
 from . import workflow_versions
@@ -148,11 +151,60 @@ class JobStore:
         job["progressLabel"] = "任务失败"
         self.save(job)
 
+    def _image_result_valid(self, job: dict) -> bool:
+        variant = f"ai-{job['id']}"
+        photo = self.media.get(job["photoId"]) or {}
+        if variant not in photo.get("variants", []):
+            return False
+        content = self.media.bytes(job["photoId"], variant)
+        if not content:
+            return False
+        try:
+            with Image.open(io.BytesIO(content)) as image:
+                if image.format != "JPEG":
+                    return False
+                image.load()
+            return True
+        except (OSError, ValueError):
+            return False
+
+    @staticmethod
+    def _video_file_valid(path: Path) -> bool:
+        try:
+            if not path.is_file() or path.stat().st_size == 0:
+                return False
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
+                 "format=duration:stream=width,height", "-of", "json", str(path)],
+                capture_output=True, text=True, timeout=15, check=True)
+            body = json.loads(probe.stdout)
+            streams = body.get("streams") or []
+            duration = float((body.get("format") or {}).get("duration") or 0)
+            return (duration > 0 and len(streams) == 1
+                    and streams[0].get("width", 0) > 0
+                    and streams[0]["width"] * 9 == streams[0].get("height", 0) * 16)
+        except (OSError, ValueError, subprocess.SubprocessError, json.JSONDecodeError):
+            return False
+
+    def _can_finish_without_model(self, job: dict) -> bool:
+        if job["kind"] == "edit":
+            return self._image_result_valid(job)
+        job_dir = self.root / job["id"]
+        clips = job["clips"]
+        if (all(clip.get("done") for clip in clips)
+                and self._video_file_valid(job_dir / "memory.mp4")):
+            return True
+        return all(self._video_file_valid(job_dir / f"{index}.mp4")
+                   for index in range(len(clips)))
+
     async def _drain(self):
         while pending := self.pending():
             job = pending[0]
             try:
                 self._validate_job_inputs(job)
+                if self._can_finish_without_model(job):
+                    await self._run(job["id"])
+                    continue
                 job["status"] = "loading_model"
                 job["progressLabel"] = "加载模型服务"
                 job["progressPercent"] = 5
@@ -242,8 +294,7 @@ class JobStore:
             job.pop("errorCode", None)
             if job["kind"] == "edit":
                 variant = f"ai-{job['id']}"
-                photo = self.media.get(job["photoId"]) or {}
-                if variant in photo.get("variants", []) and self.media.bytes(job["photoId"], variant):
+                if self._image_result_valid(job):
                     job["variant"] = variant
                     job["status"] = "succeeded"
                     job["progressLabel"] = "已恢复已有图片产物"
@@ -290,7 +341,7 @@ class JobStore:
                 job_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
                 clips = job["clips"]
                 final_video = job_dir / "memory.mp4"
-                if final_video.exists() and all(clip.get("done") for clip in clips):
+                if all(clip.get("done") for clip in clips) and self._video_file_valid(final_video):
                     job["status"] = "succeeded"
                     job["progressLabel"] = "已恢复已有视频产物"
                     job["progressPercent"] = 100
@@ -299,12 +350,15 @@ class JobStore:
                     return
                 for index, clip in enumerate(clips):
                     output = job_dir / f"{index}.mp4"
-                    if output.exists():
+                    if self._video_file_valid(output):
                         if not clip.get("done"):
                             clip["done"] = True
                             job["completedClips"] = max(job.get("completedClips", 0), index + 1)
                             self.save(job)
                         continue
+                    if clip.get("done"):
+                        clip["done"] = False
+                        self.save(job)
                     job["progressLabel"] = f"生成镜头 {index + 1}/{len(clips)}"
                     job["progressPercent"] = None
                     self.save(job)
@@ -327,6 +381,9 @@ class JobStore:
                         self.save(job)
                     temporary_clip = job_dir / f"{index}.pending.mp4"
                     temporary_clip.write_bytes(await self._wait(self.video, clip["promptId"]))
+                    if not self._video_file_valid(temporary_clip):
+                        temporary_clip.unlink(missing_ok=True)
+                        raise RuntimeError("Spark 镜头文件不可解码或不是 16:9 视频")
                     clip["submissionState"] = "completed"
                     self.save(job)
                     os.replace(temporary_clip, output)
@@ -338,7 +395,7 @@ class JobStore:
                 job["progressPercent"] = 95
                 self.save(job)
                 concat = job_dir / "clips.txt"
-                concat.write_text("\n".join(f"file '{(job_dir / f'{index}.mp4').as_posix()}'" for index in range(len(clips))))
+                concat.write_text("\n".join(f"file '{index}.mp4'" for index in range(len(clips))))
                 temporary_video = job_dir / "memory.pending.mp4"
                 process = await asyncio.create_subprocess_exec("ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-f", "concat",
                                 "-safe", "0", "-i", str(concat), "-c:v", "libx264", "-c:a", "aac", "-movflags", "+faststart",
@@ -346,6 +403,8 @@ class JobStore:
                 _, stderr = await process.communicate()
                 if process.returncode:
                     raise RuntimeError(f"视频合成失败：{stderr.decode(errors='replace')[:200]}")
+                if not self._video_file_valid(temporary_video):
+                    raise RuntimeError("合成视频不可解码或不是 16:9")
                 os.replace(temporary_video, final_video)
             job["status"] = "succeeded"
             job["progressLabel"] = "已完成"

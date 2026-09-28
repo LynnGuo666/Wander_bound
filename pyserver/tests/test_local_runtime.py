@@ -21,6 +21,7 @@ class TrackingAdapter:
         self.states = {}
         self.next_state = None
         self.response_lost = False
+        self.reject_submission = False
 
     def freeze_workflow(self):
         return workflow_versions.freeze_workflow(self.workflow_file, self.kind)
@@ -32,6 +33,10 @@ class TrackingAdapter:
             self.next_state = None
         if self.response_lost:
             raise httpx.ReadTimeout("response lost after acceptance")
+        if self.reject_submission:
+            request = httpx.Request("POST", "http://127.0.0.1/prompt")
+            raise httpx.HTTPStatusError("invalid workflow", request=request,
+                                        response=httpx.Response(400, request=request))
         return prompt_id
 
     async def result(self, prompt_id):
@@ -174,6 +179,33 @@ def test_response_lost_and_missing_prompt_fails_without_resubmission(tmp_path, m
     assert len(image.calls) == 1
 
 
+def test_comfy_validation_rejection_is_bounded_and_retry_keeps_frozen_graph(tmp_path, monkeypatch):
+    jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
+    job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "fault injection", "seed": 2026092899})
+    frozen = copy.deepcopy(job["workflowSnapshot"])
+    image.reject_submission = True
+    image.next_state = ("missing", None)
+    async def fast_sleep(_seconds):
+        return None
+    monkeypatch.setattr("pyserver.media.jobs.asyncio.sleep", fast_sleep)
+    graph = json.loads(image.workflow_file.read_text())
+    graph["6"]["inputs"]["sampler_name"] = "new-default-after-submission"
+    image.workflow_file.write_text(json.dumps(graph))
+    for attempt in (1, 2, 3):
+        image.next_state = ("missing", None)
+        asyncio.run(jobs._run(job["id"]))
+        saved = jobs.get(job["id"])
+        assert saved["status"] == "failed" and saved["attempt"] == attempt
+        assert saved["workflowSnapshot"] == frozen
+        assert saved["submissionState"] == "unknown"
+        if attempt < 3:
+            assert jobs.retry(job["id"], expected_kind="edit")["attempt"] == attempt + 1
+    assert jobs.retry(job["id"], expected_kind="edit") is None
+    assert len(image.calls) == 3
+    assert len({call[5] for call in image.calls}) == 3
+    assert all(call[3] == frozen for call in image.calls)
+
+
 def test_running_and_success_clear_stale_resource_error_but_keep_retry_history(tmp_path, monkeypatch):
     jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
     job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
@@ -274,6 +306,7 @@ def test_completed_clip_is_not_regenerated_after_restart(tmp_path, monkeypatch):
         Path(args[-1]).write_bytes(b"combined")
         return FakeProcess()
     monkeypatch.setattr("pyserver.media.jobs.asyncio.create_subprocess_exec", fake_ffmpeg)
+    monkeypatch.setattr(JobStore, "_video_file_valid", staticmethod(lambda path: path.is_file() and path.stat().st_size > 0))
     restarted = JobStore(jobs.media, None, video, controller)
     asyncio.run(restarted._run(job["id"]))
     saved = restarted.get(job["id"])
@@ -281,4 +314,68 @@ def test_completed_clip_is_not_regenerated_after_restart(tmp_path, monkeypatch):
     assert video.calls[0][2] == 11
     assert (clip_dir / "0.mp4").read_bytes() == b"first clip"
     assert (clip_dir / "memory.mp4").read_bytes() == b"combined"
+    assert (clip_dir / "clips.txt").read_text() == "file '0.mp4'\nfile '1.mp4'"
     assert controller.maximum == 0
+
+
+def test_retry_completed_clip_composes_without_loading_model(tmp_path, monkeypatch):
+    jobs, _, video, _, trip, chosen, _ = make_jobs(tmp_path, monkeypatch)
+    job = jobs.submit("memory", {"tripId": trip["id"], "photoIds": [chosen["id"]], "title": "旅行", "seed": 10})
+    clip_dir = jobs.root / job["id"]
+    clip_dir.mkdir()
+    (clip_dir / "0.mp4").write_bytes(b"valid fake clip")
+    job["clips"][0].update({"done": True, "promptId": "saved-engine-prompt", "submissionState": "completed"})
+    job.update({"status": "failed", "error": "previous concat path failure", "errorCode": "JOB_FAILED", "completedClips": 1})
+    jobs.save(job)
+    monkeypatch.setattr(JobStore, "_video_file_valid", staticmethod(lambda path: path.is_file() and path.stat().st_size > 0))
+
+    class NoModelController:
+        primary_chat = False
+        def use(self, _kind):
+            raise AssertionError("all local clips must compose without loading a model")
+
+    class FakeProcess:
+        returncode = 0
+        async def communicate(self):
+            return b"", b""
+    async def fake_ffmpeg(*args, **_kwargs):
+        Path(args[-1]).write_bytes(b"combined")
+        return FakeProcess()
+    monkeypatch.setattr("pyserver.media.jobs.asyncio.create_subprocess_exec", fake_ffmpeg)
+    resumed = JobStore(jobs.media, None, video, NoModelController())
+    resumed._schedule = lambda: None
+    assert resumed.retry(job["id"], expected_kind="memory")["attempt"] == 2
+    asyncio.run(resumed._drain())
+    saved = resumed.get(job["id"])
+    assert saved["status"] == "succeeded" and saved["clips"][0]["promptId"] == "saved-engine-prompt"
+    assert len(video.calls) == 0
+    assert (clip_dir / "clips.txt").read_text() == "file '0.mp4'"
+    assert (clip_dir / "memory.mp4").read_bytes() == b"combined"
+
+
+def test_unreadable_video_is_not_a_completed_clip(tmp_path):
+    path = tmp_path / "corrupt.mp4"
+    path.write_bytes(b"not an MP4")
+    assert JobStore._video_file_valid(path) is False
+
+
+def test_existing_valid_image_recovers_without_loading_model(tmp_path, monkeypatch):
+    from test_generation_contract import jpeg
+    jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
+    job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
+    jobs.media.save_variant(chosen["id"], f"ai-{job['id']}", jpeg("green"))
+    job.update({"status": "failed", "error": "previous save interruption", "errorCode": "JOB_FAILED"})
+    jobs.save(job)
+
+    class NoModelController:
+        primary_chat = False
+        def use(self, _kind):
+            raise AssertionError("existing valid image must recover without loading a model")
+
+    resumed = JobStore(jobs.media, image, None, NoModelController())
+    resumed._schedule = lambda: None
+    assert resumed.retry(job["id"], expected_kind="edit")["attempt"] == 2
+    asyncio.run(resumed._drain())
+    saved = resumed.get(job["id"])
+    assert saved["status"] == "succeeded" and saved["variant"] == f"ai-{job['id']}"
+    assert image.calls == []
