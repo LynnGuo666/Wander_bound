@@ -9,6 +9,8 @@
 3. StepFun 选择两页模板、精选照片顺序，写短日记与明信片留言，并提出贴纸、邮票、插画和明信片的具体图案。Web 将这些文字主题分别提交为 Spark Qwen-Image-2.1 文生图任务；工作流从 `EmptyLatentImage` 开始，不上传用户照片。提示词版本存在 `prompts/journal-*.qwen-image-2.1.json`，任务冻结完整工作流、seed 和 prompt UUID。
 4. 图片与邮票/贴纸通过私有图片接口读取。照片留在相框内，千问生成的插画与明信片图作为各自的底图，文字、邮票独立叠放，因此用户仍能编辑。
 
+插画提示词要求画地点而不虚构旅伴或人物；人物未进入精选照片的场景标签，不能被绘成旅行事实。
+
 ## 页面所有权
 
 `GET /api/media/trips/{tripId}/journal` 返回私有手账及版本号。用户每次修改一个页面，经 `PUT /journal/pages/{pageIndex}` 保存整页，服务器将该页标记 `protected=true, source=user`；用户新增跨页时，两页立即保护。写入需要匹配版本号，避免静默覆盖并发更新。

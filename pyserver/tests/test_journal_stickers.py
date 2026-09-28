@@ -109,7 +109,7 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             illustration = await http.post(base + "/stickers", json={"motif": "江边建筑和游船", "kind": "illustration"})
             assert postcard.status_code == illustration.status_code == 202
             assert stickers.get(postcard.json()["id"])["promptVersion"] == "journal-postcard-scene-qwen21-t2i-v2"
-            assert stickers.get(illustration.json()["id"])["promptVersion"] == "journal-illustration-qwen21-t2i-v1"
+            assert stickers.get(illustration.json()["id"])["promptVersion"] == "journal-illustration-qwen21-t2i-v3"
             journal = (await http.get(base + "/journal")).json()
             edited_page = journal["pages"][0]
             edited_page["items"] = [{**item, "text": "这页由用户写过"} if item["kind"] == "text" else item
