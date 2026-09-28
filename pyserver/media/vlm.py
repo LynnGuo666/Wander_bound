@@ -21,7 +21,10 @@ from PIL import Image, ImageOps
 
 from .vision import vision_base_url, vision_model
 
-DEFAULT_TIMEOUT = float(os.getenv("PYSERVER_VLM_TIMEOUT", "60"))
+# Spark 上那台 vLLM 生成只有 8-10 tok/s，一张图打标实测 78-180s（模型被按需调度器
+# 卸载后首次请求还要等权重加载）。60s 是接 StepFun 时留下的值，到这里必然超时重试，
+# 三次都撞线就整张丢掉。
+DEFAULT_TIMEOUT = float(os.getenv("PYSERVER_VLM_TIMEOUT", "300"))
 
 
 def _first_env(*names: str) -> str | None:
