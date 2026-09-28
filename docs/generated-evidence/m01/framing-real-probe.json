@@ -116,8 +116,9 @@
     "first_utc": "2026-09-28T13:37:36.559236+00:00",
     "last_utc": "2026-09-28T13:51:26.863582+00:00",
     "peak_memory": null,
-    "sampled_available_gib_min": 44.9,
-    "sampled_gpu_utilization_percent_max": 96.0
+    "sampled_gpu_utilization_percent_max": 96.0,
+    "sampled_host_memavailable_gib_min": 44.9,
+    "source": "pyserver/inference/controller.py:_memory reads Linux /proc/meminfo MemAvailable and exposes memory.availableGiB; this is system RAM, not GPU VRAM"
   },
   "schema_version": 1,
   "visual_review": {
