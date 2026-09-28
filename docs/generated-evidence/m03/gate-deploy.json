@@ -1,0 +1,17 @@
+{
+  "before": "b02d340f7ff75bc0b332859253705e2f375b1a37",
+  "localCommit": "b6a267c",
+  "fileHashes": {
+    "pyserver/media/material_cards.py": "0eca7e1eeba1f323e812bfdf8b2de540e9ca480dec62acab81f690fbc3418773",
+    "pyserver/media/job_routes.py": "6eeaaba767cc528429a4c0b4da4d5b7df776cd3f859586eb58fc839db9cd92f9",
+    "pyserver/tests/test_material_cards.py": "ab42c56d38fee63bb80742283cd7810fa610e67020cdc09ef619e92ebda1811a"
+  },
+  "tests": {
+    "exitCode": 0,
+    "stdout": "...........                                                              [100%]\n11 passed in 0.33s\n",
+    "stderr": ""
+  },
+  "after": "cf768f744d09f2de77ae54f8aa80102f612e9949",
+  "gitStatus": "",
+  "deployed": true
+}

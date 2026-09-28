@@ -1,0 +1,259 @@
+{
+  "cards": [
+    {
+      "http": 200,
+      "card": {
+        "schemaVersion": 1,
+        "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+        "fields": {
+          "sceneDescription": {
+            "value": "October mountains and golden trees viewed south toward Yellowstone from Eagle Creek Road.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Looking_south_over_Yellowstone_from_Gallatin_National_Forest_(14924610824).jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": "2014-10-10",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Looking_south_over_Yellowstone_from_Gallatin_National_Forest_(14924610824).jpg"
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.512204+08:00"
+      },
+      "reused": false
+    },
+    {
+      "http": 200,
+      "card": {
+        "schemaVersion": 1,
+        "photoId": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "803a9d06a992f9b448a0f8955c0434a1198a2fb5739ea289053428d8735a18e3",
+        "fields": {
+          "sceneDescription": {
+            "value": "Elk grazing beside a river in Yellowstone; historical slide with visible dark border.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Yellowstone_National_Park_YELL4574.jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.553186+08:00"
+      },
+      "reused": false
+    },
+    {
+      "http": 200,
+      "card": {
+        "schemaVersion": 1,
+        "photoId": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048",
+        "fields": {
+          "sceneDescription": {
+            "value": "Aerial view of Grand Prismatic Spring and its multicolored geothermal rim; Commons reports July 2001, without a day.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Grand_prismatic_spring.jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.586729+08:00"
+      },
+      "reused": false
+    },
+    {
+      "http": 200,
+      "card": {
+        "schemaVersion": 1,
+        "photoId": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "35239be848e6df7b0e249ebda5a34e2606a5e9d4496fee8072c1a9b44aeb8539",
+        "fields": {
+          "sceneDescription": {
+            "value": "Snowy Lower Falls of the Yellowstone, portrait framing, with the water descending into the canyon.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Lower_Falls_of_the_Yellowstone_(13699489084).jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": "2014-04-03",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Lower_Falls_of_the_Yellowstone_(13699489084).jpg"
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.646771+08:00"
+      },
+      "reused": false
+    }
+  ],
+  "textOnly": true,
+  "unselectedRejected": {
+    "http": 409,
+    "body": {
+      "detail": {
+        "code": "PHOTO_NOT_SELECTED",
+        "message": "照片未在选优清单中"
+      }
+    }
+  },
+  "selection": {
+    "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+    "batchId": "m01-public-yellowstone-20260928-v1",
+    "source": "manual-acceptance-20260928",
+    "photoIds": [
+      "199b155d-0c14-4673-8d25-5de27f175676",
+      "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+      "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+      "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+    ],
+    "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+    "photos": [
+      {
+        "id": "199b155d-0c14-4673-8d25-5de27f175676",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": "2014-10-10",
+        "width": 1920,
+        "height": 1179,
+        "analysis": {
+          "width": 1920,
+          "height": 1179
+        },
+        "variants": [
+          "ai-055f8f6e-8fa6-445c-a008-43f6053059b8",
+          "ai-1c800b6b-2dfe-45c6-93a2-4166c1a22ad6",
+          "ai-2a96c54f-d019-4611-9069-a38384a32af9",
+          "ai-377e9b50-1f05-44d6-a728-0e1043675468",
+          "ai-4b3e4e47-636c-410b-b523-e868202dfdc0",
+          "ai-6d6b9ece-6d9d-4ea3-a6ba-df07cfcaddac",
+          "ai-6d8bde76-95ed-4887-b1fb-b2d459d32861",
+          "ai-92e48610-b124-46c2-a4bd-07a4a31ad2ec",
+          "ai-a246014b-f591-4c83-a560-06c0036a6885",
+          "ai-e991e93f-6b60-46a9-8f62-e44fb771e047"
+        ],
+        "createdAt": "2026-09-28T20:10:41.457987+08:00"
+      },
+      {
+        "id": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": null,
+        "width": 1920,
+        "height": 1280,
+        "analysis": {
+          "width": 1920,
+          "height": 1280
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.519029+08:00"
+      },
+      {
+        "id": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": null,
+        "width": 1920,
+        "height": 1227,
+        "analysis": {
+          "width": 1920,
+          "height": 1227
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.564275+08:00"
+      },
+      {
+        "id": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "capturedDay": "2014-04-03",
+        "width": 1707,
+        "height": 2560,
+        "analysis": {
+          "width": 1707,
+          "height": 2560
+        },
+        "variants": [],
+        "createdAt": "2026-09-28T20:10:41.762021+08:00"
+      }
+    ]
+  }
+}
