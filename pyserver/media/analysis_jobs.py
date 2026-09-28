@@ -70,7 +70,8 @@ class AnalysisJobs:
 
     def retry(self, job_id: str) -> dict | None:
         job = self.get(job_id)
-        if not job or job["status"] != "failed":
+        if not job or (job["status"] != "failed" and not
+                       (job["status"] == "succeeded" and job["warnings"])):
             return None
         job.update(status="queued", stage="等待重试", error=None, updatedAt=now())
         self.save(job)

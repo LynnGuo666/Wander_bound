@@ -110,8 +110,9 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
                 return None
             cities = []
             for item in (result.get("cities") or [])[:8]:
-                if isinstance(item, dict) and isinstance(item.get("name"), str) and item["name"].strip():
-                    cities.append({"name": item["name"].strip()[:40], "role": str(item.get("role") or "未知")[:20],
+                if (isinstance(item, dict) and isinstance(item.get("name"), str) and item["name"].strip()
+                        and item.get("role") in {"出发地", "途经", "到达地"}):
+                    cities.append({"name": item["name"].strip()[:40], "role": item["role"],
                                    "reason": str(item.get("reason") or "")[:160]})
             valid_ids = {photo["id"] for photo in selected}
             legs = []
