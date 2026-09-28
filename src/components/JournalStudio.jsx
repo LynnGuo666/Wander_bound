@@ -298,10 +298,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
         if (!alive) return;
         const current = result.stickers || [];
         updateStickerJobs(current);
-        const wanted = [...itineraryAssets.stickers.map(next => ({ kind: 'sticker', motif: next })),
+        const wanted = [{ kind: 'illustration', motif: itineraryAssets.illustration },
+          { kind: 'postcard', motif: itineraryAssets.postcard },
           { kind: 'stamp', motif: itineraryAssets.stamp },
-          { kind: 'illustration', motif: itineraryAssets.illustration },
-          { kind: 'postcard', motif: itineraryAssets.postcard }];
+          ...itineraryAssets.stickers.map(next => ({ kind: 'sticker', motif: next }))];
         for (const item of wanted) {
           if (!alive) return;
           if (current.some(job => job.kind === item.kind && job.motif === item.motif)) continue;
@@ -411,10 +411,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       if (pagesRef.current.length >= 12 && pagesRef.current.slice(0, 2).every(page => page.protected))
         throw new Error('已达到 12 页上限；现有页面均由你修改，AI 不会覆盖它们。');
       const plan = await mediaRequest(`/api/media/trips/${trip.id}/journal/compose`, token, { method: 'POST' });
-      const stickerIds = await Promise.all(plan.stickerMotifs.map(nextMotif => queueSticker(nextMotif)));
-      const stampId = await queueSticker(plan.stampMotif, 'stamp');
-      const postcardId = await queueSticker(plan.postcardMotif, 'postcard');
       const illustrationId = await queueSticker(plan.illustrationMotif, 'illustration');
+      const postcardId = await queueSticker(plan.postcardMotif, 'postcard');
+      const stampId = await queueSticker(plan.stampMotif, 'stamp');
+      const stickerIds = await Promise.all(plan.stickerMotifs.map(nextMotif => queueSticker(nextMotif)));
       const layouts = plan.templates.map((id, index) => {
         const template = templates.find(item => item.id === id);
         const items = fromTemplate(template, trip, index, stickerIds, stampId,
