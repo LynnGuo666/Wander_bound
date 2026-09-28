@@ -1,0 +1,220 @@
+{
+  "http": 202,
+  "response": {
+    "id": "a2e67591-7d04-4b1f-a3cc-375d3e23ee13",
+    "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+    "productKind": "storyboard",
+    "resultKind": "storyboard_json",
+    "status": "planning",
+    "version": 0,
+    "draft": null,
+    "draftDigest": null,
+    "selectionSnapshot": {
+      "schemaVersion": 1,
+      "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+      "selection": {
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "batchId": "m01-public-yellowstone-20260928-v1",
+        "source": "manual-acceptance-20260928",
+        "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+        "photoIds": [
+          "199b155d-0c14-4673-8d25-5de27f175676",
+          "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+          "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+          "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+        ],
+        "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+      },
+      "inputPhotoIds": [
+        "199b155d-0c14-4673-8d25-5de27f175676",
+        "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+        "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+        "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+      ],
+      "originals": [
+        {
+          "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+          "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+        },
+        {
+          "photoId": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+          "sha256": "803a9d06a992f9b448a0f8955c0434a1198a2fb5739ea289053428d8735a18e3"
+        },
+        {
+          "photoId": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+          "sha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048"
+        },
+        {
+          "photoId": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+          "sha256": "35239be848e6df7b0e249ebda5a34e2606a5e9d4496fee8072c1a9b44aeb8539"
+        }
+      ],
+      "inputVariant": "original"
+    },
+    "materialCardsSnapshot": [
+      {
+        "schemaVersion": 1,
+        "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+        "fields": {
+          "sceneDescription": {
+            "value": "October mountains and golden trees viewed south toward Yellowstone from Eagle Creek Road.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Looking_south_over_Yellowstone_from_Gallatin_National_Forest_(14924610824).jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": "2014-10-10",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Looking_south_over_Yellowstone_from_Gallatin_National_Forest_(14924610824).jpg"
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.512204+08:00"
+      },
+      {
+        "schemaVersion": 1,
+        "photoId": "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "803a9d06a992f9b448a0f8955c0434a1198a2fb5739ea289053428d8735a18e3",
+        "fields": {
+          "sceneDescription": {
+            "value": "Elk grazing beside a river in Yellowstone; historical slide with visible dark border.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Yellowstone_National_Park_YELL4574.jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.553186+08:00"
+      },
+      {
+        "schemaVersion": 1,
+        "photoId": "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "a714956782c86d9e781082062ecf35fbd201be69ef5e80e28fbacb1586b2c048",
+        "fields": {
+          "sceneDescription": {
+            "value": "Aerial view of Grand Prismatic Spring and its multicolored geothermal rim; Commons reports July 2001, without a day.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Grand_prismatic_spring.jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.586729+08:00"
+      },
+      {
+        "schemaVersion": 1,
+        "photoId": "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0",
+        "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+        "version": 1,
+        "originalSha256": "35239be848e6df7b0e249ebda5a34e2606a5e9d4496fee8072c1a9b44aeb8539",
+        "fields": {
+          "sceneDescription": {
+            "value": "Snowy Lower Falls of the Yellowstone, portrait framing, with the water descending into the canyon.",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Lower_Falls_of_the_Yellowstone_(13699489084).jpg"
+            }
+          },
+          "subject": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "place": {
+            "value": null,
+            "source": {
+              "kind": "unknown",
+              "reference": ""
+            }
+          },
+          "capturedAt": {
+            "value": "2014-04-03",
+            "source": {
+              "kind": "documented_import",
+              "reference": "https://commons.wikimedia.org/wiki/File:Lower_Falls_of_the_Yellowstone_(13699489084).jpg"
+            }
+          }
+        },
+        "updatedAt": "2026-09-28T23:25:19.646771+08:00"
+      }
+    ],
+    "confirmedSnapshot": null,
+    "error": null,
+    "errorCode": null,
+    "createdAt": "2026-09-28T23:34:56.179558+08:00",
+    "startedAt": null,
+    "completedAt": null,
+    "attempt": 1,
+    "stepAttempts": null,
+    "backend": "step-5-preview",
+    "promptVersion": "travel-storyboard-1.0.0"
+  },
+  "photosSentToStep": false
+}
