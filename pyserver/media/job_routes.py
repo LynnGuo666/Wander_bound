@@ -8,19 +8,41 @@ from ..trips import TripStore
 from .store import MediaStore
 from .jobs import JobStore
 from .auth import require_media_auth
+from .contracts import ContractError, MAX_PROMPT_LENGTH, PRODUCT_KINDS
+
+
+def _contract_error(exc: ContractError) -> HTTPException:
+    return HTTPException(exc.status_code, exc.body())
+
+
+def _fields(payload: dict, allowed: set[str]) -> None:
+    if set(payload) - allowed:
+        raise HTTPException(400, {"code": "REQUEST_INVALID", "message": "请求包含未支持字段"})
+
+
+def _require_trip(trips: TripStore, trip_id: object) -> None:
+    if not isinstance(trip_id, str):
+        raise HTTPException(400, {"code": "TRIP_ID_INVALID", "message": "tripId 无效"})
+    if not trips.get(trip_id):
+        raise HTTPException(404, {"code": "TRIP_NOT_FOUND", "message": "行程不存在"})
 
 def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter:
     router = APIRouter()
     @router.post("/api/media/memories")
     async def create_memory(request: Request, payload: dict):
         require_media_auth(request)
+        _fields(payload, {"tripId", "photoIds", "title"})
         trip_id = payload.get("tripId")
         photo_ids = payload.get("photoIds")
-        if not trips.get(trip_id) or not isinstance(photo_ids, list) or not 1 <= len(photo_ids) <= 8 or len(set(photo_ids)) != len(photo_ids) or any((media.get(item) or {}).get("tripId") != trip_id for item in photo_ids):
-            raise HTTPException(400, "请选择该行程的 1–8 张不重复照片")
+        _require_trip(trips, trip_id)
+        title = payload.get("title", "旅行回忆")
+        if not isinstance(title, str) or not 1 <= len(title.strip()) <= 80:
+            raise HTTPException(400, {"code": "TITLE_INVALID", "message": "title 必须是 1–80 字符"})
         try:
             job = jobs.submit("memory", {"tripId": trip_id, "photoIds": photo_ids,
-                                         "title": str(payload.get("title") or "旅行回忆")[:80]})
+                                         "title": title.strip()})
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
         except ValueError as exc:
             raise HTTPException(503, str(exc)) from exc
         return JSONResponse({key: job[key] for key in ("id", "status", "backend")}, status_code=202)
@@ -28,18 +50,59 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
     @router.post("/api/media/photos/{photo_id}/redraw")
     async def redraw(photo_id: str, request: Request, payload: dict):
         require_media_auth(request)
-        if not media.get(photo_id):
-            raise HTTPException(404, "照片不存在")
-        prompt = str(payload.get("prompt") or "").strip()[:500]
-        if not prompt:
-            raise HTTPException(400, "请描述重绘效果")
-        import secrets
+        _fields(payload, {"prompt", "seed"})
+        photo = media.get(photo_id)
+        if not photo:
+            raise HTTPException(404, {"code": "PHOTO_NOT_FOUND", "message": "照片不存在"})
+        _require_trip(trips, photo.get("tripId"))
+        prompt = payload.get("prompt")
+        if not isinstance(prompt, str) or not 1 <= len(prompt.strip()) <= MAX_PROMPT_LENGTH:
+            raise HTTPException(400, {"code": "PROMPT_INVALID", "message": f"prompt 必须是 1–{MAX_PROMPT_LENGTH} 字符"})
+        seed = payload.get("seed")
+        if seed is not None and (type(seed) is not int or not 0 <= seed <= 0xFFFFFFFF):
+            raise HTTPException(400, {"code": "SEED_INVALID", "message": "seed 必须是 0–4294967295 的整数"})
         try:
-            job = jobs.submit("edit", {"photoId": photo_id, "prompt": prompt,
-                                       "seed": int(payload.get("seed")) if payload.get("seed") is not None else secrets.randbits(32)})
+            job = jobs.submit("edit", {"photoId": photo_id, "prompt": prompt.strip(),
+                                       "seed": seed if seed is not None else secrets.randbits(32)})
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
         except ValueError as exc:
             raise HTTPException(503, str(exc)) from exc
         return JSONResponse({key: job[key] for key in ("id", "status", "backend", "seed")}, status_code=202)
+
+    @router.post("/api/media/generation-jobs")
+    async def prepare_generation_job(request: Request, payload: dict):
+        """Persist a validated input contract; product runners arrive in M02/M03."""
+        require_media_auth(request)
+        _require_trip(trips, payload.get("tripId"))
+        try:
+            job = jobs.prepare_product(payload)
+        except ContractError as exc:
+            raise _contract_error(exc) from exc
+        return JSONResponse({key: job[key] for key in
+                             ("id", "productKind", "resultKind", "status", "executionReady", "selectionSnapshot")},
+                            status_code=201)
+
+    @router.get("/api/media/generation-jobs/{job_id}")
+    async def generation_job_status(job_id: str, request: Request):
+        require_media_auth(request)
+        job = jobs.get(job_id)
+        if not job or job.get("productKind") not in PRODUCT_KINDS:
+            raise HTTPException(404, {"code": "JOB_NOT_FOUND", "message": "任务不存在"})
+        return {key: job.get(key) for key in
+                ("id", "productKind", "resultKind", "status", "executionReady", "backend",
+                 "createdAt", "startedAt", "completedAt", "selectionSnapshot", "result", "error")}
+
+    @router.get("/api/media/generation-jobs/{job_id}/result")
+    async def generation_job_result(job_id: str, request: Request):
+        require_media_auth(request)
+        job = jobs.get(job_id)
+        if not job or job.get("productKind") not in PRODUCT_KINDS:
+            raise HTTPException(404, {"code": "JOB_NOT_FOUND", "message": "任务不存在"})
+        if job["status"] != "succeeded" or job.get("result") is None:
+            raise HTTPException(409, {"code": "RESULT_NOT_READY", "message": "产物尚未生成"})
+        return {"id": job_id, "productKind": job["productKind"], "resultKind": job["resultKind"],
+                "result": job["result"]}
 
     @router.get("/api/media/edits/{job_id}")
     async def edit_status(job_id: str, request: Request):
@@ -47,7 +110,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         job = jobs.get(job_id)
         if not job or job["kind"] != "edit":
             raise HTTPException(404, "任务不存在")
-        return {key: job.get(key) for key in ("id", "photoId", "status", "backend", "variant", "error", "createdAt", "startedAt", "completedAt", "attempt", "progressLabel", "progressPercent")}
+        return {key: job.get(key) for key in ("id", "photoId", "status", "backend", "variant", "error", "errorCode", "createdAt", "startedAt", "completedAt", "attempt", "progressLabel", "progressPercent")}
 
     @router.post("/api/media/edits/{job_id}/retry")
     async def retry_edit(job_id: str, request: Request):
@@ -63,7 +126,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         job = jobs.get(job_id)
         if not job or job["kind"] != "memory":
             raise HTTPException(404, "任务不存在")
-        return {key: job.get(key) for key in ("id", "status", "backend", "error", "createdAt", "startedAt", "completedAt", "attempt", "completedClips", "progressLabel", "progressPercent")}
+        return {key: job.get(key) for key in ("id", "status", "backend", "error", "errorCode", "createdAt", "startedAt", "completedAt", "attempt", "completedClips", "progressLabel", "progressPercent")}
 
     @router.post("/api/media/memories/{job_id}/retry")
     async def retry_memory(job_id: str, request: Request):

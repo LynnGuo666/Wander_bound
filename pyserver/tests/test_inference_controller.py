@@ -16,8 +16,17 @@ class Memory:
     def __init__(self, root):
         self.root = root
         self.saved = []
+        self.trip_id = "11111111-1111-4111-8111-111111111111"
 
-    def bytes(self, _photo_id):
+    def get(self, photo_id):
+        return {"id": photo_id, "tripId": self.trip_id}
+
+    def selection_record(self, trip_id):
+        return {"tripId": trip_id, "batchId": "controller-test", "source": "fixture",
+                "photoIds": ["photo-0", "photo-1", "photo-2"], "updatedAt": "2026-09-28T00:00:00Z"}
+
+    def bytes(self, _photo_id, variant="original"):
+        assert variant == "original"
         return b"photo"
 
     def save_variant(self, photo_id, variant, content):
