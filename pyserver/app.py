@@ -25,6 +25,8 @@ def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = N
     async def lifespan(_app: FastAPI):
         controller.start()
         await jobs.resume()
+        if controller.primary_chat and not jobs.pending():
+            controller.begin_warm("chat")
         yield
         await jobs.close()
         await controller.close()

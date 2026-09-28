@@ -16,4 +16,4 @@
 
 本地运行 `./spark-tunnel.sh` 和 `./start.sh`。测试：`.venv/bin/python -m pytest pyserver/tests -q`。
 
-Spark 部署设置 `SPARK_MODEL_CONTROL=1` 后，`/api/inference/status` 提供模型和资源状态；媒体任务经单一工作队列串行执行，模型空闲默认 600 秒后停止。Web 的“模型调度”页可观察队列、内存和 GPU 利用率；手动预热、释放及 Qwen3.8 测试接口要求 `MEDIA_API_TOKEN`。本地开发默认观察模式，不执行 `systemctl`。Qwen3.8 使用独立的 `deploy/spark/qwen38.service`；未安装该单元时 Web 显示“尚未部署”，现有 Step Plan 不变。
+Spark 部署设置 `SPARK_MODEL_CONTROL=1` 后，`/api/inference/status` 提供模型和资源状态；媒体任务经单一工作队列串行执行。`SPARK_QWEN38_STICKY=1` 让 Qwen 优先常驻：图片可在内存足够时与它并存，视频任务会临时释放它，任务结束后自动恢复。图片与视频空闲 600 秒后停止。Web 的“模型调度”页可观察队列、内存和 GPU 利用率；手动预热、释放及 Qwen3.8 测试接口要求 `MEDIA_API_TOKEN`。本地开发默认观察模式，不执行 `systemctl`。Qwen3.8 使用独立的 `deploy/spark/qwen38.service`；未安装该单元时 Web 显示“尚未部署”，现有 Step Plan 不变。
