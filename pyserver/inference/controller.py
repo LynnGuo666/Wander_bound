@@ -47,6 +47,7 @@ class ModelController:
         self.loading_model: str | None = None
         self.load_progress: dict | None = None
         self.load_since: str | None = None
+        self.last_warm_attempt = 0.0
         self.owner_file = None
 
     async def _command(self, *args: str, timeout: int = 30) -> str:
@@ -270,6 +271,7 @@ class ModelController:
         self.loading_model = name
         self.phase = "loading_model"
         self.load_progress = {"model": name, "stage": "等待调度", "percent": 0, "estimated": True}
+        self.last_warm_attempt = time.monotonic()
 
         async def run():
             try:
@@ -339,6 +341,7 @@ class ModelController:
                             try:
                                 await self._stop(spec)
                                 self.error = "可用内存低于安全余量，已释放常驻 Qwen"
+                                self.last_warm_attempt = time.monotonic()
                             except RuntimeError as exc:
                                 self.error = str(exc)[:200]
                     elif time.monotonic() - last >= (self.chat_idle_seconds if spec.name == "chat" else self.idle_seconds):
@@ -353,6 +356,14 @@ class ModelController:
                             self.error = str(exc)[:200]
             if restore_primary and self.primary_chat and not self.primary_paused:
                 self.begin_warm("chat")
+            elif self.primary_chat and not self.primary_paused and (not self.warm_task or self.warm_task.done()):
+                if time.monotonic() - self.last_warm_attempt >= 300:
+                    memory = self._memory()
+                    if ((memory.get("availableGiB") or 0) >= self.peak_gib["chat"] + self.reserve_gib
+                            and (memory.get("pressureFull10") or 0) <= 1
+                            and await self._service_state(self.specs["video"]) != "active"
+                            and await self._service_state(self.specs["chat"]) != "active"):
+                        self.begin_warm("chat")
 
     def start(self):
         if self.enabled and self.sweeper is None:
