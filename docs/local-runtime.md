@@ -24,12 +24,20 @@
 
 主会话提交的 selected 原图 H3 job `90981311-bf42-47f5-b189-b7fcc62c5202` 于 20:26:54 +08 开始，镜头 prompt UUID 为 `4e38017b-4ff3-485c-9009-4063c1bcdc4d`。本轮在它仍处于 Comfy `queue_running` 时，仅执行一次 `systemctl --user restart travel-agent.service`：API PID `1154560 → 1155843`。重启前、立即恢复及 5 秒后，job 均为 `running/attempt=1/resourceRetries=2`，镜头 prompt 与队列 running ID 相同，pending 为空；重启后 authenticated memory GET 为 HTTP 200，控制器仍显示 `activeModel=video`。原始脱敏读数分别见 [重启观察](generated-evidence/m01/runtime-h3-restart.json)与 [API 回读](generated-evidence/m01/runtime-api-after-restart.json)。
 
-主会话在 H3 运行期间提交另一 Qwen job `92e48610-b124-46c2-a4bd-07a4a31ad2ec`。20:36:20 +08 的 [并发读数](generated-evidence/m01/runtime-concurrency-observation.json)显示 H3 仍运行，Qwen `queued/startedAt=null`，API queue 为一条 video 加一条 image，Comfy queue 只有原 H3 prompt。H3 完成后的 Qwen 启动顺序、最终 MP4 与下载哈希尚待追踪；这些中间读数不构成 c03 完整通过。
+主会话在 H3 运行期间提交另一 Qwen job `92e48610-b124-46c2-a4bd-07a4a31ad2ec`。20:36:20 +08 的 [并发读数](generated-evidence/m01/runtime-concurrency-observation.json)显示 H3 仍运行，Qwen `queued/startedAt=null`，API queue 为一条 video 加一条 image，Comfy queue 只有原 H3 prompt。Qwen 于 H3 后的 20:39:50 +08 启动、20:40:25 成功；时间与终态见[交接结果](generated-evidence/m01/runtime-handoff-outcome.json)。
 
-真实 H3 在两次资源等待后进入 `running` 时，旧 busy `error` 文本仍在 job 中。本地后续提交 `fa9c197` 清正常运行/成功状态下的当前 `error/errorCode`，保留历史 `resourceRetries`；全量 pyserver 测试 64 passed。Spark 当前任务仍使用已部署 `37ecdc75`，本轮未部署这项修复。
+真实 H3 在两次资源等待后进入 `running` 时，旧 busy `error` 文本仍在 job 中。提交 `fa9c197` 清正常运行/成功状态下的当前 `error/errorCode`，保留历史 `resourceRetries`；此修复已包含在下述 Spark 验证分支部署中。
 
 ### 镜头成功后的合成故障与本地修复
 
 H3 引擎原 prompt 实际生成并保存 `0.mp4`，大小 1,087,931 字节、SHA-256 `30c75a8a287b295fcaa925ac6adb477541a0cf1f0bb36403cd117a19a7dff773`；ffprobe 为 H.264 `1024×576`、24 fps、5.167 秒，带 AAC 音轨。job 记录 `completedClips=1`、`done=true`，但最终 `failed/JOB_FAILED`，原因是 concat 列表写入 `data/media/jobs/.../0.mp4`，FFmpeg 又相对 `clips.txt` 所在目录解析，使路径重复。完整脱敏元数据见 [H3 结果](generated-evidence/m01/runtime-h3-outcome.json)。主会话排队的 Qwen job 在 20:39:50 +08 才开始、20:40:25 成功；[交接结果](generated-evidence/m01/runtime-handoff-outcome.json)同时保留两个任务的终态及哈希，观察时 API queue 为 0。H3 最终 `memory.mp4` 尚不存在，不能把镜头成功称作成片成功。
 
-本地修复将 concat 条目写成同目录 basename `file '0.mp4'`；已有图片变体及所有已存在有效镜头可不加载模型直接恢复，镜头与最终 MP4 在复用/发布前需经 ffprobe 检查非空、可解码、16:9 和正时长。对于坏文件，不以 `done` 标志冒充完成。Spark `/tmp` 中用合成蓝色 160×90、24 fps、0.5 秒小片段运行了真实 FFmpeg 回归：旧路径返回 254 且出现重复目录，新 basename 成功并由 ffprobe 确认输出；见 [FFmpeg 回归](generated-evidence/m01/runtime-ffmpeg-regression.json)。本地 pyserver 全量测试 **68 passed**。修复提交尚未部署，原 H3 job 的正式 retry 与最终 MP4 下载仍待主会话部署后验证。
+本地修复将 concat 条目写成同目录 basename `file '0.mp4'`；已有图片变体及所有已存在有效镜头可不加载模型直接恢复，镜头与最终 MP4 在复用/发布前需经 ffprobe 检查非空、容器元数据、16:9 和正时长。ffprobe 元数据通过并不证明每一帧都能解码。对于已知坏文件，不以 `done` 标志冒充完成。Spark `/tmp` 中用合成蓝色 160×90、24 fps、0.5 秒小片段运行了真实 FFmpeg 回归：旧路径返回 254 且出现重复目录，新 basename 成功并由 ffprobe 确认输出；见 [FFmpeg 回归](generated-evidence/m01/runtime-ffmpeg-regression.json)。本地 pyserver 全量测试 **68 passed**。
+
+### 已审查修复的 Spark 正式重试
+
+Spark 验证分支原 HEAD `37ecdc75`、工作树 clean、API queue 0、原 H3 job `failed/attempt=1`。仅将已审查的 `jobs.py` 和对应 runtime 测试精确补丁提交为远端 `a25a09ffaafca790c0363bb041f99046189c47d8`；未带入本地提交链中的 M02/M03 文档与 APP 探针文件。远端 runtime 测试 **13 passed**。只重启 `travel-agent.service` 一次，API PID `1155843 → 1160143`；重启后 queue 0，video 模型 `stopped_on_demand`。
+
+正式 retry 只调用原 job `90981311-bf42-47f5-b189-b7fcc62c5202` 一次，HTTP 202、attempt 2。job 随后 `succeeded`，`error/errorCode` 均为空；已完成镜头 prompt 仍为 `4e38017b-4ff3-485c-9009-4063c1bcdc4d`，`0.mp4` SHA-256 仍为 `30c75a8a287b295fcaa925ac6adb477541a0cf1f0bb36403cd117a19a7dff773`。H3 服务仍 `inactive/MainPID=0`，没有再次加载模型。最终 `memory.mp4` 位于 Spark `data/media/jobs/90981311-bf42-47f5-b189-b7fcc62c5202/memory.mp4`，大小 923,563 字节，SHA-256 `9631d518df625a94bec2fcd5ba05bca72b398d73d9cb322b7531e2665bddd29b`。正式 API 下载 HTTP 200 且同 SHA；ffprobe 显示 H.264 `1024×576`、24 fps、125 帧、5.216 秒及 AAC；`ffmpeg -v error -i memory.mp4 -f null -` 对完整文件 CPU 解码退出码 0、无错误输出。完整脱敏读数见 [正式重试与解码](generated-evidence/m01/runtime-h3-retry-deploy.json)。
+
+此批证明原已完成镜头的 CPU 合成恢复。故障注入按主会话安排暂停，缺失 prompt 的有界对账、手动失败重试及整个 c03 验收尚无真实证据，不据此通过 criterion 或完成 runtime 节点。
