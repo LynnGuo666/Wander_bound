@@ -47,7 +47,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         job = jobs.get(job_id)
         if not job or job["kind"] != "edit":
             raise HTTPException(404, "任务不存在")
-        return {key: job.get(key) for key in ("id", "photoId", "status", "backend", "variant", "error", "createdAt", "startedAt", "completedAt", "attempt")}
+        return {key: job.get(key) for key in ("id", "photoId", "status", "backend", "variant", "error", "createdAt", "startedAt", "completedAt", "attempt", "progressLabel", "progressPercent")}
 
     @router.post("/api/media/edits/{job_id}/retry")
     async def retry_edit(job_id: str, request: Request):
@@ -63,7 +63,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         job = jobs.get(job_id)
         if not job or job["kind"] != "memory":
             raise HTTPException(404, "任务不存在")
-        return {key: job.get(key) for key in ("id", "status", "backend", "error", "createdAt", "startedAt", "completedAt", "attempt", "completedClips")}
+        return {key: job.get(key) for key in ("id", "status", "backend", "error", "createdAt", "startedAt", "completedAt", "attempt", "completedClips", "progressLabel", "progressPercent")}
 
     @router.post("/api/media/memories/{job_id}/retry")
     async def retry_memory(job_id: str, request: Request):

@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import fcntl
 import os
+import re
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
@@ -44,6 +45,8 @@ class ModelController:
         self.sweeper: asyncio.Task | None = None
         self.warm_task: asyncio.Task | None = None
         self.loading_model: str | None = None
+        self.load_progress: dict | None = None
+        self.load_since: str | None = None
         self.owner_file = None
 
     async def _command(self, *args: str, timeout: int = 30) -> str:
@@ -143,6 +146,8 @@ class ModelController:
 
     async def _start(self, spec: ModelSpec):
         self.phase = "loading_model"
+        self.load_since = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        self.load_progress = {"model": spec.name, "stage": "启动推理服务", "percent": 5, "estimated": True}
         memory = self._memory()
         available = memory.get("availableGiB")
         required = max(spec.minimum_gib, self.peak_gib[spec.name] + self.reserve_gib)
@@ -151,12 +156,41 @@ class ModelController:
         if (memory.get("pressureFull10") or 0) > 1:
             raise RuntimeError("系统内存压力过高，暂缓加载模型")
         await self._command("systemctl", "--user", "start", spec.service, timeout=45)
-        for _ in range(450 if spec.name == "chat" else 60):
+        for index in range(450 if spec.name == "chat" else 60):
             if await self._ready(spec):
                 self.phase = "ready"
+                self.load_progress = {"model": spec.name, "stage": "模型已就绪", "percent": 100, "estimated": False}
                 return
+            if spec.name == "chat" and index % 5 == 0:
+                await self._track_chat_progress(spec)
             await asyncio.sleep(2)
         raise RuntimeError(f"{spec.label} 启动后未通过健康检查")
+
+    async def _track_chat_progress(self, spec: ModelSpec):
+        if not self.load_since:
+            return
+        try:
+            logs = await self._command("journalctl", "--user", "-u", spec.service, "--since", self.load_since,
+                                       "--no-pager", "-o", "cat", timeout=8)
+        except RuntimeError:
+            return
+        matches = re.findall(r"Loading safetensors checkpoint shards:\s*(\d+)%", logs)
+        if matches:
+            shard_percent = int(matches[-1])
+            stage = f"加载权重 {shard_percent}%"
+            percent = 10 + round(shard_percent * 0.55)
+        else:
+            stage, percent = "初始化模型", 8
+        for marker, next_stage, next_percent in (
+            ("Model loading took", "权重已加载，编译推理内核", 68),
+            ("torch.compile took", "编译完成，预热推理内核", 78),
+            ("Initial profiling/warmup run took", "分配缓存并预热", 85),
+            ("Autotuning process starts", "调优推理内核", 90),
+            ("Application startup complete", "等待健康检查", 98),
+        ):
+            if marker in logs:
+                stage, percent = next_stage, next_percent
+        self.load_progress = {"model": spec.name, "stage": stage, "percent": percent, "estimated": True}
 
     async def _ensure(self, name: str):
         spec = self.specs[name]
@@ -235,6 +269,7 @@ class ModelController:
             return
         self.loading_model = name
         self.phase = "loading_model"
+        self.load_progress = {"model": name, "stage": "等待调度", "percent": 0, "estimated": True}
 
         async def run():
             try:
@@ -283,6 +318,7 @@ class ModelController:
         models = await asyncio.gather(*(describe(spec) for spec in self.specs.values()))
         return {"enabled": self.enabled, "phase": self.phase, "activeModel": self.active,
                 "loadingModel": self.loading_model,
+                "loadProgress": self.load_progress if self.loading_model else None,
                 "primaryChat": self.primary_chat and not self.primary_paused,
                 "idleTimeoutSeconds": self.idle_seconds, "error": self.error, "memory": self._memory(), "gpu": await self._gpu(),
                 "models": models}

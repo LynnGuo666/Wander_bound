@@ -20,7 +20,9 @@ def router_for(controller: ModelController, jobs: JobStore) -> APIRouter:
         result = await controller.status()
         pending = jobs.pending()
         result["queue"] = {"total": len(pending), "image": sum(job["kind"] == "edit" for job in pending),
-                           "video": sum(job["kind"] == "memory" for job in pending)}
+                           "video": sum(job["kind"] == "memory" for job in pending),
+                           "jobs": [{key: job.get(key) for key in ("id", "kind", "status", "progressLabel", "progressPercent", "completedClips")}
+                                    for job in pending]}
         return result
 
     @router.post("/api/inference/models/{name}/warm")

@@ -62,6 +62,7 @@ def test_media_jobs_are_serialized_and_saved(tmp_path):
         await jobs.worker
         assert controller.maximum == 1
         assert [jobs.get(job_id)["status"] for job_id in ids] == ["succeeded"] * 3
+        assert all(jobs.get(job_id)["progressPercent"] == 100 for job_id in ids)
         assert len(media.saved) == 3
     asyncio.run(scenario())
 
@@ -166,6 +167,19 @@ def test_primary_chat_shares_with_image_but_yields_to_video():
         await controller._ensure("video")
         assert controller.running == {"video"}
         assert controller.stopped == ["image", "chat"]
+    asyncio.run(scenario())
+
+
+def test_qwen_loading_progress_uses_current_journal_stage():
+    class Controller(ModelController):
+        async def _command(self, *_args, **_kwargs):
+            return "Loading safetensors checkpoint shards:  57% Completed\nModel loading took 174 seconds\ntorch.compile took 57 seconds"
+
+    async def scenario():
+        controller = Controller(enabled=True)
+        controller.load_since = "2026-09-28 18:00:00"
+        await controller._track_chat_progress(controller.specs["chat"])
+        assert controller.load_progress == {"model": "chat", "stage": "编译完成，预热推理内核", "percent": 78, "estimated": True}
     asyncio.run(scenario())
 
 
