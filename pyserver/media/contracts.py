@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import uuid
 from dataclasses import dataclass
 
+from PIL import Image
+
 
 PRODUCT_KINDS = ("scrapbook", "storyboard", "video")
-MAX_INPUT_PHOTOS = 32
+MAX_INPUT_PHOTOS = 8
 MAX_PROMPT_LENGTH = 4000
 
 
@@ -38,6 +41,50 @@ def _ids(value: object, *, maximum: int) -> list[str]:
 def _digest(value: dict) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False,
                                      separators=(",", ":")).encode()).hexdigest()
+
+
+def _original_bytes(media, photo_id: str) -> bytes:
+    try:
+        content = media.bytes(photo_id, "original")
+        if not content:
+            raise ValueError("empty original")
+        with Image.open(io.BytesIO(content)) as image:
+            if image.format != "JPEG":
+                raise ValueError("original is not JPEG")
+            image.load()
+        return content
+    except (OSError, ValueError):
+        raise ContractError("ORIGINAL_UNREADABLE", "规范化 JPEG 原图不可读", 409) from None
+
+
+def validate_snapshot(snapshot: object) -> None:
+    """Reject incomplete persisted jobs before any engine or result lookup."""
+    if not isinstance(snapshot, dict) or snapshot.get("schemaVersion") != 1:
+        raise ContractError("SNAPSHOT_INVALID", "任务缺少有效的输入快照", 409)
+    selection = snapshot.get("selection")
+    inputs = snapshot.get("inputPhotoIds")
+    originals = snapshot.get("originals")
+    if (snapshot.get("inputVariant") != "original" or not isinstance(selection, dict)
+            or not isinstance(inputs, list) or not inputs
+            or any(not isinstance(item, str) for item in inputs)
+            or len(inputs) != len(set(inputs)) or not isinstance(originals, list)
+            or [item.get("photoId") for item in originals if isinstance(item, dict)] != inputs
+            or len(originals) != len(inputs)):
+        raise ContractError("SNAPSHOT_INVALID", "任务输入快照结构无效", 409)
+    fields = {key: selection.get(key) for key in
+              ("tripId", "batchId", "source", "updatedAt", "photoIds")}
+    selected = fields["photoIds"]
+    if (fields["tripId"] != snapshot.get("tripId")
+            or not isinstance(selected, list) or not selected
+            or any(not isinstance(item, str) for item in selected)
+            or len(selected) != len(set(selected))
+            or any(item not in selected for item in inputs)
+            or any(not isinstance(fields[key], str) or not fields[key]
+                   for key in ("batchId", "source", "updatedAt"))
+            or selection.get("sha256") != _digest(fields)
+            or any(not isinstance(item.get("sha256"), str) or len(item["sha256"]) != 64
+                   for item in originals)):
+        raise ContractError("SNAPSHOT_INVALID", "任务输入快照资格或哈希无效", 409)
 
 
 def selected_original_snapshot(media, trip_id: str, photo_ids: object,
@@ -70,12 +117,7 @@ def selected_original_snapshot(media, trip_id: str, photo_ids: object,
             raise ContractError("PHOTO_WRONG_TRIP", "照片不属于该行程", 409)
         if photo_id not in selected_set:
             raise ContractError("PHOTO_NOT_SELECTED", "照片未在选优清单中", 409)
-        try:
-            original = media.bytes(photo_id, "original")
-        except OSError:
-            original = None
-        if not original:
-            raise ContractError("ORIGINAL_UNREADABLE", "规范化原图不可读", 409)
+        original = _original_bytes(media, photo_id)
         originals.append({"photoId": photo_id, "sha256": hashlib.sha256(original).hexdigest()})
     selection_fields = {key: selection[key] for key in
                         ("tripId", "batchId", "source", "updatedAt", "photoIds")}
@@ -88,19 +130,13 @@ def selected_original_snapshot(media, trip_id: str, photo_ids: object,
 
 def original_from_snapshot(media, snapshot: dict, photo_id: str) -> bytes:
     """Read the fixed original; a replaced or deleted original is an error."""
-    if not isinstance(snapshot, dict) or snapshot.get("inputVariant") != "original":
-        raise ContractError("SNAPSHOT_INVALID", "任务缺少有效的原图快照", 409)
+    validate_snapshot(snapshot)
     if photo_id not in snapshot.get("inputPhotoIds", []):
         raise ContractError("SNAPSHOT_INVALID", "照片不在任务输入快照中", 409)
     photo = media.get(photo_id)
     if not photo or photo.get("tripId") != snapshot.get("tripId"):
         raise ContractError("ORIGINAL_UNREADABLE", "任务原图已删除或行程已变化", 409)
-    try:
-        content = media.bytes(photo_id, "original")
-    except OSError:
-        content = None
-    if not content:
-        raise ContractError("ORIGINAL_UNREADABLE", "任务原图不可读", 409)
+    content = _original_bytes(media, photo_id)
     expected = next((item.get("sha256") for item in snapshot.get("originals", [])
                      if item.get("photoId") == photo_id), None)
     if not expected or hashlib.sha256(content).hexdigest() != expected:
@@ -119,7 +155,9 @@ def product_contract(media, payload: object) -> dict:
     if prompt is not None and (not isinstance(prompt, str) or not prompt.strip()
                                or len(prompt) > MAX_PROMPT_LENGTH):
         raise ContractError("PROMPT_INVALID", f"prompt 必须是 1–{MAX_PROMPT_LENGTH} 字符")
-    snapshot = selected_original_snapshot(media, payload.get("tripId"), payload.get("photoIds"))
+    maximum = 1 if kind == "scrapbook" else 8
+    snapshot = selected_original_snapshot(media, payload.get("tripId"), payload.get("photoIds"),
+                                          maximum=maximum)
     return {"productKind": kind, "snapshot": snapshot,
             "prompt": prompt.strip() if prompt is not None else None,
             "resultKind": {"scrapbook": "image", "storyboard": "storyboard_json",
