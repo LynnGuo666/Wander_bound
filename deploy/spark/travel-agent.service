@@ -1,0 +1,18 @@
+[Unit]
+Description=Travel Agent FastAPI private service
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/Developer/travel-agent
+EnvironmentFile=-/home/Developer/travel-agent/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/Developer/travel-agent/deploy/spark/start-python.sh
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

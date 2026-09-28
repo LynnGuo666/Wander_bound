@@ -9,7 +9,7 @@
 3. 保持 `./spark-tunnel.sh` 运行，使本机 `14176`–`14179` 连接 Spark 的四个 Docker MCP 服务。需要图片生成时另开 `./spark-comfy-tunnel.sh`。
 4. 运行 `./start.sh`，打开 <http://127.0.0.1:4176/>。`GET /api/health` 检查主服务，`POST /api/capabilities` 展示 MCP `tools/list` 的实际能力。
 
-Python 主服务只在本机调试；Spark 上运行 OTA、12306、道旅与旅行数据聚合四个 Docker MCP。Spark 的旧 Node HTTP/Agent 服务已停用。`./start.sh` 中的 API 地址可用环境变量覆盖，协作者只需要可访问的 MCP HTTP 地址，无须在本机运行供应商 Docker。
+本机开发使用 `./start.sh` 和 SSH MCP 隧道。Spark 生产环境在 `127.0.0.1:4174` 运行同一个 Python FastAPI 服务，由 `deploy/spark/travel-agent.service` 启动；它直接调用节点回环地址的四个 Docker MCP 和两套 ComfyUI。`./start.sh` 中的 API 地址可用环境变量覆盖，协作者只需要可访问的 MCP HTTP 地址，无须在本机运行供应商 Docker。
 
 ## 代码边界
 
