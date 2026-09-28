@@ -5,6 +5,7 @@ import json
 import httpx
 from fastapi import FastAPI
 
+from pyserver.accounts import current_user
 from pyserver.inference import ModelController
 from pyserver.media import ComfyClient, MediaStore
 from pyserver.media import journal_routes
@@ -23,9 +24,11 @@ class Jobs:
 
 
 def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_path, monkeypatch):
-    monkeypatch.setenv("MEDIA_API_TOKEN", "journal-test-token")
+    user = {"id": "journal-test-user", "role": "member"}
     trips = TripStore(tmp_path / "trips")
+    context = current_user.set(user)
     trip = trips.create({"query": "上海旅行"})
+    current_user.reset(context)
     trip["plan"] = {"destination": "上海", "itinerary": [{"stops": [{"name": "外滩"}]}]}
     trips.save(trip)
     media = MediaStore(tmp_path / "media")
@@ -44,6 +47,18 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
 
     monkeypatch.setattr(journal_routes.step, "complete", complete)
     app = FastAPI()
+
+    @app.middleware("http")
+    async def test_account_session(request, call_next):
+        bearer = request.headers.get("Authorization")
+        request.state.user = (user if bearer == "Bearer journal-test-token" else
+                              {"id": "another-user", "role": "member"} if bearer == "Bearer other-test-token" else None)
+        context = current_user.set(request.state.user)
+        try:
+            return await call_next(request)
+        finally:
+            current_user.reset(context)
+
     app.include_router(journal_routes.router_for(Config(), trips, media, Jobs(), stickers))
 
     async def scenario():
@@ -68,6 +83,9 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             assert all(node["class_type"] != "LoadImage" for node in saved["workflow"].values())
             assert (await http.get(base + "/stickers")).json()["stickers"][0]["id"] == body["id"]
             assert (await http.get(f"/api/media/stickers/{body['id']}/image")).status_code == 409
+            http.headers["Authorization"] = "Bearer other-test-token"
+            assert (await http.get(f"/api/media/stickers/{body['id']}/image")).status_code == 404
+            http.headers["Authorization"] = "Bearer journal-test-token"
             stamp = await http.post(base + "/stickers", json={"motif": "外滩江景", "kind": "stamp"})
             assert stamp.status_code == 202 and stamp.json()["kind"] == "stamp"
             assert stickers.get(stamp.json()["id"])["promptVersion"] == "journal-stamp-qwen21-t2i-v1"

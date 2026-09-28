@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../lib/api.js';
 import { ArrowDown, ArrowUp, Eye, EyeOff, KeyRound, RotateCcw, Save, Settings2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,7 +34,7 @@ export default function DeveloperSettingsView({ onSaved }) {
   async function load() {
     setBusy(true); setError('');
     try {
-      const response = await fetch('/api/settings');
+      const response = await apiFetch('/api/settings');
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
       setSettings(result); setPriorities(result.priorities); setKeys({});
@@ -54,7 +55,7 @@ export default function DeveloperSettingsView({ onSaved }) {
   async function save(event) {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
     try {
-      const response = await fetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch('/api/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credentials: keys, priorities }) });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);

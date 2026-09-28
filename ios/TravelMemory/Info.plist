@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>旅忆</string>
+	<string>行驿</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -36,7 +36,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>用于识别你的出发城市，规划前往目的地的路线。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>按你选择的旅程日期读取照片；仅在你确认后将所选照片上传到私有旅行服务器。</string>
+	<string>扫描已授权相册的时间与位置以发现过往旅行；仅在你选择旅行后，将相关照片上传到私有旅行服务器分析。</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 </dict>

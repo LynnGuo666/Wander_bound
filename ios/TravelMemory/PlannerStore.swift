@@ -4,10 +4,10 @@ import CoreLocation
 @MainActor
 final class PlannerStore: ObservableObject {
     @Published var memory: TripMemory {
-        didSet { save(memory, key: "travel-memory-v1") }
+        didSet { if let activeAccountId { save(memory, key: "travel-memory-v1:\(activeAccountId)") } }
     }
     @Published var plan: TravelPlan? {
-        didSet { if let plan { save(plan, key: "travel-plan-v1") } }
+        didSet { if let plan, let activeAccountId { save(plan, key: "travel-plan-v1:\(activeAccountId)") } }
     }
     @Published var query = "我想去深圳玩 3 天，机票尽量便宜，但不要红眼航班。"
     @Published var destination = "深圳"
@@ -19,26 +19,37 @@ final class PlannerStore: ObservableObject {
     }
     @Published var isLoading = false
     @Published var statusMessage: String?
+    @Published var trips: [TripRecord] = []
+    @Published var activeTripId: String?
+    @Published var question: AgentQuestion?
+    @Published var progressNote = ""
+    private var streamTask: Task<Void, Never>?
+    private var activeAccountId: String?
 
     init() {
-        let savedMemory = Self.load(TripMemory.self, key: "travel-memory-v1") ?? TripMemory()
+        let savedMemory = TripMemory()
         memory = savedMemory
-        plan = Self.load(TravelPlan.self, key: "travel-plan-v1")
+        plan = nil
         originCity = savedMemory.homeCity
-        serverURL = UserDefaults.standard.string(forKey: "travel-api-url") ?? "http://127.0.0.1:4176"
+        serverURL = UserDefaults.standard.string(forKey: "travel-api-url") ?? "http://spark-82.tailb7a50b.ts.net:7000"
         let calendar = Calendar.current
         let weekday = calendar.component(.weekday, from: Date())
         let daysUntilFriday = (6 - weekday + 7) % 7 == 0 ? 7 : (6 - weekday + 7) % 7
         startDate = calendar.date(byAdding: .day, value: daysUntilFriday, to: Date()) ?? Date()
     }
 
-    func generate(location: CLLocationCoordinate2D?) async {
-        guard let endpoint = URL(string: serverURL.trimmingCharacters(in: .whitespacesAndNewlines) + "/api/plan") else {
-            statusMessage = "请在数据来源中填写有效的规划服务地址。"
-            return
-        }
-        isLoading = true
-        defer { isLoading = false }
+    func activateAccount(_ id: String?) {
+        guard activeAccountId != id else { return }
+        stop(); trips = []; activeTripId = nil; question = nil
+        activeAccountId = id
+        memory = id.flatMap { Self.load(TripMemory.self, key: "travel-memory-v1:\($0)") } ?? TripMemory()
+        plan = id.flatMap { Self.load(TravelPlan.self, key: "travel-plan-v1:\($0)") }
+        originCity = memory.homeCity
+    }
+
+    func clearAccountData() { activateAccount(nil) }
+
+    func generate(location: CLLocationCoordinate2D?) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -48,30 +59,93 @@ final class PlannerStore: ObservableObject {
             location: location.map { Coordinates(lat: $0.latitude, lng: $0.longitude) },
             memory: memory
         )
+        guard let body = try? JSONEncoder().encode(requestBody) else { return }
+        beginStream(body)
+    }
+
+    func answer(optionId: String, customText: String = "") {
+        guard let question, let activeTripId else { return }
+        let payload: [String: Any] = ["sessionId": activeTripId, "answer": [
+            "questionId": question.id, "optionId": optionId, "customText": customText]]
+        if let body = try? JSONSerialization.data(withJSONObject: payload) { beginStream(body) }
+    }
+
+    func revise(_ instruction: String) {
+        guard let activeTripId, !instruction.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        if let body = try? JSONSerialization.data(withJSONObject: ["tripId": activeTripId, "query": instruction]) {
+            beginStream(body)
+        }
+    }
+
+    func stop() { streamTask?.cancel(); isLoading = false; progressNote = "规划已停止" }
+
+    func refreshTrips() async {
         do {
-            var request = URLRequest(url: endpoint)
-            request.httpMethod = "POST"
-            request.timeoutInterval = 115
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(requestBody)
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let response = response as? HTTPURLResponse else { throw PlannerError.invalidResponse }
-            if !(200...299).contains(response.statusCode) {
-                let message = try? JSONDecoder().decode(APIError.self, from: data).error
-                throw PlannerError.server(message ?? "规划服务返回 \(response.statusCode)")
+            trips = try await AppAPI(baseURL: serverURL).decode(TripList.self, path: "/api/trips").trips
+        } catch { statusMessage = "行程读取失败：\(error.localizedDescription)" }
+    }
+
+    func openTrip(_ id: String) async {
+        do {
+            let record: TripRecord = try await AppAPI(baseURL: serverURL).decode(TripRecord.self, path: "/api/trips/\(id)")
+            activeTripId = record.id
+            plan = record.plan
+            question = record.pendingQuestion
+        } catch { statusMessage = "行程读取失败：\(error.localizedDescription)" }
+    }
+
+    private func beginStream(_ body: Data) {
+        streamTask?.cancel()
+        isLoading = true
+        question = nil
+        progressNote = "正在查找地点、交通与住宿…"
+        streamTask = Task { await stream(body) }
+    }
+
+    private func stream(_ body: Data) async {
+        defer { isLoading = false }
+        do {
+            var request = try AppAPI(baseURL: serverURL).request("/api/plan/stream", method: "POST", body: body)
+            request.timeoutInterval = 300
+            let (bytes, response) = try await URLSession.shared.bytes(for: request)
+            guard let response = response as? HTTPURLResponse, (200...299).contains(response.statusCode) else {
+                throw PlannerError.invalidResponse
             }
-            let result = try JSONDecoder().decode(TravelPlan.self, from: data)
-            plan = result
-            originCity = result.originCity
-            let sourceMessage: String
-            switch result.agentRun?.status {
-            case "completed": sourceMessage = "Step 5 Preview 已完成规划"
-            case "degraded": sourceMessage = "模型暂不可用，已用规则生成行程"
-            default: sourceMessage = "Step 5 Preview 未配置，已用规则生成行程"
+            var event = ""
+            var data: [String] = []
+            for try await line in bytes.lines {
+                try Task.checkCancellation()
+                if line.hasPrefix("event: ") { event = String(line.dropFirst(7)) }
+                else if line.hasPrefix("data: ") { data.append(String(line.dropFirst(6))) }
+                else if line.isEmpty {
+                    if let payload = data.joined(separator: "\n").data(using: .utf8) {
+                        receive(event: event, payload: payload)
+                    }
+                    event = ""; data = []
+                }
             }
-            statusMessage = result.locationDetected == true ? "已识别出发城市：\(result.originCity)。\(sourceMessage)" : sourceMessage
-        } catch {
-            statusMessage = "连接失败：\(error.localizedDescription)"
+            await refreshTrips()
+        } catch is CancellationError { return }
+        catch { statusMessage = "规划失败：\(error.localizedDescription)" }
+    }
+
+    private func receive(event: String, payload: Data) {
+        guard let object = (try? JSONSerialization.jsonObject(with: payload)) as? [String: Any] else { return }
+        if event == "progress" {
+            if let note = object["publicNote"] as? String, !note.isEmpty { progressNote = note }
+            else if let name = object["type"] as? String { progressNote = name.replacingOccurrences(of: "_", with: " ") }
+        } else if event == "result" {
+            if let id = object["tripId"] as? String { activeTripId = id }
+            if object["needsInput"] as? Bool == true {
+                question = try? JSONDecoder().decode(AgentQuestion.self, from: JSONSerialization.data(withJSONObject: object["question"] ?? [:]))
+                progressNote = "请选择后继续规划"
+            } else if let error = object["error"] as? String {
+                statusMessage = error
+            } else if let result = try? JSONDecoder().decode(TravelPlan.self, from: payload) {
+                plan = result
+                originCity = result.originCity
+                progressNote = "行程已生成"
+            } else { statusMessage = "规划结果格式需要更新，请刷新行程详情" }
         }
     }
 

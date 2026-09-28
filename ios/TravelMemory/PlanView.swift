@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftUIX
 
 struct PlanView: View {
     @EnvironmentObject private var store: PlannerStore
@@ -8,7 +7,6 @@ struct PlanView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 17) {
-                hero
                 requestCard
                 if let message = store.statusMessage {
                     Label(message, systemImage: "info.circle")
@@ -59,11 +57,8 @@ struct PlanView: View {
                             .frame(maxWidth: .infinity)
                             .padding(15)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.borderedProminent).tint(Palette.brandForest)
                     .accessibilityHint("将行程中的地点加入已到访记忆，未来规划会避开")
-                } else {
-                    ContentUnavailableView("从一次新探索开始", systemImage: "map", description: Text("输入目的地，添加出发城市，再生成行程。"))
-                        .padding(.vertical, 30)
                 }
             }
             .padding(.horizontal, 18)
@@ -71,34 +66,8 @@ struct PlanView: View {
             .padding(.bottom, 35)
         }
         .background(Palette.canvas)
-        .navigationTitle("智能规划")
+        .navigationTitle("规划新行程")
         .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private var hero: some View {
-        ZStack(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 25)
-                .fill(LinearGradient(colors: [Palette.pale, Color(red: 0.84, green: 0.91, blue: 0.82)], startPoint: .leading, endPoint: .trailing))
-            Circle().fill(Color(red: 0.98, green: 0.84, blue: 0.62))
-                .frame(width: 115, height: 115).offset(x: 255, y: -40)
-            Image(systemName: "airplane")
-                .font(.system(size: 31)).foregroundStyle(Palette.coral)
-                .rotationEffect(.degrees(-20)).offset(x: 282, y: -23)
-            VStack(alignment: .leading, spacing: 10) {
-                Label("更懂你的旅行 Agent", systemImage: "sparkles")
-                    .font(.caption.bold()).foregroundStyle(Palette.forest)
-                    .padding(.horizontal, 10).padding(.vertical, 7)
-                    .background(Color.white.opacity(0.53), in: Capsule())
-                Text("下一站，\n去发现新的。")
-                    .font(.system(size: 31, weight: .bold, design: .rounded))
-                    .tracking(-1.5).foregroundStyle(Palette.ink)
-                Text("结合位置、偏好和足迹，安排属于你的旅程。")
-                    .font(.caption).foregroundStyle(Palette.muted)
-            }
-            .padding(23)
-        }
-        .frame(height: 213)
-        .clipped()
     }
 
     private var requestCard: some View {
@@ -117,11 +86,9 @@ struct PlanView: View {
                     Picker("天数", selection: $store.days) {
                         ForEach(1...7, id: \.self) { Text("\($0) 天").tag($0) }
                     }
-                    .font(.caption)
-                    .frame(width: 88)
+                    .frame(width: 100)
                 }
                 DatePicker("出发日期", selection: $store.startDate, in: Date()..., displayedComponents: .date)
-                    .font(.caption)
                 HStack {
                     Button { location.locate() } label: {
                         Label("获取当前位置", systemImage: "location.circle")
@@ -133,11 +100,11 @@ struct PlanView: View {
                 Text(location.message).font(.caption2).foregroundStyle(Palette.muted)
                 field("出发城市（定位不可用时填写）", text: $store.originCity, icon: "location")
                 Button {
-                    Task { await store.generate(location: location.coordinate) }
+                    store.generate(location: location.coordinate)
                 } label: {
                     HStack(spacing: 9) {
                         if store.isLoading {
-                            ActivityIndicator().animated(true).style(.large).frame(width: 20, height: 20)
+                            ProgressView().frame(width: 20, height: 20)
                         } else {
                             Image(systemName: "sparkles")
                         }
@@ -146,8 +113,16 @@ struct PlanView: View {
                     .frame(maxWidth: .infinity)
                     .padding(11)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.borderedProminent).tint(Palette.brandForest)
                 .disabled(store.isLoading)
+                if store.isLoading {
+                    HStack {
+                        ProgressView()
+                        Text(store.progressNote).font(.caption)
+                        Spacer()
+                        Button("停止") { store.stop() }
+                    }
+                }
             }
         }
     }
@@ -155,8 +130,8 @@ struct PlanView: View {
     private func field(_ title: String, text: Binding<String>, icon: String) -> some View {
         HStack(spacing: 7) {
             Image(systemName: icon).foregroundStyle(Palette.forest)
-            CocoaTextField(title, text: text)
-                .font(.caption)
+            TextField(title, text: text)
+                .font(.body)
                 .textInputAutocapitalization(.never)
         }
         .padding(10)

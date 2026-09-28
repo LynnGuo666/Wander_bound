@@ -22,6 +22,7 @@ from .contracts import (ContractError, original_from_snapshot, product_contract,
                         selected_original_snapshot, validate_snapshot)
 from ..inference import ModelController
 from ..trips import now
+from ..accounts import current_user
 
 MAX_RESOURCE_RETRIES = 3
 RESOURCE_RETRY_DELAY_SECONDS = 30
@@ -48,7 +49,9 @@ class JobStore:
     def get(self, job_id: str) -> dict | None:
         try:
             uuid.UUID(job_id)
-            return json.loads((self.root / f"{job_id}.json").read_text())
+            job = json.loads((self.root / f"{job_id}.json").read_text())
+            user = current_user.get()
+            return job if user is None or job.get("ownerId") == user["id"] else None
         except (ValueError, FileNotFoundError, json.JSONDecodeError):
             return None
 
@@ -66,6 +69,8 @@ class JobStore:
         return sorted(works, key=lambda item: item.get("createdAt") or "", reverse=True)[:100]
 
     def save(self, job: dict):
+        if "ownerId" not in job:
+            job["ownerId"] = (current_user.get() or {}).get("id")
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         filename = self.root / f"{job['id']}.json"
         temporary = self.root / f"{job['id']}.{uuid.uuid4()}.tmp"
@@ -143,11 +148,15 @@ class JobStore:
 
     def _schedule(self):
         if self.worker is None or self.worker.done():
-            self.worker = asyncio.create_task(self._drain())
+            reset = current_user.set(None)
+            try:
+                self.worker = asyncio.create_task(self._drain())
+            finally:
+                current_user.reset(reset)
 
     def pending(self) -> list[dict]:
         jobs = (self.get(path.stem) for path in self.root.glob("*.json")) if self.root.exists() else ()
-        return sorted((job for job in jobs if job and job.get("status") in {"queued", "running", "loading_model"}),
+        return sorted((job for job in jobs if job and job.get("ownerId") and job.get("status") in {"queued", "running", "loading_model"}),
                       key=lambda job: (job.get("createdAt", ""), job["id"]))
 
     def _validate_job_inputs(self, job: dict) -> None:

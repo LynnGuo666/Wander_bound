@@ -30,8 +30,9 @@ TOOLS = {
     "discover_places": definition("discover_places", "按指定城市查询真实地点，未指定则查主要目的地。可多次查询沿途城市，返回可用于排程的 ID。", {"city": {"type": "string"}}),
     "search_transport": definition("search_transport", "按起点、目的地和日期懒加载 12306 MCP 火车票数据。", {}),
     "search_stays": definition("search_stays", "取得住宿数据；无已认证供应商时返回空数组，不能编造酒店。", {}),
-    "draft_plan": definition("draft_plan", "使用已发现的真实地点 ID 提交最终行程；可为每一天指定城市及地点 ID。不得编造价格或地点。", {
+    "draft_plan": definition("draft_plan", "使用已发现的真实地点 ID 提交最终行程；可为每一天指定城市及地点 ID。对缺少真实游玩时长的地点，须在 recommendedDurations 按地点 ID 给出 AI 建议分钟数；不得编造价格、地点或交通耗时。", {
         "placeIds": {"type": "array", "items": {"type": "string"}},
+        "recommendedDurations": {"type": "object", "description": "缺少真实游玩时长时，按地点 ID 给出建议分钟数，范围 30-360；只表示 AI 建议", "additionalProperties": {"type": "integer"}},
         "dayAssignments": {"type": "array", "items": {"type": "object", "properties": {
             "date": {"type": "string"}, "city": {"type": "string"}, "placeIds": {"type": "array", "items": {"type": "string"}}}}}}, ["placeIds"]),
 }

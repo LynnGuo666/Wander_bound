@@ -55,7 +55,7 @@ function itineraryMotifs(trip) {
   };
 }
 
-export default function JournalStudio({ trip, photos = [], works = [], token, onOpenSettings, onCreateWork, onSameCity, sameCityCount = 0, rememberedStops = [], turnDirection = "" }) {
+export default function JournalStudio({ trip, photos = [], works = [], token, onOpenSettings, onCreateWork, onSameCity, sameCityCount = 0, rememberedStops = [], turnDirection = "", note = "", onNoteChange }) {
   const [pages, setPages] = useState(() => loadLayout(trip));
   const [selected, setSelected] = useState(null);
   const [stickerJobs, setStickerJobs] = useState([]);
@@ -66,12 +66,21 @@ export default function JournalStudio({ trip, photos = [], works = [], token, on
   const [error, setError] = useState('');
   const drag = useRef(null);
   const stageRef = useRef(null);
+  const noteApplied = useRef(false);
   const videos = works.filter(work => work.kind === 'memory' && work.status === 'succeeded');
 
   useEffect(() => {
     try { localStorage.setItem(`${STORE_PREFIX}${trip.id}`, JSON.stringify(pages)); }
     catch { setError('排版未能保存在当前浏览器'); }
   }, [pages, trip.id]);
+  useEffect(() => {
+    if (!note || noteApplied.current) return;
+    noteApplied.current = true;
+    setPages(previous => previous.map((page, pageIndex) => ({ ...page,
+      items: page.items.map(item => pageIndex === 0 && item.kind === 'text' && item.text === defaultText(trip)
+        ? { ...item, text: note } : item),
+    })));
+  }, [note, trip.id]);
   useEffect(() => {
     if (!token) { setStickerJobs([]); return; }
     let alive = true;
@@ -119,6 +128,8 @@ export default function JournalStudio({ trip, photos = [], works = [], token, on
   }, [stickerJobs]);
 
   function updateItem(pageIndex, id, patch) {
+    if (typeof patch.text === 'string' && pages[pageIndex]?.items.some(item => item.id === id && item.kind === 'text'))
+      onNoteChange?.(patch.text);
     setPages(previous => previous.map((page, index) => index === pageIndex
       ? { ...page, items: page.items.map(item => item.id === id ? { ...item, ...patch } : item) } : page));
   }

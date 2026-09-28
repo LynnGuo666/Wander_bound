@@ -27,4 +27,5 @@ def test_ground_route_uses_verified_amap_duration(monkeypatch):
         {"name": "甲", "lat": 24.3, "lng": 109.4}, {"name": "乙", "lat": 24.301, "lng": 109.401}]}]}
     result = asyncio.run(amap.enrich_routes(plan, "test-key"))
     assert result["itinerary"][0]["stops"][1]["travelMinutes"] == 11
-    assert result["groundJourneys"][0]["source"] == "高德步行路线"
+    walking = next(item for item in result["groundJourneys"] if item.get("to") == "乙")
+    assert walking["source"] == "高德步行路线"

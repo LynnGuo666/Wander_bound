@@ -3,10 +3,6 @@ options:
   bundleIdPrefix: ai.deepsleeptt
   deploymentTarget:
     iOS: "17.0"
-packages:
-  SwiftUIX:
-    url: https://github.com/SwiftUIX/SwiftUIX.git
-    revision: 3a99044b7045fb5907a7df18c7fe323e5656c6ab
 targets:
   TravelMemory:
     type: application
@@ -16,9 +12,9 @@ targets:
     info:
       path: TravelMemory/Info.plist
       properties:
-        CFBundleDisplayName: 旅忆
+        CFBundleDisplayName: 行驿
         NSLocationWhenInUseUsageDescription: 用于识别你的出发城市，规划前往目的地的路线。
-        NSPhotoLibraryUsageDescription: 按你选择的旅程日期读取照片；仅在你确认后将所选照片上传到私有旅行服务器。
+        NSPhotoLibraryUsageDescription: 扫描已授权相册的时间与位置以发现过往旅行；仅在你选择旅行后，将相关照片上传到私有旅行服务器分析。
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
           NSExceptionDomains:
@@ -32,7 +28,5 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: ""
-    dependencies:
-      - package: SwiftUIX
     scheme:
       testTargets: []

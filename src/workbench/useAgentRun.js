@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { apiFetch } from '../lib/api.js';
 
 function parseFrame(frame) {
   const lines = frame.split('\n');
@@ -28,7 +29,7 @@ export function useAgentRun() {
     setQuestion(null);
     let receivedResult = false;
     try {
-      const response = await fetch('/api/plan/stream', {
+      const response = await apiFetch('/api/plan/stream', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload), signal: current.signal,
       });
@@ -84,5 +85,9 @@ export function useAgentRun() {
   }, []);
   const reviseTrip = useCallback((id, instruction) => run({ tripId: id, query: instruction }, true), [run]);
   const cancel = useCallback(() => controller.current?.abort(), []);
-  return { events, plan, question, tripId, error, running, run, answerQuestion, openTrip, reviseTrip, cancel };
+  const reset = useCallback(() => {
+    controller.current?.abort(); controller.current = null; sessionId.current = null;
+    setEvents([]); setPlan(null); setQuestion(null); setTripId(null); setError(''); setRunning(false);
+  }, []);
+  return { events, plan, question, tripId, error, running, run, answerQuestion, openTrip, reviseTrip, cancel, reset };
 }
