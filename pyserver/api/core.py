@@ -6,6 +6,7 @@ import asyncio
 from fastapi import APIRouter
 from ..settings import ConfigStore
 from ..providers import list_mcp_tools
+from ..providers import amap_quota
 from ..trips import now
 
 def router_for(config: ConfigStore) -> APIRouter:
@@ -21,7 +22,8 @@ def router_for(config: ConfigStore) -> APIRouter:
                               "duffel": {"configured": bool(keys["duffel"]), "label": "Duffel 航班"},
                               "tuniu": {"configured": ota and data and bool(keys["tuniu"]), "label": "途牛 · OTA MCP"},
                               "flyai": {"configured": ota and data, "label": "飞猪 · OTA MCP"},
-                              "rail12306": {"configured": data and bool(os.getenv("TRAVEL_12306_MCP_URL")), "label": "12306 MCP（社区）"}}}
+                              "rail12306": {"configured": data and bool(os.getenv("TRAVEL_12306_MCP_URL")), "label": "12306 MCP（社区）"}},
+                "amapQuota": await amap_quota.snapshot()}
 
     @router.post("/api/capabilities")
     async def capabilities(payload: dict):
