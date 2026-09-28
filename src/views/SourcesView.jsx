@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '../lib/api.js';
 import { Database, RefreshCw, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -61,7 +62,7 @@ export default function SourcesView({ plan, onOpenSettings }) {
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const response = await fetch('/api/capabilities', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const response = await apiFetch('/api/capabilities', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
       setCatalog(result);

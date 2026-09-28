@@ -44,7 +44,7 @@ def test_question_answer_updates_memory_and_preserves_history(tmp_path, monkeypa
     monkeypatch.setattr(agent.step, "complete", fake_complete)
 
     async def scenario():
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test", headers={"Authorization": "Bearer legacy-test"}) as client:
             first = (await client.post("/api/plan", json={"query": "安排旅行"})).json()
             assert first["needsInput"] and first["agentRun"]["modelTurns"] == 1
             second = (await client.post("/api/plan", json={"sessionId": first["sessionId"],
@@ -79,12 +79,14 @@ def test_photo_belongs_to_trip_and_exif_is_removed(tmp_path, monkeypatch):
             assert response.status_code == 201
             photo = response.json()
             assert photo["tripId"] == trip["id"]
-            detail = (await client.get(f"/api/trips/{trip['id']}")).json()
+            assert (await client.get(f"/api/trips/{trip['id']}")).status_code == 401
+            detail = (await client.get(f"/api/trips/{trip['id']}", headers=headers)).json()
             assert detail["photos"][0]["id"] == photo["id"]
-            result = await client.get(f"/api/trips/{trip['id']}/photos/{photo['id']}")
+            assert (await client.get(f"/api/trips/{trip['id']}/photos/{photo['id']}")).status_code == 401
+            result = await client.get(f"/api/trips/{trip['id']}/photos/{photo['id']}", headers=headers)
             assert result.status_code == 200
             assert b"Exif" not in result.content
-            assert (await client.get(f"/api/trips/{trip['id']}/photos/{photo['id']}", params={"variant": "missing"})).status_code == 404
+            assert (await client.get(f"/api/trips/{trip['id']}/photos/{photo['id']}", headers=headers, params={"variant": "missing"})).status_code == 404
     asyncio.run(scenario())
 
 
@@ -105,7 +107,7 @@ def test_text_only_model_turn_continues_to_tool_call(tmp_path, monkeypatch):
     monkeypatch.setattr(agent.step, "complete", fake_complete)
 
     async def scenario():
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test", headers={"Authorization": "Bearer legacy-test"}) as client:
             result = (await client.post("/api/plan", json={"query": "安排旅行"})).json()
             assert result["needsInput"] is True
             assert result["agentRun"]["modelTurns"] == 2
@@ -229,7 +231,7 @@ def test_server_fallback_saves_verified_plan_after_text_only_turns(tmp_path, mon
     monkeypatch.setattr(amap, "enrich_routes", fake_routes)
 
     async def scenario():
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test", headers={"Authorization": "Bearer legacy-test"}) as client:
             response = await client.post("/api/plan", json={"query": "长春到柳州三日游", "originCity": "长春",
                                                     "destination": "柳州", "startDate": "2026-10-02", "days": 3})
             result = response.json()

@@ -235,7 +235,8 @@ def test_web_status_and_control_auth(tmp_path, monkeypatch):
 
     async def scenario():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-            status = await client.get("/api/inference/status")
+            assert (await client.get("/api/inference/status")).status_code == 401
+            status = await client.get("/api/inference/status", headers={"Authorization": "Bearer test-token"})
             assert status.status_code == 200
             assert status.json()["enabled"] is False
             assert len(status.json()["models"]) == 3

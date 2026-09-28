@@ -16,6 +16,31 @@ struct DayPanel: View {
                         Text(day.date).font(.caption2).foregroundStyle(Palette.muted)
                     }
                 }
+                if let feasibility = day.feasibility {
+                    Text(feasibility.status == "conflict" ? "时间冲突" : feasibility.status == "unknown" ? "部分交通时间待核实" : "预计可行")
+                        .font(.caption.bold()).foregroundStyle(feasibility.status == "conflict" ? Palette.coral : Palette.forest)
+                    ForEach(feasibility.issues, id: \.self) { issue in
+                        Text(issue).font(.caption2).foregroundStyle(Palette.coral)
+                    }
+                }
+                if let cost = day.timeCost {
+                    Text("时间成本：交通 \(cost.travelMinutes) 分钟 · 游玩 \(cost.visitMinutes) 分钟 · 准备与用餐 \(cost.bufferMinutes) 分钟\(cost.unknownLegs > 0 ? " · \(cost.unknownLegs) 段未知" : "")")
+                        .font(.caption2).foregroundStyle(Palette.muted)
+                }
+                if let timeline = day.timeline, !timeline.isEmpty {
+                    ForEach(Array(timeline.enumerated()), id: \.offset) { _, item in
+                        HStack(alignment: .top, spacing: 10) {
+                            Text(item.startAt.map { String($0.dropFirst(11).prefix(5)) } ?? "待定")
+                                .font(.caption.monospacedDigit()).frame(width: 40, alignment: .leading)
+                            VStack(alignment: .leading) {
+                                Text(item.label).font(.subheadline)
+                                Text(item.durationSource == "ai_recommended" ? "AI 建议时长" : item.durationSource == "planning_default" ? "规划占位时长" :
+                                     item.routeStatus == "unknown" ? "高德路线时间未知" : item.minutes.map { "\($0) 分钟" } ?? "")
+                                    .font(.caption2).foregroundStyle(Palette.muted)
+                            }
+                        }
+                    }
+                } else {
                 if day.stops.isEmpty {
                     Text(day.title == "抵达与入住" ? "抵达时间较晚，留给进城和入住。" : "尚无可核实的新地点。接入地点源后重新规划。")
                         .font(.caption).foregroundStyle(Palette.muted)
@@ -52,6 +77,7 @@ struct DayPanel: View {
                         Spacer(minLength: 0)
                     }
                     if stop.id != day.stops.last?.id { Divider().padding(.leading, 57) }
+                }
                 }
             }
         }

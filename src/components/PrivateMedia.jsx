@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { apiFetch } from '../lib/api.js';
 
 export function PrivateMedia({ url, token, alt = '', className = '', video = false }) {
   const [source, setSource] = useState('');
@@ -8,7 +9,7 @@ export function PrivateMedia({ url, token, alt = '', className = '', video = fal
     const controller = new AbortController();
     let objectUrl = '';
     setSource(''); setError(false);
-    fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal })
+    apiFetch(url, { signal: controller.signal })
       .then(response => { if (!response.ok) throw new Error(String(response.status)); return response.blob(); })
       .then(blob => { if (!controller.signal.aborted) { objectUrl = URL.createObjectURL(blob); setSource(objectUrl); } })
       .catch(() => { if (!controller.signal.aborted) setError(true); });

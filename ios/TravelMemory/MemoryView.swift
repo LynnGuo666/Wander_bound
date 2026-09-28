@@ -7,102 +7,62 @@ struct MemoryView: View {
     @State private var brands = ""
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("YOUR TRAVEL MEMORY")
-                        .font(.caption2.bold()).tracking(2).foregroundStyle(Palette.forest)
-                    Text("让下一次，更像你。")
-                        .font(.largeTitle.bold()).foregroundStyle(Palette.ink)
-                    Text("偏好与足迹保存在此设备。规划时会避开已到访地点。")
-                        .font(.caption).foregroundStyle(Palette.muted)
+        Form {
+            Section {
+                TextField("常用出发城市", text: $store.memory.homeCity)
+                    .textContentType(.addressCity)
+                Picker("优先交通", selection: $store.memory.transportPreference) {
+                    Text("飞机").tag("flight")
+                    Text("高铁").tag("train")
                 }
-                .padding(.vertical, 12)
+                Toggle("价格优先", isOn: $store.memory.pricePriority)
+                Toggle("避开红眼航班", isOn: $store.memory.avoidRedEye)
+            } header: { Text("出行偏好") }
+            footer: { Text("这些偏好会用于你发起的下一次行程规划。") }
 
-                Surface {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Label("出行偏好", systemImage: "airplane").font(.headline).foregroundStyle(Palette.ink)
-                        TextField("常用出发城市", text: $store.memory.homeCity)
-                            .textFieldStyle(.roundedBorder)
-                        Picker("优先交通", selection: $store.memory.transportPreference) {
-                            Text("飞机").tag("flight")
-                            Text("高铁").tag("train")
-                        }
-                        Toggle("价格优先", isOn: $store.memory.pricePriority)
-                        Toggle("避开红眼与隔夜航班", isOn: $store.memory.avoidRedEye)
+            Section("住宿") {
+                TextField("喜欢的酒店品牌", text: $brands)
+                    .onChange(of: brands) { _, value in
+                        store.memory.hotelBrands = value.split(whereSeparator: { "、,，".contains($0) })
+                            .map(String.init).filter { !$0.isEmpty }
                     }
-                }
-
-                Surface {
-                    VStack(alignment: .leading, spacing: 14) {
-                        Label("住宿喜好", systemImage: "bed.double").font(.headline).foregroundStyle(Palette.ink)
-                        TextField("喜欢的品牌，以顿号分隔", text: $brands)
-                            .textFieldStyle(.roundedBorder)
-                            .onChange(of: brands) { _, value in
-                                store.memory.hotelBrands = value.split(whereSeparator: { "、,，".contains($0) }).map(String.init).filter { !$0.isEmpty }
-                            }
-                        Stepper("每晚预算 ¥\(store.memory.hotelNightBudget)", value: $store.memory.hotelNightBudget, in: 0...10000, step: 50)
-                        Label("仅在生成行程时向规划服务传入这些偏好。", systemImage: "lock.shield")
-                            .font(.caption2).foregroundStyle(Palette.muted)
-                    }
-                }
-
-                Surface {
-                    VStack(alignment: .leading, spacing: 13) {
-                        Label("去过的城市", systemImage: "map").font(.headline).foregroundStyle(Palette.ink)
-                        if store.memory.visitedCities.isEmpty {
-                            Text("还没有记录").font(.caption).foregroundStyle(Palette.muted)
-                        }
-                        ForEach(store.memory.visitedCities, id: \.self) { city in
-                            HStack {
-                                Tag(text: city, symbol: "mappin")
-                                Spacer()
-                                Button(role: .destructive) {
-                                    store.memory.visitedCities.removeAll { $0 == city }
-                                } label: { Image(systemName: "xmark.circle") }
-                                .accessibilityLabel("移除 \(city)")
-                            }
-                        }
-                        HStack {
-                            TextField("添加城市", text: $newCity).textFieldStyle(.roundedBorder)
-                            Button("添加") { store.addVisitedCity(newCity); newCity = "" }
-                        }
-                    }
-                }
-
-                Surface {
-                    VStack(alignment: .leading, spacing: 13) {
-                        Label("去过的地点", systemImage: "mappin.and.ellipse").font(.headline).foregroundStyle(Palette.ink)
-                        if store.memory.visitedPlaces.isEmpty {
-                            Text("完成一次行程后，可自动记录它的地点。")
-                                .font(.caption).foregroundStyle(Palette.muted)
-                        }
-                        ForEach(store.memory.visitedPlaces) { place in
-                            HStack {
-                                VStack(alignment: .leading) {
-                                    Text(place.name).font(.subheadline)
-                                    Text(place.city).font(.caption2).foregroundStyle(Palette.muted)
-                                }
-                                Spacer()
-                                Button(role: .destructive) {
-                                    store.memory.visitedPlaces.removeAll { $0.id == place.id }
-                                } label: { Image(systemName: "xmark.circle") }
-                                .accessibilityLabel("移除 \(place.name)")
-                            }
-                            Divider()
-                        }
-                        HStack {
-                            TextField("添加已去过的地点", text: $newPlace).textFieldStyle(.roundedBorder)
-                            Button("添加") { store.addVisitedPlace(newPlace); newPlace = "" }
-                        }
-                    }
+                Stepper(value: $store.memory.hotelNightBudget, in: 0...10000, step: 50) {
+                    LabeledContent("每晚预算", value: store.memory.hotelNightBudget,
+                                   format: .currency(code: "CNY"))
                 }
             }
-            .padding(18)
+
+            Section {
+                ForEach(store.memory.visitedCities, id: \.self) { city in
+                    Label(city, systemImage: "mappin")
+                }
+                .onDelete { indexes in store.memory.visitedCities.remove(atOffsets: indexes) }
+                HStack {
+                    TextField("添加城市", text: $newCity)
+                    Button("添加") { store.addVisitedCity(newCity); newCity = "" }
+                        .disabled(newCity.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            } header: { Text("去过的城市") }
+            footer: { Text("向左轻扫条目可移除。") }
+
+            Section("去过的地点") {
+                ForEach(store.memory.visitedPlaces) { place in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(place.name)
+                        Text(place.city).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .onDelete { indexes in store.memory.visitedPlaces.remove(atOffsets: indexes) }
+                HStack {
+                    TextField("添加地点", text: $newPlace)
+                    Button("添加") { store.addVisitedPlace(newPlace); newPlace = "" }
+                        .disabled(newPlace.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
         }
+        .scrollContentBackground(.hidden)
         .background(Palette.canvas)
-        .navigationTitle("旅行记忆")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationTitle("我的")
         .onAppear { brands = store.memory.hotelBrands.joined(separator: "、") }
     }
 }

@@ -7,6 +7,7 @@ import math
 import httpx
 
 from .amap_quota import consume as consume_quota
+from .coordinates import wgs_to_gcj
 
 
 async def _get(path: str, params: dict, timeout: float = 8) -> dict:
@@ -89,43 +90,143 @@ async def route_minutes(origin: dict, destination: dict, city: str, key: str) ->
     path = ((route.get("paths") or [None])[0] if walking else (route.get("transits") or [None])[0])
     if not path or not (_number(path.get("duration")) or 0) > 0:
         return None
+    geometry = []
+    def append_geometry(polyline):
+        for pair in str(polyline or "").split(";"):
+            try:
+                lng, lat = (float(value) for value in pair.split(","))
+                if -180 <= lng <= 180 and -90 <= lat <= 90 and (not geometry or geometry[-1] != {"lat": lat, "lng": lng}):
+                    geometry.append({"lat": lat, "lng": lng})
+            except (TypeError, ValueError):
+                continue
     segments = ([{"mode": "walk", "instruction": str(step.get("instruction") or "")[:160],
                   "distanceMeters": _number(step.get("distance"))} for step in (path.get("steps") or [])[:8]]
                 if walking else [])
+    if walking:
+        for step in path.get("steps") or []:
+            append_geometry(step.get("polyline"))
     if not walking:
         for item in (path.get("segments") or [])[:8]:
-            walk = (item.get("walking") or {}).get("distance")
+            walking_part = item.get("walking") or {}
+            walk = walking_part.get("distance")
             if (_number(walk) or 0) > 0:
                 segments.append({"mode": "walk", "distanceMeters": _number(walk)})
+            for step in walking_part.get("steps") or []:
+                append_geometry(step.get("polyline"))
             line = ((item.get("bus") or {}).get("buslines") or [None])[0]
             if line:
+                append_geometry(line.get("polyline"))
                 segments.append({"mode": "transit", "line": str(line.get("name") or "")[:100],
                                  "board": (line.get("departure_stop") or {}).get("name"),
                                  "alight": (line.get("arrival_stop") or {}).get("name")})
     return {"minutes": math.ceil(float(path["duration"]) / 60), "source": "高德步行路线" if walking else "高德公共交通",
             "mode": "walk" if walking else "transit", "walkingMeters": _number(path.get("distance" if walking else "walking_distance")),
-            "fare": None if walking else _number(path.get("cost")), "currency": None if walking else "CNY", "segments": segments}
+            "fare": None if walking else _number(path.get("cost")), "currency": None if walking else "CNY", "segments": segments,
+            "geometry": geometry, "coordinateSystem": "GCJ-02"}
+
+
+async def terminal_point(label: str, city: str, key: str) -> dict | None:
+    """Resolve a supplier terminal label to a POI; never use the city centre as an airport."""
+    if not label or not city:
+        return None
+    if not any(word in label.lower() for word in ("机场", "站", "airport", "station")) and not (len(label) == 3 and label.isascii() and label.isupper()):
+        return None
+    await consume_quota("poi")
+    payload = await _get("place/text", {"key": key, "keywords": label,
+                                           "city": city, "citylimit": "true", "offset": 5})
+    for row in payload.get("pois") or []:
+        name = str(row.get("name") or "")
+        if not ("机场" in name or "站" in name):
+            continue
+        try:
+            lng, lat = (float(value) for value in str(row.get("location") or "").split(","))
+        except ValueError:
+            continue
+        return {"name": name, "lat": lat, "lng": lng, "coordinateSystem": "GCJ-02", "source": "高德 POI"}
+    return None
+
+
+async def hotel_point(label: str, city: str, key: str) -> dict | None:
+    if not label or not city:
+        return None
+    await consume_quota("poi")
+    payload = await _get("place/text", {"key": key, "keywords": label, "city": city,
+                                           "citylimit": "true", "offset": 5})
+    for row in payload.get("pois") or []:
+        if label not in str(row.get("name") or "") and str(row.get("name") or "") not in label:
+            continue
+        try:
+            lng, lat = (float(value) for value in str(row.get("location") or "").split(","))
+        except ValueError:
+            continue
+        return {"name": str(row["name"]), "lat": lat, "lng": lng, "approximate": False,
+                "coordinateSystem": "GCJ-02", "source": "高德 POI"}
+    return None
 
 
 async def enrich_routes(plan: dict, key: str | None) -> dict:
     if not key:
         return plan
     journeys = []
-    for day_index, day in enumerate(plan["itinerary"]):
-        for index, stop in enumerate(day["stops"]):
-            origin = day["stops"][index - 1] if index else (plan.get("stayArea") if day_index else None)
-            if not origin or any(_number(point.get(coord)) is None for point in (origin, stop) for coord in ("lat", "lng")):
-                continue
+    outbound = next((item for item in (plan.get("flights") or []) + (plan.get("trains") or [])
+                     if item.get("id") in {plan.get("recommendedOutboundFlightId"), plan.get("recommendedOutboundTrainId")}), None)
+    returns = (plan.get("returnFlights") or []) + (plan.get("returnTrains") or [])
+    inbound = next((item for item in returns if item.get("id") in
+                    {plan.get("recommendedReturnFlightId"), plan.get("recommendedReturnTrainId")}), None)
+    if inbound is None:
+        inbound = next((item for item in returns if item.get("departureAt")), None)
+    terminals = {}
+    for role, offer, label, city in (("outboundOrigin", outbound, "origin", plan.get("originCity")),
+                                      ("outboundDestination", outbound, "destination", plan.get("destination")),
+                                      ("returnOrigin", inbound, "origin", plan.get("destination"))):
+        if offer:
             try:
-                route = await route_minutes(origin, stop, day["city"], key)
+                terminals[role] = await terminal_point(str(offer.get(label) or ""), city, key)
             except (httpx.HTTPError, RuntimeError):
-                continue
-            if not route:
-                continue
-            stop["travelMinutes"] = route["minutes"]
-            stop["travelSource"] = route["source"]
-            journeys.append({"day": day["day"], "from": origin["name"], "to": stop["name"],
+                terminals[role] = None
+    plan["terminals"] = terminals
+    stay = plan.get("stayArea") or {}
+    start = plan.get("startLocation") or {}
+    if _number(start.get("lat")) is not None and _number(start.get("lng")) is not None:
+        start = {"name": "出发地点", **wgs_to_gcj(start["lat"], start["lng"]), "coordinateSystem": "GCJ-02"}
+    async def add(day: dict, origin: dict | None, destination: dict | None, purpose: str):
+        if not origin or not destination or any(_number(point.get(coord)) is None for point in (origin, destination) for coord in ("lat", "lng")):
+            journeys.append({"day": day["day"], "purpose": purpose, "from": (origin or {}).get("name"),
+                             "to": (destination or {}).get("name"), "minutes": None, "status": "unknown"})
+            return
+        try:
+            route = await route_minutes(origin, destination,
+                                        plan.get("originCity") if purpose == "to-terminal" else day["city"], key)
+        except (httpx.HTTPError, RuntimeError):
+            route = None
+        if route is None:
+            journeys.append({"day": day["day"], "purpose": purpose, "from": origin["name"], "to": destination["name"],
                              "fromCoordinate": {"lat": origin["lat"], "lng": origin["lng"]},
-                             "toCoordinate": {"lat": stop["lat"], "lng": stop["lng"]}, **route,
-                             "imagery": {"status": "check-on-device", "provider": "Apple MapKit Look Around"}})
+                             "toCoordinate": {"lat": destination["lat"], "lng": destination["lng"]},
+                             "minutes": None, "status": "unknown"})
+            return
+        journeys.append({"day": day["day"], "purpose": purpose, "from": origin["name"], "to": destination["name"],
+                         "fromCoordinate": {"lat": origin["lat"], "lng": origin["lng"]},
+                         "toCoordinate": {"lat": destination["lat"], "lng": destination["lng"]},
+                         "status": "estimated", **route,
+                         "imagery": {"status": "check-on-device", "provider": "Apple MapKit Look Around"}})
+        if purpose == "to-place":
+            destination["travelMinutes"] = route["minutes"]
+            destination["travelSource"] = route["source"]
+    arrival_day = str((outbound or {}).get("arrivalAt") or "")[:10]
+    for day_index, day in enumerate(plan["itinerary"]):
+        if day_index == 0 and outbound:
+            await add(day, {"name": "出发地点", **start} if start else None, terminals.get("outboundOrigin"), "to-terminal")
+        if outbound and day["date"] == arrival_day:
+            await add(day, terminals.get("outboundDestination"), stay, "arrival-to-stay")
+        elif day_index == 0 and stay:
+            await add(day, None, stay, "arrival-to-stay")
+        previous = stay
+        for index, stop in enumerate(day["stops"]):
+            await add(day, previous, stop, "to-place")
+            previous = stop
+        if day["stops"]:
+            await add(day, previous, stay, "return-to-stay")
+        if day_index == len(plan["itinerary"]) - 1 and inbound:
+            await add(day, stay, terminals.get("returnOrigin"), "to-return-terminal")
     return {**plan, "groundJourneys": journeys}
