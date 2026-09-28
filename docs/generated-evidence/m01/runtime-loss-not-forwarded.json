@@ -1,0 +1,130 @@
+{
+  "mode": "drop_without_forward",
+  "startedAtUtc": "2026-09-28T13:28:20.341900+00:00",
+  "deploymentSha": "d055caed1c290b81baad1d57dcfab46cc25621db",
+  "apiPidBefore": "1163194",
+  "preQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "envOriginalSha256": "010d04fdd3a7777c3f3cea75b6973ef6d399a26af5ece0b5886b70f34efaa012",
+  "startOriginalSha256": "ae4423c88b79fc426added6ada1f29873a844e64101ca47361966cd01919d47e",
+  "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+  "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+  "selectionBatchId": "m01-public-yellowstone-20260928-v1",
+  "seed": 2026092805,
+  "proxyBound": "127.0.0.1:18191",
+  "apiPidOnProxy": "1163310",
+  "submitHttp": 202,
+  "submitJobId": "87e0f8f9-04e2-4b8d-bdc8-998c4adbe0d4",
+  "jobId": "87e0f8f9-04e2-4b8d-bdc8-998c4adbe0d4",
+  "elapsedSeconds": 11.01,
+  "transitions": [
+    {
+      "elapsedSeconds": 0.0,
+      "point": [
+        "queued",
+        null,
+        null
+      ]
+    },
+    {
+      "elapsedSeconds": 1.0,
+      "point": [
+        "running",
+        "4c5004ef-de27-4679-9aaf-c4313e0455a6",
+        "unknown"
+      ]
+    },
+    {
+      "elapsedSeconds": 11.01,
+      "point": [
+        "failed",
+        "4c5004ef-de27-4679-9aaf-c4313e0455a6",
+        "unknown"
+      ]
+    }
+  ],
+  "job": {
+    "id": "87e0f8f9-04e2-4b8d-bdc8-998c4adbe0d4",
+    "status": "failed",
+    "attempt": 1,
+    "promptId": "4c5004ef-de27-4679-9aaf-c4313e0455a6",
+    "submissionState": "unknown",
+    "error": "Spark 队列/历史中持续找不到 prompt",
+    "errorCode": "JOB_FAILED",
+    "variant": null
+  },
+  "frozen": {
+    "workflowHash": "b967b10fbe052fa8ad2c3f1f8999f8b4efdc533a1608d8bbe69b094696d78cf1",
+    "snapshotHash": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10",
+    "workflowVersion": "1.0.0",
+    "selectionHash": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7",
+    "originalHash": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb",
+    "seed": 2026092805,
+    "parameters": {
+      "aspect_ratio": "3:2"
+    }
+  },
+  "proxy": {
+    "mode": "drop_without_forward",
+    "promptPostCount": 1,
+    "promptForwardCount": 0,
+    "promptId": "4c5004ef-de27-4679-9aaf-c4313e0455a6",
+    "upstreamAcceptedId": null,
+    "upstreamStatus": null,
+    "responseDropped": true,
+    "bound": "127.0.0.1:18191"
+  },
+  "comfyHistoryContainsUuid": false,
+  "comfyHistoryStatus": null,
+  "comfyQueueRunningIds": [],
+  "comfyQueuePendingIds": [],
+  "retryHttp": 409,
+  "retryBody": "{\"detail\":{\"code\":\"PROMPT_OUTCOME_UNKNOWN\",\"message\":\"旧生成请求结果未确认，不能分配新请求编号重试\"}}",
+  "jobBytesUnchangedAfterRetry": true,
+  "apiPidRestored": "1163586",
+  "envRestoredExact": true,
+  "envRestoredSha256": "010d04fdd3a7777c3f3cea75b6973ef6d399a26af5ece0b5886b70f34efaa012",
+  "startRestoredExact": true,
+  "startRestoredSha256": "ae4423c88b79fc426added6ada1f29873a844e64101ca47361966cd01919d47e",
+  "gitCleanAfter": true,
+  "finalQueue": {
+    "total": 0,
+    "image": 0,
+    "video": 0,
+    "jobs": []
+  },
+  "finalModels": [
+    {
+      "id": "image",
+      "label": "Qwen-Image-2.1",
+      "service": "qwen21-comfy.service",
+      "state": "ready",
+      "active": false,
+      "idleTimeoutSeconds": 600,
+      "idleSeconds": null
+    },
+    {
+      "id": "video",
+      "label": "MiniMax H3",
+      "service": "minimax-h3-comfy.service",
+      "state": "stopped_on_demand",
+      "active": false,
+      "idleTimeoutSeconds": 600,
+      "idleSeconds": null
+    },
+    {
+      "id": "chat",
+      "label": "Qwen3.8-27B",
+      "service": "qwen38.service",
+      "state": "ready",
+      "active": false,
+      "idleTimeoutSeconds": 1800,
+      "idleSeconds": 1
+    }
+  ],
+  "endedAtUtc": "2026-09-28T13:28:34.154062+00:00"
+}

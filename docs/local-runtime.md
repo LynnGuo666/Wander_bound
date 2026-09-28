@@ -40,7 +40,7 @@ Spark 验证分支原 HEAD `37ecdc75`、工作树 clean、API queue 0、原 H3 j
 
 正式 retry 只调用原 job `90981311-bf42-47f5-b189-b7fcc62c5202` 一次，HTTP 202、attempt 2。job 随后 `succeeded`，`error/errorCode` 均为空；已完成镜头 prompt 仍为 `4e38017b-4ff3-485c-9009-4063c1bcdc4d`，`0.mp4` SHA-256 仍为 `30c75a8a287b295fcaa925ac6adb477541a0cf1f0bb36403cd117a19a7dff773`。H3 服务仍 `inactive/MainPID=0`，没有再次加载模型。最终 `memory.mp4` 位于 Spark `data/media/jobs/90981311-bf42-47f5-b189-b7fcc62c5202/memory.mp4`，大小 923,563 字节，SHA-256 `9631d518df625a94bec2fcd5ba05bca72b398d73d9cb322b7531e2665bddd29b`。正式 API 下载 HTTP 200 且同 SHA；ffprobe 显示 H.264 `1024×576`、24 fps、125 帧、5.216 秒及 AAC；`ffmpeg -v error -i memory.mp4 -f null -` 对完整文件 CPU 解码退出码 0、无错误输出。完整脱敏读数见 [正式重试与解码](generated-evidence/m01/runtime-h3-retry-deploy.json)。
 
-此批证明原已完成镜头的 CPU 合成恢复。以下故障探针另行验证了服务校验拒绝、缺失 UUID 的有限对账和 retry 上限；真正的网络响应丢失后引擎是否受理仍未注入。
+此批证明原已完成镜头的 CPU 合成恢复。以下故障探针另行验证了服务校验拒绝、缺失 UUID 的有限对账和 retry 上限；之后又用受控 loopback 代理验证了引擎受理后 HTTP 响应丢失。
 
 ### 无效 sampler 的真实 Comfy 拒绝与有限重试
 
@@ -48,7 +48,15 @@ Spark 验证分支原 HEAD `37ecdc75`、工作树 clean、API queue 0、原 H3 j
 
 Comfy 日志明确显示 `Failed to validate prompt` 和 `sampler_name` 不在允许列表；这是 `/prompt` 参数校验拒绝，**不是引擎开始采样后失败**。首轮固定 UUID `a9181990-6e79-431f-82c0-2fda84028365` 在 history/queue 均不存在，job 有界失败并显示“持续找不到 prompt”；见[首轮拒绝](generated-evidence/m01/runtime-fault-attempt1.json)。正式手动 retry HTTP 202 后，attempt 2 和 3 各约 12 秒失败，分别换成 UUID `ebf80a25-6929-4475-b9cd-143f2dd2f46a`、`4b68e1e7-81bc-4b78-a910-cda5d84a21ca`；冻结工作流、选优清单、原图哈希、参数及 seed 均未变，Comfy history/queue 均无新 UUID，见[第二轮](generated-evidence/m01/runtime-fault-attempt2.json)与[第三轮](generated-evidence/m01/runtime-fault-attempt3.json)。第 4 次正式 retry 返回 HTTP 404“无法重试”，job JSON 未变。最终远端默认文件原哈希、Git clean、API queue 0，image 服务 ready/idle，video 服务 stopped_on_demand；见[上限与资源终态](generated-evidence/m01/runtime-fault-cap-final.json)。未直接向 Comfy 提交任务，未再次启动 H3。
 
-### c03 证据边界与待审修复
+### HTTP 响应丢失后的真实引擎对账
+
+主审批准后，Spark 验证分支从 `a25a09f` 仅应用 `jobs.py`、`job_routes.py` 和 `test_local_runtime.py` 的已审查精确补丁，成为 `d055caed1c290b81baad1d57dcfab46cc25621db`；三个远端文件 SHA-256 与本地提交 `64a5875` 对应文件相同，旧 HEAD 保留供回退，见[逐文件部署映射](generated-evidence/m01/runtime-loss-deploy.json)。远端原 H3 manifest 下 runtime 测试 **14 passed**，只重启 `travel-agent.service`。首次代理预检查发现启动脚本固定覆盖 `.env` 的 Qwen URL，故在正式 POST 前停止；`.env` 原字节恢复、无 job、queue 0，见[配置预检查](generated-evidence/m01/runtime-loss-config-preflight.json)。随后只临时替换本项目启动脚本中 Qwen URL 的一行，代理仅监听 `127.0.0.1:18191`；原 `.env` 与启动脚本均有精确字节备份、`finally` 和独立 watchdog 恢复保障。
+
+正式 selected-only redraw 使用秋景 photoId `199b155d-0c14-4673-8d25-5de27f175676`、seed `2026092804` 和原创层叠剪纸提示。job `377e9b50-1f05-44d6-a728-0e1043675468` 的代理只向 Comfy 转发 **一次** `/prompt`；Comfy HTTP 200 受理 UUID `435f7b96-9129-4024-9418-d7ea7fad3733` 后代理才断开返回连接。持久 job 曾为 `running/submissionState=unknown`，仍用同一 UUID 查到 Comfy history `success`，约 36 秒后 `succeeded/attempt=1`；未自动重投。真实 JPEG 为 `1248×832`、342,886 字节、SHA-256 `9fef13f146438810f7a729cdb05c53cdc734882ad98b6ec8ddd1d791a66df245`，见[受理后丢失响应](generated-evidence/m01/runtime-loss-accepted.json)。恢复原服务配置并重启 API 后，正式变体 GET HTTP 200、下载 SHA 与磁盘一致，见[恢复后回读](generated-evidence/m01/runtime-loss-final-read.json)。此探针是运行时恢复验证，不作为 M02 风格预设验收。
+
+另一条对照探针用 seed `2026092805` 创建 job `87e0f8f9-04e2-4b8d-bdc8-998c4adbe0d4`。代理收到一条 `/prompt` 后直接断开，**零次转发**给 Comfy；UUID `4c5004ef-de27-4679-9aaf-c4313e0455a6` 在 history/queue 均缺失，约 11 秒后自然 `failed/submissionState=unknown`。正式 retry 返回结构化 `PROMPT_OUTCOME_UNKNOWN` HTTP 409，job 文件字节不变；这证明结果不明时不会分配新 UUID，不能把这条描述成引擎已受理。见[未转发对照](generated-evidence/m01/runtime-loss-not-forwarded.json)。结束时 `.env`、启动脚本、默认 Qwen 图及 manifest SHA 全部为原值，Git clean、queue 0、代理端口空闲，临时 watchdog 已停止；Qwen ready/idle、H3 stopped_on_demand。远端现可交给 framing 探针。
+
+### c03 证据矩阵
 
 | 子要求 | 证据与状态 |
 | --- | --- |
@@ -56,6 +64,7 @@ Comfy 日志明确显示 `Failed to validate prompt` 和 `sampler_name` 不在�
 | API 在 H3 运行中重启并对账 | 重启观察保留同一 Comfy `queue_running` UUID，无重复 prompt。 |
 | 已完成镜头恢复、成片可读 | 正式重试 attempt 2 保留原 clip SHA/UUID，H3 inactive；最终 MP4 API 下载同 SHA，完整 CPU 解码通过。 |
 | Comfy 明确拒绝、missing 有界失败、人工 retry 和三次上限 | 本节五份 fault 证据；拒绝发生在图参数校验阶段，无实际采样。 |
-| 真正 HTTP 响应丢失但引擎可能已受理 | **未做真实网络故障注入**，不能由上述 Comfy 400 推断安全。 |
+| Comfy 受理后的真实 HTTP 响应丢失 | loopback 代理只转发一次，Comfy 返回相同 UUID 后断响应；job `unknown` 经 history 对账成功，真实 JPEG 与重启后 API 下载同 SHA。 |
+| 未转发请求的自然 `unknown` 与 409 防重 | 零次上游 `/prompt`、history/queue missing，约 11 秒失败；正式 retry 409 且 job 字节不变。此例无引擎采样。 |
 
-当前 Spark 部署把 400 校验拒绝与网络结果不明都标记为 `submissionState=unknown`；人工 retry 会给后者换 UUID，存在重复执行风险。待主审的**仅本地修复，尚未部署**：明确的 HTTP 400/422 标 `rejected`、Comfy history 确认失败标 `failed`，两者可重试；`intent_recorded`、`accepted`、`unknown` 的失败 job 则由正式 retry API 返回结构化 `PROMPT_OUTCOME_UNKNOWN` 409，保留原 UUID 与 job，等待人工对账。图片及视频镜头均受保护。针对测试 14 passed，pyserver 全量 72 passed；测试不代替真正网络故障验证。主会话评审前不通过 c03、不完成 runtime 节点。
+`d055cae` 已部署防重修复：明确的 HTTP 400/422 标 `rejected`、Comfy history 确认失败标 `failed`，两者可重试；`intent_recorded`、`accepted`、`unknown` 的失败 job 由正式 retry API 返回结构化 `PROMPT_OUTCOME_UNKNOWN` 409，保留原 UUID 与 job，等待人工对账。图片及视频镜头均受保护。远端 runtime 14 passed，本地 pyserver 全量 72 passed；真实网络探针已单独记录，替身测试不冒充模型证据。c03 criterion 的最终 review 由主会话执行。
