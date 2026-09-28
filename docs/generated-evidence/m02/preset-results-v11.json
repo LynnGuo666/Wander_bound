@@ -1,0 +1,511 @@
+{
+  "items": [
+    {
+      "styleId": "watercolor",
+      "status": {
+        "id": "6d8bde76-95ed-4887-b1fb-b2d459d32861",
+        "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+        "status": "succeeded",
+        "backend": "dgx-spark-qwen-image-2.1",
+        "variant": "ai-6d8bde76-95ed-4887-b1fb-b2d459d32861",
+        "error": null,
+        "errorCode": null,
+        "createdAt": "2026-09-28T22:53:30.491876+08:00",
+        "startedAt": "2026-09-28T22:53:30.599430+08:00",
+        "completedAt": "2026-09-28T22:54:00.865750+08:00",
+        "attempt": 1,
+        "progressLabel": "已完成",
+        "progressPercent": 100
+      },
+      "job": {
+        "id": "6d8bde76-95ed-4887-b1fb-b2d459d32861",
+        "kind": "edit",
+        "status": "succeeded",
+        "backend": "dgx-spark-qwen-image-2.1",
+        "createdAt": "2026-09-28T22:53:30.491876+08:00",
+        "attempt": 1,
+        "progressPercent": 100,
+        "progressLabel": "已完成",
+        "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+        "prompt": "全场景与贴纸用透明水彩绘制：湿画法的柔和渗色、叠色、自然留白、淡淡铅笔结构与冷压纸颗粒。树叶用流动的色块，山峦有透明色层，避免厚重塑料和硬切纸边。\n把整张照片彻底重新设计成简化的手作插画，远山、草坡、树林全部重新塑造，只保留场景布局、秋日颜色和可辨主体，不保留原照片像素或摄影纹理。减少细碎草叶与树枝，用大块清晰形状概括；画面每一处都必须是这个画风。成品是一张平面的米白纸旅行手帐，横向3:2，主画占左侧约三分之二，右侧放几枚同画风的山、树、云小贴纸，这些元素必须来自原场景。四边与底部留白，贴纸有窄白边。整页无任何文字。",
+        "seed": 2026092901,
+        "parameters": {
+          "aspect_ratio": "3:2"
+        },
+        "selectionSnapshot": {
+          "schemaVersion": 1,
+          "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+          "selection": {
+            "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+            "batchId": "m01-public-yellowstone-20260928-v1",
+            "source": "manual-acceptance-20260928",
+            "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+            "photoIds": [
+              "199b155d-0c14-4673-8d25-5de27f175676",
+              "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+              "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+              "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+            ],
+            "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+          },
+          "inputPhotoIds": [
+            "199b155d-0c14-4673-8d25-5de27f175676"
+          ],
+          "originals": [
+            {
+              "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+              "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+            }
+          ],
+          "inputVariant": "original"
+        },
+        "workflowSnapshot": {
+          "schema_version": 1,
+          "kind": "image",
+          "workflow_id": "travel.qwen-image-2.1.edit",
+          "workflow_version": "1.0.0",
+          "workflow_hash": "b967b10fbe052fa8ad2c3f1f8999f8b4efdc533a1608d8bbe69b094696d78cf1",
+          "api_graph": {
+            "1": {
+              "class_type": "LoadImage",
+              "inputs": {
+                "image": "__TRAVEL_IMAGE__"
+              }
+            },
+            "2": {
+              "class_type": "UNETLoader",
+              "inputs": {
+                "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+                "weight_dtype": "default"
+              }
+            },
+            "3": {
+              "class_type": "CLIPLoader",
+              "inputs": {
+                "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+                "type": "qwen_image",
+                "device": "default"
+              }
+            },
+            "4": {
+              "class_type": "VAELoader",
+              "inputs": {
+                "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+              }
+            },
+            "5": {
+              "class_type": "TextEncodeQwenImage21",
+              "inputs": {
+                "clip": [
+                  "3",
+                  0
+                ],
+                "vae": [
+                  "4",
+                  0
+                ],
+                "images.image_1": [
+                  "1",
+                  0
+                ],
+                "prompt": "__TRAVEL_PROMPT__",
+                "negative_prompt": "",
+                "resolution": 1024
+              }
+            },
+            "6": {
+              "class_type": "KSampler",
+              "inputs": {
+                "model": [
+                  "2",
+                  0
+                ],
+                "positive": [
+                  "5",
+                  0
+                ],
+                "negative": [
+                  "5",
+                  1
+                ],
+                "latent_image": [
+                  "5",
+                  2
+                ],
+                "seed": "__TRAVEL_SEED__",
+                "steps": 25,
+                "cfg": 1,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1
+              }
+            },
+            "7": {
+              "class_type": "VAEDecode",
+              "inputs": {
+                "samples": [
+                  "6",
+                  0
+                ],
+                "vae": [
+                  "4",
+                  0
+                ]
+              }
+            },
+            "8": {
+              "class_type": "SaveImage",
+              "inputs": {
+                "images": [
+                  "7",
+                  0
+                ],
+                "filename_prefix": "travel-agent-qwen21"
+              }
+            }
+          },
+          "engine": {
+            "comfyui": "0.37.0",
+            "commit": "4ef23c34d950eecc37040a21ee1741a49d2e44b1",
+            "frontend": "1.53.6"
+          },
+          "custom_nodes": {},
+          "model_nodes": {
+            "2": {
+              "class_type": "UNETLoader",
+              "file": "qwen_image_2.1_int8_convrot.safetensors",
+              "bytes": 7256783064
+            },
+            "3": {
+              "class_type": "CLIPLoader",
+              "file": "qwen3vl_8b_int8_convrot.safetensors",
+              "bytes": 9350798360
+            },
+            "4": {
+              "class_type": "VAELoader",
+              "file": "qwen_image_2.1_vae_bf16.safetensors",
+              "bytes": 675509688
+            },
+            "5": {
+              "class_type": "TextEncodeQwenImage21",
+              "source": "comfy_extras/nodes_qwen.py",
+              "resolution": 1024
+            }
+          },
+          "parameter_schema": {
+            "aspect_ratio": {
+              "type": "string",
+              "enum": [
+                "source",
+                "3:2"
+              ],
+              "default": "source"
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615,
+              "default": 0
+            }
+          },
+          "input_policy": "contain-white-v1",
+          "snapshot_hash": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10"
+        },
+        "error": null,
+        "startedAt": "2026-09-28T22:53:30.599430+08:00",
+        "promptId": "8676ada8-8be3-476e-9204-755efc83dcd1",
+        "submissionState": "completed",
+        "variant": "ai-6d8bde76-95ed-4887-b1fb-b2d459d32861",
+        "completedAt": "2026-09-28T22:54:00.865750+08:00"
+      },
+      "sha256": "63322c4c65d304a835e4f4fc0120e8b7ef67d1eb86ce93a19fb177de110d2c85",
+      "size": [
+        1248,
+        832
+      ],
+      "http": 200
+    },
+    {
+      "styleId": "papercut",
+      "status": {
+        "id": "055f8f6e-8fa6-445c-a008-43f6053059b8",
+        "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+        "status": "succeeded",
+        "backend": "dgx-spark-qwen-image-2.1",
+        "variant": "ai-055f8f6e-8fa6-445c-a008-43f6053059b8",
+        "error": null,
+        "errorCode": null,
+        "createdAt": "2026-09-28T22:53:30.532601+08:00",
+        "startedAt": "2026-09-28T22:54:00.953458+08:00",
+        "completedAt": "2026-09-28T22:54:31.244427+08:00",
+        "attempt": 1,
+        "progressLabel": "已完成",
+        "progressPercent": 100
+      },
+      "job": {
+        "id": "055f8f6e-8fa6-445c-a008-43f6053059b8",
+        "kind": "edit",
+        "status": "succeeded",
+        "backend": "dgx-spark-qwen-image-2.1",
+        "createdAt": "2026-09-28T22:53:30.532601+08:00",
+        "attempt": 1,
+        "progressPercent": 100,
+        "progressLabel": "已完成",
+        "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+        "prompt": "全场景与贴纸都由多层彩色卡纸剪切叠成：清晰切边、可辨纸张厚度、不同高度的层叠纸片和柔和投影。山体是分层轮廓，树冠由成簇剪纸组成。颜色平整，纸纤维细腻，不要水彩笔触、毛线或塑料。\n把整张照片彻底重新设计成简化的手作插画，远山、草坡、树林全部重新塑造，只保留场景布局、秋日颜色和可辨主体，不保留原照片像素或摄影纹理。减少细碎草叶与树枝，用大块清晰形状概括；画面每一处都必须是这个画风。成品是一张平面的米白纸旅行手帐，横向3:2，主画占左侧约三分之二，右侧放几枚同画风的山、树、云小贴纸，这些元素必须来自原场景。四边与底部留白，贴纸有窄白边。整页无任何文字。",
+        "seed": 2026092902,
+        "parameters": {
+          "aspect_ratio": "3:2"
+        },
+        "selectionSnapshot": {
+          "schemaVersion": 1,
+          "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+          "selection": {
+            "tripId": "c2712842-c987-4347-938b-b6bc6fa7905e",
+            "batchId": "m01-public-yellowstone-20260928-v1",
+            "source": "manual-acceptance-20260928",
+            "updatedAt": "2026-09-28T20:10:41.766989+08:00",
+            "photoIds": [
+              "199b155d-0c14-4673-8d25-5de27f175676",
+              "5869d8f2-b80b-466a-a724-7f9702e0a3f0",
+              "df012e97-1209-4270-9b6e-1e1f0d8267ee",
+              "a531f3cb-c2bb-439b-b1bb-04b97fa63dc0"
+            ],
+            "sha256": "2827a2fe4be7cd3cca728e2c2df6bb5988dc2376a8a14de55b90d0cc25d2c4b7"
+          },
+          "inputPhotoIds": [
+            "199b155d-0c14-4673-8d25-5de27f175676"
+          ],
+          "originals": [
+            {
+              "photoId": "199b155d-0c14-4673-8d25-5de27f175676",
+              "sha256": "a87ea82f0139e73342c82e1640483afdcb427efb7df6689cdaab69b44f4b0dbb"
+            }
+          ],
+          "inputVariant": "original"
+        },
+        "workflowSnapshot": {
+          "schema_version": 1,
+          "kind": "image",
+          "workflow_id": "travel.qwen-image-2.1.edit",
+          "workflow_version": "1.0.0",
+          "workflow_hash": "b967b10fbe052fa8ad2c3f1f8999f8b4efdc533a1608d8bbe69b094696d78cf1",
+          "api_graph": {
+            "1": {
+              "class_type": "LoadImage",
+              "inputs": {
+                "image": "__TRAVEL_IMAGE__"
+              }
+            },
+            "2": {
+              "class_type": "UNETLoader",
+              "inputs": {
+                "unet_name": "qwen_image_2.1_int8_convrot.safetensors",
+                "weight_dtype": "default"
+              }
+            },
+            "3": {
+              "class_type": "CLIPLoader",
+              "inputs": {
+                "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+                "type": "qwen_image",
+                "device": "default"
+              }
+            },
+            "4": {
+              "class_type": "VAELoader",
+              "inputs": {
+                "vae_name": "qwen_image_2.1_vae_bf16.safetensors"
+              }
+            },
+            "5": {
+              "class_type": "TextEncodeQwenImage21",
+              "inputs": {
+                "clip": [
+                  "3",
+                  0
+                ],
+                "vae": [
+                  "4",
+                  0
+                ],
+                "images.image_1": [
+                  "1",
+                  0
+                ],
+                "prompt": "__TRAVEL_PROMPT__",
+                "negative_prompt": "",
+                "resolution": 1024
+              }
+            },
+            "6": {
+              "class_type": "KSampler",
+              "inputs": {
+                "model": [
+                  "2",
+                  0
+                ],
+                "positive": [
+                  "5",
+                  0
+                ],
+                "negative": [
+                  "5",
+                  1
+                ],
+                "latent_image": [
+                  "5",
+                  2
+                ],
+                "seed": "__TRAVEL_SEED__",
+                "steps": 25,
+                "cfg": 1,
+                "sampler_name": "euler",
+                "scheduler": "simple",
+                "denoise": 1
+              }
+            },
+            "7": {
+              "class_type": "VAEDecode",
+              "inputs": {
+                "samples": [
+                  "6",
+                  0
+                ],
+                "vae": [
+                  "4",
+                  0
+                ]
+              }
+            },
+            "8": {
+              "class_type": "SaveImage",
+              "inputs": {
+                "images": [
+                  "7",
+                  0
+                ],
+                "filename_prefix": "travel-agent-qwen21"
+              }
+            }
+          },
+          "engine": {
+            "comfyui": "0.37.0",
+            "commit": "4ef23c34d950eecc37040a21ee1741a49d2e44b1",
+            "frontend": "1.53.6"
+          },
+          "custom_nodes": {},
+          "model_nodes": {
+            "2": {
+              "class_type": "UNETLoader",
+              "file": "qwen_image_2.1_int8_convrot.safetensors",
+              "bytes": 7256783064
+            },
+            "3": {
+              "class_type": "CLIPLoader",
+              "file": "qwen3vl_8b_int8_convrot.safetensors",
+              "bytes": 9350798360
+            },
+            "4": {
+              "class_type": "VAELoader",
+              "file": "qwen_image_2.1_vae_bf16.safetensors",
+              "bytes": 675509688
+            },
+            "5": {
+              "class_type": "TextEncodeQwenImage21",
+              "source": "comfy_extras/nodes_qwen.py",
+              "resolution": 1024
+            }
+          },
+          "parameter_schema": {
+            "aspect_ratio": {
+              "type": "string",
+              "enum": [
+                "source",
+                "3:2"
+              ],
+              "default": "source"
+            },
+            "seed": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 18446744073709551615,
+              "default": 0
+            }
+          },
+          "input_policy": "contain-white-v1",
+          "snapshot_hash": "46c36edb26d4c6532392656af4fbfbd2f50382a378773c4c315b768315883a10"
+        },
+        "error": null,
+        "startedAt": "2026-09-28T22:54:00.953458+08:00",
+        "promptId": "1967552e-3ca2-4d43-a9e8-1321a1398550",
+        "submissionState": "completed",
+        "variant": "ai-055f8f6e-8fa6-445c-a008-43f6053059b8",
+        "completedAt": "2026-09-28T22:54:31.244427+08:00"
+      },
+      "sha256": "0b1f2afa9bcccada216536d1c2ca73c6b619c9e15af6bd679904eaf3bedf4904",
+      "size": [
+        1248,
+        832
+      ],
+      "http": 200
+    }
+  ],
+  "inference": {
+    "enabled": true,
+    "phase": "idle",
+    "activeModel": null,
+    "loadingModel": null,
+    "loadProgress": null,
+    "primaryChat": true,
+    "idleTimeoutSeconds": 600,
+    "error": null,
+    "memory": {
+      "totalGiB": 119.7,
+      "availableGiB": 34.2,
+      "freeGiB": 10.7,
+      "swapFreeGiB": 0.0,
+      "pressureSome10": 0.0,
+      "pressureFull10": 0.0
+    },
+    "gpu": {
+      "utilizationPercent": 0.0,
+      "powerWatts": 11.46
+    },
+    "models": [
+      {
+        "id": "image",
+        "label": "Qwen-Image-2.1",
+        "service": "qwen21-comfy.service",
+        "state": "ready",
+        "active": false,
+        "idleTimeoutSeconds": 600,
+        "idleSeconds": 42
+      },
+      {
+        "id": "video",
+        "label": "MiniMax H3",
+        "service": "minimax-h3-comfy.service",
+        "state": "stopped_on_demand",
+        "active": false,
+        "idleTimeoutSeconds": 600,
+        "idleSeconds": 3584
+      },
+      {
+        "id": "chat",
+        "label": "Qwen3.8-27B",
+        "service": "qwen38.service",
+        "state": "ready",
+        "active": false,
+        "idleTimeoutSeconds": 1800,
+        "idleSeconds": 42
+      }
+    ],
+    "queue": {
+      "total": 0,
+      "image": 0,
+      "video": 0,
+      "jobs": []
+    }
+  }
+}
