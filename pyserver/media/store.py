@@ -86,6 +86,19 @@ class MediaStore:
         os.chmod(meta, 0o600)
         return photo
 
+    def set_tags(self, photo_id: str, tags: dict) -> dict | None:
+        """把 VLM 打标（场景/人物/情绪/物体 + keep/highlight 等）写回照片 metadata，
+        供剪辑和回忆编排按内容选取和排序。tags 为空就存空 dict，不阻断后续。
+        """
+        photo = self.get(photo_id)
+        if not photo:
+            return None
+        photo["tags"] = tags or {}
+        meta = self.meta_dir / f"{photo_id}.json"
+        meta.write_text(json.dumps(photo, ensure_ascii=False))
+        os.chmod(meta, 0o600)
+        return photo
+
     def enhance(self, photo_id: str, preset: str) -> dict | None:
         photo = self.get(photo_id)
         if not photo:
