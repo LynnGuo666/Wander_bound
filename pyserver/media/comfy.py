@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
 import re
 import uuid
@@ -10,6 +9,8 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import httpx
+
+from . import workflow_versions
 
 FILE = re.compile(r"^[\w. -]{1,180}$")
 
@@ -45,9 +46,32 @@ class ComfyClient:
         except (httpx.HTTPError, ValueError):
             return False
 
-    async def queue(self, image: bytes, prompt: str, seed: int | None = None) -> str:
+    def freeze_workflow(self) -> dict:
         if not self.configured:
             raise RuntimeError("工作流文件未配置")
+        return workflow_versions.freeze_workflow(self.workflow_file, self.kind)
+
+    async def queue(self, image: bytes, prompt: str, seed: int | None = None, *,
+                    workflow_snapshot: dict | None = None, parameters: dict | None = None) -> str:
+        # Validate before uploading private input. A frozen graph never reads the
+        # current workflow file, even when that file has since been replaced.
+        snapshot = (workflow_versions.validate_snapshot(workflow_snapshot, self.kind)
+                    if workflow_snapshot is not None else self.freeze_workflow())
+        settings, seed = workflow_versions.validate_parameters(snapshot, parameters, seed)
+        workflow = snapshot["api_graph"]
+        if self.kind == "video":
+            node = workflow.get("6", {})
+            if node.get("class_type") != "MiniMaxH3ImageToVideo" or node.get("inputs", {}).get("width") != 1024 or node["inputs"].get("height") != 576:
+                raise ValueError("视频工作流 API 图不满足目标 16:9 画布")
+            node["inputs"]["length"] = settings["frames"]
+            workflow["14"]["inputs"]["fps"] = settings["fps"]
+            if workflow.get("7", {}).get("inputs", {}).get("noise_seed") != "__TRAVEL_SEED__":
+                raise ValueError("视频工作流未绑定任务 seed")
+        else:
+            node = workflow.get("5", {})
+            if node.get("class_type") != "TextEncodeQwenImage21" or node.get("inputs", {}).get("resolution") != 1024:
+                raise ValueError("图片工作流 API 图分辨率不符合当前策略")
+        image = workflow_versions.prepare_image(image, settings["aspect_ratio"], snapshot["input_policy"])
         async with httpx.AsyncClient(timeout=35) as client:
             upload = await client.post(f"{self.base_url}/upload/image", files={"image": (f"travel-{uuid.uuid4()}.jpg", image, "image/jpeg")},
                                        data={"overwrite": "false"})
@@ -55,7 +79,6 @@ class ComfyClient:
             name = upload.json().get("name", "")
             if not FILE.fullmatch(name):
                 raise RuntimeError("ComfyUI 未返回有效图片名")
-            workflow = json.loads(self.workflow_file.read_text())
             text = f"<image1> {prompt}" if self.kind == "image" and "<image1>" not in prompt else prompt
             workflow = _replace(workflow, {"__TRAVEL_IMAGE__": name, "__TRAVEL_PROMPT__": text,
                                            "__TRAVEL_SEED__": seed if seed is not None else 0})
