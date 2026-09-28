@@ -1,8 +1,10 @@
 """The media worker must preserve jobs and never overlap heavy inference."""
 import asyncio
+import io
 from contextlib import asynccontextmanager
 
 import httpx
+from PIL import Image as PillowImage
 
 from pyserver.app import create_app
 from pyserver.inference.controller import ModelController, ModelSpec
@@ -27,7 +29,9 @@ class Memory:
 
     def bytes(self, _photo_id, variant="original"):
         assert variant == "original"
-        return b"photo"
+        output = io.BytesIO()
+        PillowImage.new("RGB", (8, 8), "red").save(output, format="JPEG")
+        return output.getvalue()
 
     def save_variant(self, photo_id, variant, content):
         self.saved.append((photo_id, variant, content))

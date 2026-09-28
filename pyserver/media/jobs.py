@@ -10,7 +10,8 @@ from pathlib import Path
 
 from .comfy import ComfyClient
 from .store import MediaStore
-from .contracts import ContractError, original_from_snapshot, product_contract, selected_original_snapshot
+from .contracts import (ContractError, original_from_snapshot, product_contract,
+                        selected_original_snapshot, validate_snapshot)
 from ..inference import ModelController
 from ..trips import now
 
@@ -81,10 +82,31 @@ class JobStore:
         return sorted((job for job in jobs if job and job.get("status") in {"queued", "running", "loading_model"}),
                       key=lambda job: (job.get("createdAt", ""), job["id"]))
 
+    def _validate_job_inputs(self, job: dict) -> None:
+        snapshot = job.get("selectionSnapshot")
+        expected = [job.get("photoId")] if job.get("kind") == "edit" else job.get("photoIds")
+        if (job.get("kind") not in {"edit", "memory"} or not isinstance(snapshot, dict)
+                or not isinstance(expected, list) or not expected
+                or any(not isinstance(photo_id, str) for photo_id in expected)
+                or snapshot.get("inputPhotoIds") != expected
+                or (job.get("kind") == "memory" and snapshot.get("tripId") != job.get("tripId"))):
+            raise ContractError("SNAPSHOT_INVALID", "任务缺少有效的输入快照", 409)
+        validate_snapshot(snapshot)
+        for photo_id in expected:
+            original_from_snapshot(self.media, snapshot, photo_id)
+
+    def _fail(self, job: dict, exc: Exception) -> None:
+        job["status"] = "failed"
+        job["error"] = str(exc)[:300]
+        job["errorCode"] = exc.code if isinstance(exc, ContractError) else "JOB_FAILED"
+        job["progressLabel"] = "任务失败"
+        self.save(job)
+
     async def _drain(self):
         while pending := self.pending():
             job = pending[0]
             try:
+                self._validate_job_inputs(job)
                 job["status"] = "loading_model"
                 job["progressLabel"] = "加载模型服务"
                 job["progressPercent"] = 5
@@ -93,6 +115,8 @@ class JobStore:
                     await self._run(job["id"])
             except asyncio.CancelledError:
                 raise
+            except ContractError as exc:
+                self._fail(self.get(job["id"]) or job, exc)
             except Exception as exc:
                 job = self.get(job["id"]) or job
                 job["status"] = "queued"
@@ -132,6 +156,7 @@ class JobStore:
         if not job:
             return
         try:
+            self._validate_job_inputs(job)
             job["status"] = "running"
             job.setdefault("startedAt", now())
             job["progressLabel"] = "上传输入并提交工作流"
@@ -188,15 +213,14 @@ class JobStore:
             job["progressPercent"] = 100
             job["completedAt"] = now()
         except Exception as exc:
-            job["status"] = "failed"
-            job["error"] = str(exc)[:300]
-            job["errorCode"] = exc.code if isinstance(exc, ContractError) else "JOB_FAILED"
-            job["progressLabel"] = "任务失败"
+            self._fail(job, exc)
+            return
         self.save(job)
 
-    def retry(self, job_id: str) -> dict | None:
+    def retry(self, job_id: str, *, expected_kind: str | None = None) -> dict | None:
         job = self.get(job_id)
-        if not job or job["status"] != "failed":
+        if (not job or job["status"] != "failed"
+                or (expected_kind is not None and job["kind"] != expected_kind)):
             return None
         job["status"] = "queued"
         job["error"] = None

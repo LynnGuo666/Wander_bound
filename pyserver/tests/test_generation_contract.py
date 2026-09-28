@@ -1,6 +1,7 @@
 """Selected-original contracts use only synthetic photos and an in-process HTTP app."""
 import asyncio
 import io
+import uuid
 
 import httpx
 from fastapi import FastAPI
@@ -24,12 +25,14 @@ class Adapter:
 
     def __init__(self):
         self.queued = []
+        self.result_calls = 0
 
     async def queue(self, *args):
         self.queued.append(args)
         return "prompt-id"
 
     async def result(self, _prompt_id):
+        self.result_calls += 1
         return "completed", {"filename": "rendered.jpg"}
 
     async def download(self, _file):
@@ -71,7 +74,10 @@ def test_http_contract_rejects_missing_empty_foreign_unselected_duplicate_and_fo
             media.set_selected(trip["id"], {"batchId": "empty", "source": "test", "photoIds": []})
             await reject(base, "SELECTION_EMPTY", 409)
             media.set_selected(trip["id"], {"batchId": "batch-1", "source": "test", "photoIds": [chosen["id"]]})
-            await reject({**base, "photoIds": [chosen["id"], chosen["id"]]}, "PHOTO_IDS_DUPLICATE", 400)
+            await reject({**base, "productKind": "video", "photoIds": [chosen["id"], chosen["id"]]}, "PHOTO_IDS_DUPLICATE", 400)
+            await reject({**base, "photoIds": [chosen["id"], other["id"]]}, "PHOTO_IDS_INVALID", 400)
+            await reject({**base, "productKind": "storyboard", "photoIds": [str(uuid.uuid4()) for _ in range(9)]},
+                         "PHOTO_IDS_INVALID", 400)
             await reject({**base, "photoIds": [other["id"]]}, "PHOTO_NOT_SELECTED", 409)
             await reject({**base, "photoIds": [foreign["id"]]}, "PHOTO_WRONG_TRIP", 409)
             await reject({**base, "photoIds": ["00000000-0000-4000-8000-000000000000"]}, "PHOTO_NOT_FOUND", 404)
@@ -81,6 +87,8 @@ def test_http_contract_rejects_missing_empty_foreign_unselected_duplicate_and_fo
             await reject({**base, "prompt": "x" * 4001}, "PROMPT_INVALID", 400)
             original = media.bytes(chosen["id"], "original")
             media.photos_dir.joinpath(f"{chosen['id']}.jpg").unlink()
+            await reject(base, "ORIGINAL_UNREADABLE", 409)
+            media.photos_dir.joinpath(f"{chosen['id']}.jpg").write_bytes(b"not a JPEG")
             await reject(base, "ORIGINAL_UNREADABLE", 409)
             media.photos_dir.joinpath(f"{chosen['id']}.jpg").write_bytes(original)
             assert not jobs.root.exists() or not list(jobs.root.glob("*.json"))
@@ -173,4 +181,53 @@ def test_old_generation_routes_require_selection_and_worker_rechecks_original(tm
             assert jobs.get(deleted["id"])["errorCode"] == "ORIGINAL_UNREADABLE"
             assert len(image.queued) == 1
 
+            media.photos_dir.joinpath(f"{other['id']}.jpg").write_bytes(original_other)
+            corrupt = jobs.submit("edit", {"photoId": other["id"], "prompt": "test", "seed": 1})
+            media.photos_dir.joinpath(f"{other['id']}.jpg").write_bytes(b"not a JPEG")
+            await jobs._run(corrupt["id"])
+            assert jobs.get(corrupt["id"])["errorCode"] == "ORIGINAL_UNREADABLE"
+            assert len(image.queued) == 1
+
     asyncio.run(scenario())
+
+
+def test_wrong_retry_route_never_mutates_or_schedules_another_job_kind(tmp_path, monkeypatch):
+    app, media, jobs, _, trip, chosen, _, _ = fixture(tmp_path, monkeypatch)
+    media.set_selected(trip["id"], {"batchId": "batch", "source": "test", "photoIds": [chosen["id"]]})
+    edit = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "test", "seed": 1})
+    memory = jobs.submit("memory", {"tripId": trip["id"], "photoIds": [chosen["id"]], "title": "旅行"})
+    for job in (edit, memory):
+        job["status"] = "failed"
+        jobs.save(job)
+    schedules = []
+    jobs._schedule = lambda: schedules.append("scheduled")
+
+    async def scenario():
+        headers = {"Authorization": "Bearer contract-test-token"}
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            for path, job in ((f"/api/media/memories/{edit['id']}/retry", edit),
+                              (f"/api/media/edits/{memory['id']}/retry", memory)):
+                response = await client.post(path, headers=headers)
+                assert response.status_code == 404
+                current = jobs.get(job["id"])
+                assert current["status"] == "failed" and current["attempt"] == 1
+            assert schedules == []
+            response = await client.post(f"/api/media/edits/{edit['id']}/retry", headers=headers)
+            assert response.status_code == 202
+            assert jobs.get(edit["id"])["attempt"] == 2
+            assert schedules == ["scheduled"]
+
+    asyncio.run(scenario())
+
+
+def test_legacy_prompt_id_cannot_bypass_snapshot_before_controller(tmp_path, monkeypatch):
+    _, media, jobs, image, trip, chosen, _, _ = fixture(tmp_path, monkeypatch)
+    media.set_selected(trip["id"], {"batchId": "batch", "source": "test", "photoIds": [chosen["id"]]})
+    legacy = {"id": str(uuid.uuid4()), "kind": "edit", "status": "queued", "backend": "test",
+              "createdAt": "2026-09-28T00:00:00Z", "photoId": chosen["id"],
+              "prompt": "old", "promptId": "already-queued", "seed": 1, "attempt": 1}
+    jobs.save(legacy)
+    asyncio.run(jobs._drain())
+    failed = jobs.get(legacy["id"])
+    assert failed["status"] == "failed" and failed["errorCode"] == "SNAPSHOT_INVALID"
+    assert not image.queued and image.result_calls == 0

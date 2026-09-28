@@ -115,8 +115,11 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
     @router.post("/api/media/edits/{job_id}/retry")
     async def retry_edit(job_id: str, request: Request):
         require_media_auth(request)
-        job = jobs.retry(job_id)
-        if not job or job["kind"] != "edit":
+        current = jobs.get(job_id)
+        if not current or current.get("kind") != "edit" or current.get("status") != "failed":
+            raise HTTPException(404, "无法重试")
+        job = jobs.retry(job_id, expected_kind="edit")
+        if not job:
             raise HTTPException(404, "无法重试")
         return JSONResponse({"id": job_id, "status": job["status"], "attempt": job["attempt"]}, status_code=202)
 
@@ -131,8 +134,11 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
     @router.post("/api/media/memories/{job_id}/retry")
     async def retry_memory(job_id: str, request: Request):
         require_media_auth(request)
-        job = jobs.retry(job_id)
-        if not job or job["kind"] != "memory":
+        current = jobs.get(job_id)
+        if not current or current.get("kind") != "memory" or current.get("status") != "failed":
+            raise HTTPException(404, "无法重试")
+        job = jobs.retry(job_id, expected_kind="memory")
+        if not job:
             raise HTTPException(404, "无法重试")
         return JSONResponse({"id": job_id, "status": job["status"], "attempt": job["attempt"]}, status_code=202)
 
