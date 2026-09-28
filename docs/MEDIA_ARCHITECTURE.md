@@ -16,6 +16,8 @@ iOS 通过 PhotoKit 读取用户授权的相册，用户选中的照片才会上
 
 本地调试先启动 `./spark-comfy-tunnel.sh`，再运行 `./start.sh`。默认图像 API 为 `http://127.0.0.1:18191`，视频 API 为 `http://127.0.0.1:18188`；照片重绘与视频工作流分别是 `workflows/qwen-image-2.1-edit-api.json` 和 `workflows/minimax-h3-i2v-api.json`。城市封面可使用 `workflows/qwen-image-2.1-t2i-api.json` 进行无参考图文生图：它从 `EmptyLatentImage` 开始，不上传图片，也不在提示词前加 `<image1>`。Spark 已部署的同一套 Qwen 模型权重和 ComfyUI 服务即可执行该图；当前应用的媒体 API 仍绑定照片重绘工作流，文生图需单独提交这份工作流。Spark 上的 ComfyUI 保持私有，不向公网开放。只运行旅行规划时无需启动媒体隧道。
 
+本地 Vite 的开发者调试页使用 `?debug=1`，其 `/api/inference` 请求通过 Tailscale 私网转发到 Spark，以展示真实的内存、GPU 与模型状态；其他 `/api` 请求仍由本地 FastAPI 处理。需要换私网入口时可在启动 Vite 前设置 `SPARK_DEBUG_API_URL`。Spark 部署页面直接访问同源的模型状态接口。
+
 已验证的城市封面提示词存于 `prompts/city-cover.qwen-image-2.1.json`，内有用途标签、可替换变量、seed 和深圳湾实例。连接媒体隧道后可直接运行：
 
 ```bash
