@@ -34,6 +34,14 @@
   "observed_result": {
     "clip_sha256": "93cad7ed7863f97accd03450d4c144a1228e16a9430ab8ca6e220662b3226d60",
     "completed_at": "2026-09-28T21:51:04.365530+08:00",
+    "engine_clip_ffprobe": {
+      "duration": "5.166667",
+      "height": 576,
+      "nb_frames": "124",
+      "r_frame_rate": "24/1",
+      "width": 1024
+    },
+    "extra_frame_interpretation": "Observed in final FFmpeg-composed output; cause not established. Engine single clip preserves requested 124 frames.",
     "ffprobe": {
       "format": {
         "duration": "5.216000",
@@ -59,6 +67,7 @@
         }
       ]
     },
+    "final_video_extra_frame_vs_engine_clip": 1,
     "full_cpu_decode_exit": 0,
     "old_job_and_clip_unchanged": true,
     "prompt_id": "f07c21de-2fc4-4440-a4b7-9cdfa7051575",
@@ -78,7 +87,8 @@
     "/private/tmp/audit.m01.outputs-sol.20260928/framing-archive.json",
     "/private/tmp/audit.m01.outputs-sol.20260928/framing-audio-volumedetect.txt",
     "/private/tmp/audit.m01.outputs-sol.20260928/framing-border-metrics.json",
-    "/private/tmp/audit.m01.outputs-sol.20260928/framing-motion-metrics.json"
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-motion-metrics.json",
+    "/private/tmp/audit.m01.outputs-sol.20260928/framing-engine-clip-ffprobe.json"
   ],
   "request": {
     "http_status": 202,
