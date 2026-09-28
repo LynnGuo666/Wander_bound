@@ -174,6 +174,38 @@ def test_response_lost_and_missing_prompt_fails_without_resubmission(tmp_path, m
     assert len(image.calls) == 1
 
 
+def test_running_and_success_clear_stale_resource_error_but_keep_retry_history(tmp_path, monkeypatch):
+    jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
+    job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel"})
+    job.update({"error": "previous model busy", "errorCode": "RESOURCE_WAIT", "resourceRetries": 2})
+    jobs.save(job)
+    release = asyncio.Event()
+    original_result = image.result
+    async def delayed_result(prompt_id):
+        await release.wait()
+        return await original_result(prompt_id)
+    image.result = delayed_result
+
+    async def scenario():
+        task = asyncio.create_task(jobs._run(job["id"]))
+        for _ in range(100):
+            current = jobs.get(job["id"])
+            if current["status"] == "running" and current.get("promptId"):
+                break
+            await asyncio.sleep(0)
+        assert current["status"] == "running"
+        assert current["error"] is None and "errorCode" not in current
+        assert current["resourceRetries"] == 2
+        release.set()
+        await task
+        completed = jobs.get(job["id"])
+        assert completed["status"] == "succeeded"
+        assert completed["error"] is None and "errorCode" not in completed
+        assert completed["resourceRetries"] == 2
+
+    asyncio.run(scenario())
+
+
 def test_failed_prompt_is_terminal_then_explicit_retry_is_bounded(tmp_path, monkeypatch):
     jobs, image, _, _, _, chosen, _ = make_jobs(tmp_path, monkeypatch)
     job = jobs.submit("edit", {"photoId": chosen["id"], "prompt": "travel", "seed": 7})
