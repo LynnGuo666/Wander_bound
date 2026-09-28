@@ -252,7 +252,8 @@
         "Node name for S&R": "RandomNoise"
       },
       "widgets_values": [
-        0
+        0,
+        "fixed"
       ]
     },
     {

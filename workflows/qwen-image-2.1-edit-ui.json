@@ -248,6 +248,7 @@
       },
       "widgets_values": [
         0,
+        "fixed",
         25,
         1,
         "euler",
