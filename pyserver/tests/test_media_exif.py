@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 import math
 import struct
+from fractions import Fraction
 from PIL import Image
 
 from pyserver.media import images
@@ -118,6 +119,62 @@ def test_extract_exif_gps_south_west_is_negative():
     assert abs(out["gps"]["lng"] + (151 + 12 / 60)) < 1e-6
 
 
+def _rational(value):
+    if isinstance(value, Fraction):
+        return (value.numerator, value.denominator)
+    if isinstance(value, (tuple, list)) and len(value) == 2:   # 已经是 (num, den)
+        return (int(value[0]), int(value[1]))
+    return (int(value), 1)
+
+
+def _exif_with(orientation=None, focal=None, focal_equiv=None, exposure=None,
+               model=None, make="TestCam") -> bytes:
+    """手工拼一份 EXIF 字节，tag 放在 extract_exif 真正会读的那一层。
+
+    extract_exif 从 image.getexif() 读 IFD0（Make/Model/Orientation），从
+    exif.get_ifd(0x8769) 读 Exif IFD（焦距 / 35mm 等效 / 快门）。这里照这个分层摆。
+    不走 Pillow 的 Image.Exif.tobytes()：它在 GPS 的 ASCII tag 上会抛 TypeError。
+    """
+    ifd0, exif_ifd = [], []
+    if model:
+        ifd0.append((0x0110, 2, model.encode() + b"\x00"))
+    if make:
+        ifd0.append((0x010F, 2, make.encode() + b"\x00"))
+    if orientation is not None:
+        ifd0.append((0x0112, 3, struct.pack("<H", orientation)))
+    if focal is not None:
+        exif_ifd.append((0x920A, 5, struct.pack("<II", int(round(focal)), 1)))
+    if focal_equiv is not None:
+        exif_ifd.append((0xA405, 5, struct.pack("<II", int(round(focal_equiv * 10)), 10)))
+    if exposure is not None:
+        num, den = _rational(exposure)
+        exif_ifd.append((0x829A, 5, struct.pack("<II", num, den)))
+
+    # Exif IFD 跟在 IFD0 之后；IFD0 第 0 项是 0x8769 指向它
+    exif_offset = 8 + (2 + 12 * (len(ifd0) + 1) + 4)
+    tail = b""
+    exif_packed = struct.pack("<H", len(exif_ifd))
+    for tag, kind, value in exif_ifd:
+        if len(value) <= 4:
+            exif_packed += struct.pack("<HHI", tag, kind, 1) + value.ljust(4, b"\x00")[:4]
+        else:
+            exif_packed += struct.pack("<HHII", tag, kind, 1, exif_offset + 2 + 12 * len(exif_ifd) + 4 + len(tail))
+            tail += value
+    exif_packed += struct.pack("<I", 0)
+
+    ifd0_packed = struct.pack("<H", len(ifd0) + 1)
+    ifd0_packed += struct.pack("<HHII", 0x8769, 4, 1, exif_offset)   # 指向 Exif IFD
+    for tag, kind, value in ifd0:
+        if len(value) <= 4:
+            ifd0_packed += struct.pack("<HHI", tag, kind, 1) + value.ljust(4, b"\x00")[:4]
+        else:
+            ifd0_packed += struct.pack("<HHII", tag, kind, len(value),
+                                       exif_offset + 2 + 12 * len(exif_ifd) + 4 + len(tail))
+            tail += value
+    ifd0_packed += struct.pack("<I", 0)
+    return b"Exif\x00\x00" + b"II" + struct.pack("<HI", 42, 8) + ifd0_packed + exif_packed + tail
+
+
 def test_store_add_retains_exif(tmp_path):
     from pyserver.media.store import MediaStore
     import uuid
@@ -133,3 +190,54 @@ def test_store_add_retains_exif(tmp_path):
     assert photo["capturedAt"] == "2026:10:01 09:30:00"
     assert photo["exif"]["fNumber"] == 2.8
     assert Image.open(io.BytesIO(store.bytes(photo["id"]))).getexif().get(0x010F) is None
+
+
+# ---- 朝向 / 等效焦距 / 安全快门：废片判据的物理先验 ----
+
+
+def test_orientation_marks_rotated():
+    """Orientation≠1 就是方向记录与观看不一致——竖拍横放这类不用 VLM 目测。"""
+    assert images.extract_exif(_jpeg_raw_exif(_exif_with(orientation=1))).get("rotated") is False
+    assert images.extract_exif(_jpeg_raw_exif(_exif_with(orientation=6))).get("rotated") is True
+    assert images.extract_exif(_jpeg_raw_exif(_exif_with(orientation=3))).get("rotated") is True
+
+
+def test_focal_equiv_prefers_exif_tag_over_model_guess():
+    """EXIF 里带了 35mm 等效焦距就用它，不靠机型猜画幅。"""
+    out = images.extract_exif(_jpeg_raw_exif(_exif_with(focal_equiv=85.0, focal=50.0, model="EOS R7")))
+    assert out["focalEquiv"] == 85.0          # 直接用 tag，而不是 50×1.5=75
+
+
+def test_focal_equiv_falls_back_to_crop_factor():
+    out = images.extract_exif(_jpeg_raw_exif(_exif_with(focal=50.0, model="ILCE-7M5")))
+    assert out["focalEquiv"] == 50.0          # 全幅 crop=1
+    out = images.extract_exif(_jpeg_raw_exif(_exif_with(focal=35.0, model="X-T5")))
+    assert out["focalEquiv"] == 52.5          # APS-C crop=1.5
+
+
+def test_focal_equiv_absent_is_none_not_guessed():
+    """认不出机型、也没有等效焦距 tag 时不给默认值——猜错会让安全快门整条失效。
+    拿不到等效焦距时，干脆不写快门那几个字段，而不是填三个 None 撑场面。
+    """
+    out = images.extract_exif(_jpeg_raw_exif(_exif_with(focal=50.0, model="MysteryCam")))
+    assert "focalEquiv" not in out
+    assert "safeShutter" not in out and "shakeRisk" not in out
+
+
+def test_shake_risk_uses_safe_shutter():
+    """安全快门≈1/等效焦距；慢够了才算高风险，缺参数就不判。"""
+    # 105mm 等效 → 安全 1/105s≈0.0095；实际 1/4s 慢约 3.6 档 → high
+    out = images.extract_exif(_jpeg_raw_exif(_exif_with(exposure=(1, 4), focal_equiv=105.0)))
+    assert out["safeShutter"] == round(1 / 105, 6) and out["slowStops"] > 3.0
+    assert out["shakeRisk"] == "high"
+    # 广角 24mm，1/250s 远快于安全快门 → low
+    out = images.extract_exif(_jpeg_raw_exif(_exif_with(exposure=(1, 250), focal_equiv=24.0)))
+    assert out["slowStops"] < 0 and out["shakeRisk"] == "low"
+
+
+def test_shake_risk_needs_both_shutter_and_focal():
+    """判安全快门必须同时有快门和等效焦距；缺一个就不写这几个字段。"""
+    only_shutter = images.extract_exif(_jpeg_raw_exif(_exif_with(exposure=(1, 8))))
+    assert "safeShutter" not in only_shutter and "shakeRisk" not in only_shutter
+    only_focal = images.extract_exif(_jpeg_raw_exif(_exif_with(focal_equiv=50.0)))
+    assert "safeShutter" not in only_focal
