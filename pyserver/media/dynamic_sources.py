@@ -51,7 +51,7 @@ class DynamicPhotoSources:
         self.developing = media.root / "dynamic-photo" / "developing"
         self.batches = media.root / "dynamic-photo" / "batch-operations"
 
-    def begin_batch_operation(self, trip_id: str, payload: dict) -> dict:
+    def begin_batch_operation(self, trip_id: str, payload: dict, renderer_id: str | None = None) -> dict:
         try:
             operation_id = str(uuid.UUID(payload["operationId"]))
         except (KeyError, TypeError, ValueError):
@@ -75,6 +75,8 @@ class DynamicPhotoSources:
                 if (existing.get("ownerId") != owner or existing.get("tripId") != trip_id
                         or existing.get("payloadSha256") != fingerprint):
                     raise ContractError("OPERATION_CONFLICT", "批次操作编号已用于不同输入", 409)
+                if existing.get("rendererId") != renderer_id:
+                    raise ContractError("RENDERER_CHANGED", "精修渲染器版本已改变，请创建新批次", 409)
                 self._selection(trip_id, payload["batchId"], payload["selectionUpdatedAt"],
                                 [entry["photoId"] for entry in payload["photos"]])
                 return existing
@@ -82,7 +84,7 @@ class DynamicPhotoSources:
                             [entry["photoId"] for entry in payload["photos"]])
             receipt = {"operationId": operation_id, "ownerId": owner, "tripId": trip_id,
                        "batchId": payload["batchId"], "selectionUpdatedAt": payload["selectionUpdatedAt"],
-                       "payloadSha256": fingerprint, "completedPhotoIds": [],
+                       "payloadSha256": fingerprint, "rendererId": renderer_id, "completedPhotoIds": [],
                        "status": "running", "jobId": None, "createdAt": now(), "updatedAt": now()}
             temporary = self.batches / f"{operation_id}.{uuid.uuid4().hex}.tmp"
             try:

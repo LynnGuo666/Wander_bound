@@ -13,7 +13,7 @@ from .auth import require_media_auth
 from .contracts import ContractError
 from .dynamic_sources import DynamicPhotoSources
 from .jobs import JobStore
-from .photo_routes import _render_development
+from .photo_routes import _render_development, development_renderer
 from . import images
 
 
@@ -82,7 +82,7 @@ def router_for(trips: TripStore, sources: DynamicPhotoSources, jobs: JobStore) -
             await asyncio.to_thread(fcntl.flock, lock, fcntl.LOCK_EX)
             try:
                 try:
-                    receipt = sources.begin_batch_operation(trip_id, payload)
+                    receipt = sources.begin_batch_operation(trip_id, payload, development_renderer())
                 except ContractError as exc:
                     raise HTTPException(exc.status_code, exc.body()) from exc
                 if receipt["status"] == "settled":
@@ -109,7 +109,7 @@ def router_for(trips: TripStore, sources: DynamicPhotoSources, jobs: JobStore) -
                                 rendered = b"" if artifact.is_file() else await _render_development(sources.media, pid, params)
                                 saved = sources.media.save_develop(pid, rendered, params, entry["note"],
                                     expected_batch_id=marker_batch, expected_selection_updated_at=updated_at,
-                                    operation_id=operation_id)
+                                    operation_id=operation_id, renderer_id=receipt["rendererId"])
                                 if saved is None:
                                     raise ContractError("SELECTION_CHANGED", "精修保存前精选版本已改变", 409)
                             finally:

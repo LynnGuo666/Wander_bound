@@ -133,22 +133,53 @@ def test_dgx_suggestion_reports_unavailable_without_fallback(tmp_path, monkeypat
     asyncio.run(scenario())
 
 
-def test_preview_reports_missing_mcp_server_instead_of_substituting_a_filter(tmp_path, monkeypatch):
+def test_unconfigured_mcp_uses_versioned_local_development(tmp_path, monkeypatch):
     monkeypatch.setenv("MEDIA_API_TOKEN", "develop-token")
     monkeypatch.delenv("MCP_IMAGES_COMMAND", raising=False)
     trips = TripStore(tmp_path / "trips")
     trip = trips.create({"query": "深圳旅行"})
     media = MediaStore(tmp_path / "media")
-    photo = media.add(jpeg(), trip["id"], None)
+    photo = media.add(jpeg("gray"), trip["id"], None)
     media.set_selected(trip["id"], {"batchId": "test-batch", "source": "test", "photoIds": [photo["id"]]})
     app = create_app(config=ConfigStore(tmp_path / "config.yml"), trips=trips, media=media)
 
     async def scenario():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            headers = {"Authorization": "Bearer develop-token"}
             response = await client.post(f"/api/media/photos/{photo['id']}/develop/preview",
-                headers={"Authorization": "Bearer develop-token"}, json={"params": {}})
+                headers=headers, json={"params": {"exposure": 0.5}})
+            assert response.status_code == 200
+            assert response.content != media.bytes(photo["id"])
+            with Image.open(io.BytesIO(response.content)) as rendered:
+                with Image.open(io.BytesIO(media.bytes(photo["id"]))) as source:
+                    assert rendered.getpixel((10, 10)) != source.getpixel((10, 10))
+            saved = await client.post(f"/api/media/photos/{photo['id']}/develop/save",
+                headers=headers, json={"params": {"exposure": 0.5}})
+            assert saved.status_code == 200
+            assert saved.json()["photo"]["developments"][-1]["rendererId"] == "pillow-local@1"
+
+    asyncio.run(scenario())
+
+
+def test_configured_mcp_failure_does_not_fall_back(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEDIA_API_TOKEN", "develop-token")
+    monkeypatch.setenv("MCP_IMAGES_COMMAND", "mcp-images")
+    trips = TripStore(tmp_path / "trips")
+    trip = trips.create({"query": "深圳旅行"})
+    media = MediaStore(tmp_path / "media")
+    photo = media.add(jpeg(), trip["id"], None)
+    media.set_selected(trip["id"], {"batchId": "test-batch", "source": "test", "photoIds": [photo["id"]]})
+    async def fail(*args, **kwargs):
+        raise RuntimeError("MCP unavailable")
+    monkeypatch.setattr(MCPImagesClient, "develop", fail)
+    app = create_app(config=ConfigStore(tmp_path / "config.yml"), trips=trips, media=media)
+
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(f"/api/media/photos/{photo['id']}/develop/preview",
+                headers={"Authorization": "Bearer develop-token"}, json={"params": {"exposure": 0.5}})
             assert response.status_code == 503
-            assert "mcp_images 尚未配置" in response.json()["detail"]
+            assert "MCP unavailable" in response.json()["detail"]
 
     asyncio.run(scenario())
 

@@ -230,7 +230,8 @@ class MediaStore:
     def save_develop(self, photo_id: str, image_bytes: bytes, settings: dict, note: str = "",
                      expected_batch_id: str | None = None,
                      expected_selection_updated_at: str | None = None,
-                     operation_id: str | None = None) -> dict | None:
+                     operation_id: str | None = None,
+                     renderer_id: str | None = None) -> dict | None:
         photo = self.get(photo_id)
         if not photo:
             return None
@@ -263,7 +264,9 @@ class MediaStore:
             photo["variants"] = sorted(set([*photo.get("variants", []), variant]))
             photo.setdefault("developments", []).append({"variant": variant, "settings": settings,
                 "note": str(note)[:300], "width": width, "height": height, "createdAt": now(),
-                "selectionBatchId": selection["batchId"], **({"operationId": operation_id} if operation_id else {})})
+                "selectionBatchId": selection["batchId"],
+                **({"rendererId": renderer_id} if renderer_id else {}),
+                **({"operationId": operation_id} if operation_id else {})})
             metadata = self.meta_dir / f"{photo_id}.json"
             temporary = self.meta_dir / f"{photo_id}.{uuid.uuid4().hex}.tmp"
             try:
