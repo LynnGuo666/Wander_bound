@@ -1,0 +1,284 @@
+{
+  "codeSha": "1b489d0c28c51caf576a0711e18d89e5e1d76a75",
+  "liveSha": "8144c0f5286bab7a78c6a9a97a2b54199f8fc2b3",
+  "sparkComfySha": "e80c1570b6b44a2557d5d8e341e05782d18c9bbb",
+  "samples": [
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:Yosemite_National_Park_(30025981065).jpg",
+      "license": "public domain (NPS)",
+      "originalSha256": "7a73ef31c51c6b239ec775e51d53e1cec08dca52aac551de7670d8e9af927f27",
+      "derivedSha256": "9ffe5795b520cb8a9a196a489c22e104fc77f5e45a0e47246b7df798f13763f3",
+      "width": 768,
+      "height": 1007
+    },
+    {
+      "source": "https://commons.wikimedia.org/wiki/File:EAP-NHS-Sign.jpg",
+      "license": "public domain (author dedication)",
+      "originalSha256": "4b18f3d526913f744e3081610c738f4b23f740e2dc21d49eef3152939379037a",
+      "derivedSha256": "a8e532d9a5e953269a0e88ff40259f718153f22880d8719caaa9362c95f17081",
+      "width": 768,
+      "height": 576
+    }
+  ],
+  "batch": {
+    "tripId": "164cc8b0-5061-416e-bd28-16e6b342ba04",
+    "operationId": "4d197a6f-d0f1-4c77-9b39-b4a8124abe65",
+    "jobId": "3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72",
+    "status": "succeeded",
+    "rendererId": "pillow-local@1",
+    "selectedPhotoId": "d209c244-f18c-4291-8dff-60d5e811073c",
+    "sourceVariant": "develop-ca9602ccf3d4",
+    "sourceOriginalSha256": "4a2f6840de95df2e83a011a1a50cba5c84e25398404df04e11fc5c101ed75401",
+    "sourceDevelopedSha256": "d6226bded7280f0b0f67fb8753750dd690957d19abeaf0373352f9de1880ea9b",
+    "sourcePixelMeanAbsoluteDiffRGB": [
+      27.513,
+      26.781,
+      23.861
+    ],
+    "sourceCenterPixelBefore": [
+      165,
+      166,
+      170
+    ],
+    "sourceCenterPixelAfter": [
+      206,
+      207,
+      212
+    ],
+    "frozenInputs": [
+      {
+        "photoId": "d209c244-f18c-4291-8dff-60d5e811073c",
+        "sourceVariant": "develop-ca9602ccf3d4",
+        "variantCreatedAt": "2026-09-29T14:02:41.404616+08:00",
+        "sha256": "d6226bded7280f0b0f67fb8753750dd690957d19abeaf0373352f9de1880ea9b",
+        "width": 768,
+        "height": 1007
+      },
+      {
+        "photoId": "636854b5-c358-4471-b25c-d154065ee57c",
+        "sourceVariant": "original",
+        "variantCreatedAt": "2026-09-29T14:02:39.453927+08:00",
+        "sha256": "7af45eb0cda66053b79eefe3136df1e25ba9393349945ab6b7c2a71eabc13ee4",
+        "width": 768,
+        "height": 576
+      }
+    ]
+  },
+  "ai": {
+    "configuredModel": "qwen38-27b",
+    "observedModels": [
+      "qwen38-27b"
+    ],
+    "promptVersion": "dynamic-photo-selection@1",
+    "ranking": [
+      {
+        "photoId": "d209c244-f18c-4291-8dff-60d5e811073c",
+        "suitable": true,
+        "score": 92,
+        "reason": "画面主体为从陡峭岩壁倾泻而下的瀑布，水流具有明显的动态特征，适合做细微的流动与雾化动画；周围山体、植被和天空保持静止，构图稳定，主体清晰。",
+        "inputSha256": "d6226bded7280f0b0f67fb8753750dd690957d19abeaf0373352f9de1880ea9b",
+        "requestReceipt": {
+          "id": "84b3c235-58ab-45cc-9c9b-cf05ea2231af",
+          "inputSha256": "d6226bded7280f0b0f67fb8753750dd690957d19abeaf0373352f9de1880ea9b",
+          "configuredModel": "qwen38-27b",
+          "promptVersion": "dynamic-photo-selection@1",
+          "elapsedMs": 14966,
+          "kind": "provider_response",
+          "provider": {
+            "modelObserved": "qwen38-27b",
+            "responseId": "chatcmpl-ae507381b69f4c5e",
+            "requestId": null
+          }
+        }
+      },
+      {
+        "photoId": "636854b5-c358-4471-b25c-d154065ee57c",
+        "suitable": false,
+        "score": 32,
+        "reason": "画面主体为醒目的“Edgar Allan Poe National Historic Site”标牌，文字密集且占据中心，前景枯枝与背景建筑均缺乏自然动态，仅天空有少量云，整体不适合做单图视频动画。",
+        "inputSha256": "7af45eb0cda66053b79eefe3136df1e25ba9393349945ab6b7c2a71eabc13ee4",
+        "requestReceipt": {
+          "id": "97e638de-b9c8-45af-a34d-ea36784c8e5c",
+          "inputSha256": "7af45eb0cda66053b79eefe3136df1e25ba9393349945ab6b7c2a71eabc13ee4",
+          "configuredModel": "qwen38-27b",
+          "promptVersion": "dynamic-photo-selection@1",
+          "elapsedMs": 11632,
+          "kind": "provider_response",
+          "provider": {
+            "modelObserved": "qwen38-27b",
+            "responseId": "chatcmpl-8771d0df2ff6876d",
+            "requestId": null
+          }
+        }
+      }
+    ],
+    "selectedPhotoId": "d209c244-f18c-4291-8dff-60d5e811073c",
+    "motionPrompt": "Subtle continuous downward flow of the waterfall with light mist rising at the base, keeping the rocky cliffs and forest still."
+  },
+  "h3": {
+    "runnerVersion": "dynamic-photo-h3@1",
+    "promptId": "252f9f91-2008-410f-9dff-f0de3ebcd75a",
+    "submissionState": "submitted",
+    "submittedAt": "2026-09-29T14:03:20.129235+08:00",
+    "completedAt": "2026-09-29T14:11:48.789460+08:00",
+    "elapsedSeconds": 508.66,
+    "seed": 8827281524687945034,
+    "canvas": {
+      "sourceWidth": 768,
+      "sourceHeight": 1007,
+      "width": 512,
+      "height": 672,
+      "fittedWidth": 512,
+      "fittedHeight": 671,
+      "paddingX": 0,
+      "paddingY": 1,
+      "relativeAspectError": 0.000992,
+      "policy": "source-contain-canvas-v1",
+      "grid": 32,
+      "maxPixels": 1032192
+    },
+    "parameters": {
+      "width": 512,
+      "height": 672,
+      "frames": 124,
+      "fps": 24
+    },
+    "workflowId": "travel.minimax-h3.dynamic-photo.i2v",
+    "workflowVersion": "1.0.0",
+    "workflowHash": "62381c8c06402ce1e39b3175caf87b7c1a6cbac53a3395a7990246a5cb1d6a72",
+    "workflowSnapshotHash": "5682b665c768834bc3a3995ca81c4dd529ae1d78ec21ba0326e84842b9198e8c",
+    "modelNodes": {
+      "1": {
+        "class_type": "UNETLoader",
+        "file": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        "bytes": 20970379616
+      },
+      "2": {
+        "class_type": "CLIPLoader",
+        "file": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+        "bytes": 15687142551
+      },
+      "3": {
+        "class_type": "VAELoader",
+        "file": "minimax_h3_video_vae_fp16.safetensors",
+        "bytes": 5207808496
+      },
+      "4": {
+        "class_type": "VAELoader",
+        "file": "minimax_h3_audio_vae_fp32.safetensors",
+        "bytes": 605254808
+      },
+      "6": {
+        "class_type": "MiniMaxH3ImageToVideo",
+        "source": "comfy_extras/nodes_minimax_h3.py",
+        "canvas_grid": 32,
+        "max_pixels": 1032192,
+        "frame_grid": "17k+5"
+      },
+      "7": {
+        "class_type": "RandomNoise",
+        "seed_input": "noise_seed"
+      }
+    },
+    "customNodes": {
+      "ComfyUI_MiniMaxH3_Director": "7de4a95243ce1a25fedc634a0eda62672610afd1",
+      "minimax-h3-hybrid-cond": "a1f20e01831de84243f672285611ba9b89e4f249"
+    }
+  },
+  "output": {
+    "dynamicVersionId": "68680deb-6363-5bfe-bbce-9192380429f3",
+    "videoPath": "/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4",
+    "coverPath": "/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/cover.jpg",
+    "media": {
+      "width": 512,
+      "height": 672,
+      "frames": 124,
+      "durationSeconds": 5.166667,
+      "fps": 24.0,
+      "codec": "h264",
+      "pixelFormat": "yuv420p",
+      "hasAudio": false,
+      "fullDecode": true,
+      "sha256": "acbef4a8459207181e6834bdfb58e7cacbeba7d469f6cf418fd1c6cd8275a17c",
+      "coverSha256": "47c78631f110db6c67409e7606c718f9a850f5907cadd2079ad104cafa626ecf"
+    },
+    "http": {
+      "jobStatus": "succeeded",
+      "photoId": "d209c244-f18c-4291-8dff-60d5e811073c",
+      "jobId": "3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72",
+      "dynamicVersionId": "68680deb-6363-5bfe-bbce-9192380429f3",
+      "video": {
+        "status": 200,
+        "sha256": "acbef4a8459207181e6834bdfb58e7cacbeba7d469f6cf418fd1c6cd8275a17c",
+        "bytes": 1145128,
+        "contentType": "video/mp4"
+      },
+      "cover": {
+        "status": 200,
+        "sha256": "47c78631f110db6c67409e7606c718f9a850f5907cadd2079ad104cafa626ecf",
+        "bytes": 71781,
+        "contentType": "image/jpeg"
+      },
+      "association": {
+        "status": 200,
+        "sourceVariant": "develop-ca9602ccf3d4",
+        "stableVersion": "68680deb-6363-5bfe-bbce-9192380429f3"
+      },
+      "crossAccountStatuses": {
+        "video": 404,
+        "cover": 404,
+        "association": 404
+      },
+      "duplicateBatch": {
+        "status": 202,
+        "sameJob": true
+      }
+    },
+    "denseContactPath": "/home/Developer/dynamic-photo-validation-20260929/private-evidence/dense-contact.jpg",
+    "visualAssessment": "Waterfall and basal mist change across 0.5-second samples while cliff and forest contours remain stable; no obvious scene swap or major deformation.",
+    "realTimeDecodeSeconds": 5,
+    "independentFullDecode": true
+  },
+  "skipped": {
+    "tripId": "521e8160-24fc-410c-acf3-807aaa5271b6",
+    "jobId": "7b23a4f9-f6ff-531f-8c20-7878b65e7f95",
+    "status": "skipped",
+    "ranking": [
+      {
+        "photoId": "7d807ba1-7c69-4492-a8f0-91beb0f4d712",
+        "suitable": false,
+        "score": 28,
+        "reason": "画面主体为带密集文字的历史遗址标牌，前景枯枝与背景建筑均静止，缺乏可自然运动的水、云、雾或明显枝叶摆动，不适合做单图视频动画。",
+        "requestReceipt": {
+          "id": "eb3e5106-d25f-499d-ad6c-3306d9ce4b44",
+          "inputSha256": "7af45eb0cda66053b79eefe3136df1e25ba9393349945ab6b7c2a71eabc13ee4",
+          "configuredModel": "qwen38-27b",
+          "promptVersion": "dynamic-photo-selection@1",
+          "elapsedMs": 28579,
+          "kind": "provider_response",
+          "provider": {
+            "modelObserved": "qwen38-27b",
+            "responseId": "chatcmpl-a43bd51c0796a5e1",
+            "requestId": null
+          }
+        }
+      }
+    ],
+    "selectedPhotoId": null,
+    "h3Intent": false
+  },
+  "recovery": {
+    "validationRestarted": true,
+    "succeededResultPersisted": true,
+    "skippedPersisted": true,
+    "liveRestoredAt": "2026-09-29T14:17:54+08:00",
+    "liveHealth": 200,
+    "liveJobStatuses": {
+      "succeeded": 21,
+      "failed": 2,
+      "draft": 1
+    },
+    "previewUnchanged": true,
+    "rollbackTimerInactive": true
+  }
+}
