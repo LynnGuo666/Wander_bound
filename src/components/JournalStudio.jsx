@@ -6,7 +6,7 @@ import { PrivateMedia } from './PrivateMedia.jsx';
 import BinderFlipTransition from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 import { addStickerAccents } from '../lib/journalLayout.js';
-import { itineraryMotifs, selectJournalAsset } from '../lib/journalMotifs.js';
+import { itineraryMotifs, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from '../lib/journalMotifs.js';
 import { recalledJournalPages, recalledJournalVisuals, rememberJournalPages, rememberJournalVisuals } from '../lib/journalPageCache.js';
 
 const STORE_PREFIX = 'travel-journal-layout-v1:';
@@ -234,7 +234,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   }
   function editPage(pageIndex, transform, persist = true) {
     const next = pagesRef.current.map((page, index) => index === pageIndex
-      ? { ...transform(page), source: 'user', protected: true } : page);
+      ? { ...transform(pinAutomaticAssets(page, index, stickerJobsRef.current, itineraryAssets, selectedIds)),
+        source: 'user', protected: true } : page);
     pagesRef.current = next;
     rememberJournalPages(token, trip.id, next);
     setPages(next);
@@ -468,7 +469,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     };
     editPage(pageIndex, page => ({ ...page, items: [...page.items, item] }));
   }
-  function renderItem(item, page) {
+  function renderItem(item, page, pageIndex, itemIndex) {
     if (item.kind === 'cover' || item.kind === 'illustration') {
       const asset = selectJournalAsset(page, item.assetId, stickerJobs, 'illustration', itineraryAssets.illustration);
       return asset?.status === 'succeeded'
@@ -491,11 +492,13 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
         : <span className="studio-empty">旅途短片将在这里播放</span>}</div></div>;
     }
     if (item.kind === 'sticker') {
-      const job = stickerJobs.find(entry => entry.id === item.stickerId);
-      return item.stickerId ? job?.status === 'succeeded'
-        ? <PrivateMedia url={`/api/media/stickers/${item.stickerId}/image`} token={token} loading="eager" alt={`${job.motif}，千问生成的贴纸`} />
+      const motif = stickerMotifForItem(page, pageIndex, itemIndex, itineraryAssets);
+      const job = selectJournalAsset(page, item.stickerId, stickerJobs, 'sticker', motif);
+      const stickerId = item.stickerId || job?.id;
+      return stickerId ? job?.status === 'succeeded'
+        ? <PrivateMedia url={`/api/media/stickers/${stickerId}/image`} token={token} loading="eager" alt={`${job.motif}，千问生成的贴纸`} />
         : <span className="studio-sticker-pending">{job?.status === 'failed' ? '贴纸生成失败' : '千问绘制中…'}</span>
-        : <span className="studio-sticker-pending">行程贴纸待生成</span>;
+        : <span className="studio-sticker-pending">{page.protected ? '选择贴纸' : '行程贴纸待生成'}</span>;
     }
     if (item.kind === 'clip') return <img className="studio-clip-art" src="/art/paperclip.png" alt="千问绘制的曲别针插图" />;
     if (item.kind === 'postcard') {
@@ -512,21 +515,21 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     return <div className="studio-text">{item.text}</div>;
   }
   if (previewOnly) return <div ref={sourceRef} className="studio-preview-source" data-preview-ready={ready && previewDataReady && previewAssetsReady} aria-hidden="true">{pages.slice(0, 2).map((page, pageIndex) =>
-    <div className="studio-page" key={pageIndex}><div className="studio-canvas">{page.items.map(item =>
+    <div className="studio-page" key={pageIndex}><div className="studio-canvas">{page.items.map((item, itemIndex) =>
       <div className={`studio-item studio-${item.kind}`} key={item.id}
         style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z,
-          transform: `rotate(${item.r}deg)` }}>{renderItem(item, page)}</div>)}</div></div>)}</div>;
+          transform: `rotate(${item.r}deg)` }}>{renderItem(item, page, pageIndex, itemIndex)}</div>)}</div></div>)}</div>;
   if (!ready) return <section className="studio-shell" aria-label="可编辑的旅途手账"><p role="status" className="studio-message">正在打开手账…</p></section>;
   return <section className="studio-shell" aria-label="可编辑的旅途手账">
     <div className="studio-toolbar"><strong>{tripTitle(trip)} <small>{tripDate(trip)}</small></strong><div className="studio-spread-nav"><button type="button" disabled={spreadIndex === 0} onClick={() => { setSpreadIndex(index => index - 1); setSelected(null); }}>‹</button><small>{spreadIndex + 1} / {Math.ceil(pages.length / 2)}</small><button type="button" disabled={spreadIndex >= pages.length / 2 - 1} onClick={() => { setSpreadIndex(index => index + 1); setSelected(null); }}>›</button><button type="button" disabled={!token || busy || pages.length >= 12} onClick={addSpread}>＋两页</button></div><div><button className="solid-button" disabled={!token || busy || !ready} onClick={aiCompose}>{busy ? <LoaderCircle className="spin" size={15} /> : <Sparkles size={15} />}AI 排版</button>{!token ? <button className="text-button" onClick={onOpenSettings}>连接相册</button> : null}</div></div>
     <div className="studio-workspace">
       <div className="studio-book-stage"><div ref={stageRef} className={`studio-book-spread ${turnDirection ? `turn-${turnDirection}` : ''}`}>{pages.slice(spreadIndex * 2, spreadIndex * 2 + 2).map((page, localIndex) => { const pageIndex = spreadIndex * 2 + localIndex; return <div className="studio-page" key={pageIndex}><div className="studio-canvas" aria-label={`${localIndex === 0 ? '左' : '右'}页画布`}>
-        {page.items.map(item => <div key={item.id} className={`studio-item studio-${item.kind}${selected?.id === item.id ? ' selected' : ''}`}
+        {page.items.map((item, itemIndex) => <div key={item.id} className={`studio-item studio-${item.kind}${selected?.id === item.id ? ' selected' : ''}`}
           role="button" tabIndex={0} aria-label={`${labelFor(item.kind)}，点击编辑，拖动移动`}
           onClick={() => { setSelected({ pageIndex, id: item.id }); setToolTab('edit'); }}
           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected({ pageIndex, id: item.id }); setToolTab('edit'); } }}
           onPointerDown={event => onPointerDown(event, pageIndex, item)} onPointerMove={onPointerMove} onPointerUp={() => { if (drag.current?.moved) persistPage(drag.current.pageIndex); drag.current = null; }} onPointerCancel={() => { if (drag.current?.moved) persistPage(drag.current.pageIndex); drag.current = null; }}
-          style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z, transform: `rotate(${item.r}deg)` }}>{renderItem(item, page)}</div>)}
+          style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z, transform: `rotate(${item.r}deg)` }}>{renderItem(item, page, pageIndex, itemIndex)}</div>)}
       </div></div>; })}{turnDirection ? <BinderFlipTransition direction={turnDirection} stageRef={stageRef}
         incomingRef={turnDirection === 'next' ? nextPreviewRef : previousPreviewRef} onComplete={onTurnComplete} /> : null}</div>
       {nextTrip ? <JournalStudio key={nextTrip.id} trip={nextTrip} token={token} previewOnly sourceRef={nextPreviewRef} /> : null}
