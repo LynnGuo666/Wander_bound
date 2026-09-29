@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from './journalMotifs.js';
+import { hasCurrentJournalAsset, itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from './journalMotifs.js';
 
 const categories = JSON.parse(readFileSync(new URL('../../workflows/journal-sticker-categories.json', import.meta.url), 'utf8'));
 
@@ -14,13 +14,14 @@ test('automatic journal scenes use an actual itinerary landmark', () => {
   assert.equal(motifs.stickers[0], '上海小笼包店的食物');
   assert.match(motifs.illustration, /上海外滩/);
   assert.match(motifs.postcard, /上海外滩/);
+  assert.match(motifs.postcard, /建筑立面局部/);
   assert.match(motifs.stamp, /上海外滩/);
 });
 
 test('automatic scenes remain grounded in the city when stops are unavailable', () => {
   const motifs = itineraryMotifs({ plan: { destination: '柳州', itinerary: [] } }, []);
   assert.equal(motifs.illustration, '柳州的建筑、街道与自然光线');
-  assert.equal(motifs.postcard, '柳州的旅途风景');
+  assert.equal(motifs.postcard, '柳州的一处近景细节');
 });
 
 test('sticker themes match relevant stops without repeating city names', () => {
@@ -39,6 +40,14 @@ test('sticker themes match relevant stops without repeating city names', () => {
     [categories.find(category => category.id === 'mountain')], { includeAllCategories: true });
   assert.equal(manualMountain.stickers.length, 1);
   assert.ok(manualMountain.stickers[0].startsWith('以柳州为灵感'));
+});
+
+test('waterfront postcards request a close detail instead of repeating the landscape', () => {
+  const motifs = itineraryMotifs({ plan: { destination: '上海', itinerary: [
+    { stops: [{ name: '黄浦江' }] },
+  ] } }, []);
+  assert.equal(motifs.postcard, '上海黄浦江的水面波纹与光影局部');
+  assert.notEqual(motifs.postcard, motifs.illustration);
 });
 
 test('a new trip receives twelve varied stickers plus itinerary-relevant extras', () => {
@@ -64,6 +73,20 @@ test('automatic Qwen art fills system pages without changing user-owned pages', 
   assert.equal(selectJournalAsset({ source: 'user', protected: true }, '', jobs, 'postcard', motif), undefined);
   assert.equal(selectJournalAsset({ source: 'user', protected: true }, 'chosen', jobs, 'postcard', motif)?.id, 'chosen');
   assert.equal(selectJournalAsset({ source: 'system', protected: false }, 'missing', jobs, 'postcard', motif), undefined);
+});
+
+test('outdated Qwen assets are regenerated without blanking an existing system page', () => {
+  const versions = { postcard: 'journal-postcard-scene-qwen21-t2i-v4' };
+  const old = { id: 'old', kind: 'postcard', motif: '外滩建筑立面', status: 'succeeded',
+    promptVersion: 'journal-postcard-scene-qwen21-t2i-v2' };
+  const queued = { id: 'queued', kind: 'postcard', motif: old.motif, status: 'queued',
+    promptVersion: versions.postcard };
+  assert.equal(hasCurrentJournalAsset([old], 'postcard', old.motif, versions), false);
+  assert.equal(hasCurrentJournalAsset([queued, old], 'postcard', old.motif, versions), true);
+  assert.equal(selectJournalAsset({ source: 'system', protected: false }, '', [queued, old], 'postcard', old.motif)?.id, 'old');
+  assert.equal(selectJournalAsset({ source: 'user', protected: true }, 'old', [queued, old], 'postcard', old.motif)?.id, 'old');
+  const done = { ...queued, status: 'succeeded' };
+  assert.equal(selectJournalAsset({ source: 'system', protected: false }, '', [done, old], 'postcard', old.motif)?.id, 'queued');
 });
 
 test('automatic stickers land on different pages and user edits pin all visible media', () => {

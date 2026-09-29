@@ -6,7 +6,7 @@ import { PrivateMedia } from './PrivateMedia.jsx';
 import BinderFlipTransition from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 import { addStickerAccents } from '../lib/journalLayout.js';
-import { itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from '../lib/journalMotifs.js';
+import { hasCurrentJournalAsset, itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from '../lib/journalMotifs.js';
 import { recalledJournalPages, recalledJournalVisuals, rememberJournalPages, rememberJournalVisuals } from '../lib/journalPageCache.js';
 
 const STORE_PREFIX = 'travel-journal-layout-v1:';
@@ -288,13 +288,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   useEffect(() => {
     if (previewOnly || !note || !ready || noteApplied.current) return;
     noteApplied.current = true;
-    const next = pagesRef.current.map((page, pageIndex) => ({ ...page,
-      items: page.items.map(item => pageIndex === 0 && page.source === 'system' && !page.protected && item.kind === 'text'
-        ? { ...item, text: note } : item),
-    }));
-    pagesRef.current = next;
-    rememberJournalPages(token, trip.id, next);
-    setPages(next);
+    const firstPage = pagesRef.current[0];
+    if (!firstPage || firstPage.protected || !firstPage.items.some(item => item.kind === 'text')) return;
+    editPage(0, page => ({ ...page, items: page.items.map(item => item.kind === 'text'
+      ? { ...item, text: note.slice(0, 2000) } : item) }));
   }, [note, ready, trip.id]);
   useEffect(() => {
     if (!token) { updateStickerJobs([]); return; }
@@ -314,7 +311,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
           ...itineraryAssets.stickers.map(next => ({ kind: 'sticker', motif: next }))];
         for (const item of wanted) {
           if (!alive) return;
-          if (current.some(job => job.kind === item.kind && job.motif === item.motif && job.status !== 'failed')) continue;
+          if (hasCurrentJournalAsset(current, item.kind, item.motif, result.promptVersions)) continue;
           const created = await mediaRequest(`/api/media/trips/${trip.id}/stickers`, token,
             { method: 'POST', body: JSON.stringify(item) });
           current.push(created);
@@ -381,7 +378,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   async function queueSticker(nextMotif, kind = 'sticker') {
     const created = await mediaRequest(`/api/media/trips/${trip.id}/stickers`, token,
       { method: 'POST', body: JSON.stringify({ motif: nextMotif, kind }) });
-    updateStickerJobs(previous => [created, ...previous]);
+    updateStickerJobs(previous => [created, ...previous.filter(job => job.id !== created.id)]);
     return created.id;
   }
   async function generateSticker(event) {

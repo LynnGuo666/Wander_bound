@@ -31,6 +31,20 @@ class Jobs:
         return self.entries.get(job_id)
 
 
+def test_qwen_asset_reuses_only_the_current_prompt_version(tmp_path, monkeypatch):
+    client = ComfyClient("http://127.0.0.1:8191", "workflows/qwen-image-2.1-sticker-api.json", "image")
+    stickers = StickerStore(tmp_path / "stickers", client, ModelController())
+    monkeypatch.setattr(stickers, "schedule", lambda: None)
+    first = stickers.submit("trip-a", "上海", "外滩江景", "postcard")
+    assert stickers.submit("trip-a", "上海", "外滩江景", "postcard")["id"] == first["id"]
+    old = stickers.get(first["id"])
+    old["promptVersion"] = "journal-postcard-scene-qwen21-t2i-v2"
+    stickers.save(old)
+    current = stickers.submit("trip-a", "上海", "外滩江景", "postcard")
+    assert current["id"] != first["id"]
+    assert stickers.get(current["id"])["promptVersion"] == "journal-postcard-scene-qwen21-t2i-v4"
+
+
 def test_step_photo_context_ignores_malformed_recognition_fields():
     class SelectedPhotos:
         def selected(self, _trip_id):
@@ -139,7 +153,9 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             assert saved["promptVersion"] == "journal-sticker-qwen21-t2i-v1"
             assert saved["workflow"]["6"]["class_type"] == "EmptyLatentImage"
             assert all(node["class_type"] != "LoadImage" for node in saved["workflow"].values())
-            assert (await http.get(base + "/stickers")).json()["stickers"][0]["id"] == body["id"]
+            inventory = (await http.get(base + "/stickers")).json()
+            assert inventory["stickers"][0]["id"] == body["id"]
+            assert inventory["stickers"][0]["promptVersion"] == inventory["promptVersions"]["sticker"]
             assert (await http.get(f"/api/media/stickers/{body['id']}/image")).status_code == 409
             http.headers["Authorization"] = "Bearer other-test-token"
             assert (await http.get(f"/api/media/stickers/{body['id']}/image")).status_code == 404
@@ -150,7 +166,7 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             postcard = await http.post(base + "/stickers", json={"motif": "黄浦江夜景明信片", "kind": "postcard"})
             illustration = await http.post(base + "/stickers", json={"motif": "江边建筑和游船", "kind": "illustration"})
             assert postcard.status_code == illustration.status_code == 202
-            assert stickers.get(postcard.json()["id"])["promptVersion"] == "journal-postcard-scene-qwen21-t2i-v2"
+            assert stickers.get(postcard.json()["id"])["promptVersion"] == "journal-postcard-scene-qwen21-t2i-v4"
             assert stickers.get(illustration.json()["id"])["promptVersion"] == "journal-illustration-qwen21-t2i-v3"
             journal = (await http.get(base + "/journal")).json()
             edited_page = journal["pages"][0]

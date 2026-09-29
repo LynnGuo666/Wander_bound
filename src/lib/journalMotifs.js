@@ -25,6 +25,11 @@ export function itineraryMotifs(trip, categories, { includeAllCategories = false
   const placeName = stop => stop?.startsWith(cityBase) ? stop.slice(cityBase.length) : stop || '';
   const landmark = stops.find(stop => SCENIC_STOP.test(stop)) || stops[0] || '';
   const location = landmark ? landmark.startsWith(cityBase) ? landmark : `${city}${placeName(landmark)}` : city;
+  const postcardDetail = /楼|塔|桥|宫|寺|博物馆|美术馆|建筑|外滩|古镇|街/.test(landmark)
+    ? `${location}的建筑立面局部`
+    : /江|河|湖|海|滩|湾|水|港|浦/.test(landmark)
+      ? `${location}的水面波纹与光影局部`
+      : `${location}的一处近景细节`;
   const selectedCategories = categories.filter(category => includeAllCategories || !OPTIONAL_STICKERS[category.id]
     || stops.some(stop => OPTIONAL_STICKERS[category.id].test(stop)));
   return {
@@ -35,16 +40,23 @@ export function itineraryMotifs(trip, categories, { includeAllCategories = false
     }),
     stamp: `${location}的微型风景`,
     illustration: `${location}的建筑、街道与自然光线`,
-    postcard: `${location}的旅途风景`,
+    postcard: postcardDetail,
   };
 }
 
 export function selectJournalAsset(page, explicitId, jobs, kind, motif, pinnedMotif = '') {
   if (explicitId) return jobs.find(job => job.id === explicitId);
   const matching = job => job.kind === kind && job.motif === (pinnedMotif || motif);
-  if (pinnedMotif) return jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
+  const best = () => jobs.find(job => matching(job) && job.status === 'succeeded')
+    || jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
+  if (pinnedMotif) return best();
   if (page?.source !== 'system' || page.protected) return undefined;
-  return jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
+  return best();
+}
+
+export function hasCurrentJournalAsset(jobs, kind, motif, promptVersions = {}) {
+  return jobs.some(job => job.kind === kind && job.motif === motif && job.status !== 'failed'
+    && (!promptVersions[kind] || job.promptVersion === promptVersions[kind]));
 }
 
 export function stickerMotifForItem(page, pageIndex, itemIndex, motifs) {
