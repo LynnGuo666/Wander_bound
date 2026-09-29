@@ -61,6 +61,10 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                     continue
                 if item.get("photoId") and item["photoId"] not in allowed_photos:
                     raise HTTPException(400, "页面引用了未授权的旅途照片")
+                if item.get("videoId"):
+                    video = jobs.get(item["videoId"])
+                    if not video or video.get("tripId") != trip_id or video.get("kind") != "memory":
+                        raise HTTPException(400, "页面引用了其他行程的旅途短片")
                 for name in ("stickerId", "stampId", "assetId"):
                     if item.get(name):
                         job = stickers.get(item[name])

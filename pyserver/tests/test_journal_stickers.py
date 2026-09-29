@@ -21,8 +21,14 @@ class Config:
 
 
 class Jobs:
+    def __init__(self):
+        self.entries = {}
+
     def list_for_trip(self, _trip_id):
         return []
+
+    def get(self, job_id):
+        return self.entries.get(job_id)
 
 
 def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_path, monkeypatch):
@@ -72,7 +78,8 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
         finally:
             current_user.reset(context)
 
-    app.include_router(journal_routes.router_for(Config(), trips, media, Jobs(), stickers))
+    jobs = Jobs()
+    app.include_router(journal_routes.router_for(Config(), trips, media, jobs, stickers))
 
     async def scenario():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as http:
@@ -118,6 +125,18 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
                                     for item in edited_page["items"]]
             saved = await http.put(base + "/journal/pages/0", json={"expectedVersion": 0, "page": edited_page})
             assert saved.status_code == 200 and saved.json()["pages"][0]["protected"]
+            video_id = "410a794a-aa66-4db4-a780-1eab7ed39eb5"
+            jobs.entries[video_id] = {"id": video_id, "kind": "memory", "tripId": trip["id"]}
+            video_page = saved.json()["pages"][0]
+            video_page["items"].append({"id": "838b7399-d3b3-44b2-9349-a3038249fb3f", "kind": "video",
+                                        "videoId": video_id, "x": 10, "y": 10, "w": 30, "h": 20, "r": 0, "z": 3})
+            saved = await http.put(base + "/journal/pages/0", json={
+                "expectedVersion": saved.json()["version"], "page": video_page})
+            assert saved.status_code == 200 and saved.json()["pages"][0]["items"][-1]["videoId"] == video_id
+            foreign = {**video_page, "items": [*video_page["items"][:-1],
+                       {**video_page["items"][-1], "videoId": "c251060e-0152-4507-aee4-af63b68abb4b"}]}
+            assert (await http.put(base + "/journal/pages/0", json={
+                "expectedVersion": saved.json()["version"], "page": foreign})).status_code == 400
             proposed = [journal_routes.JournalStore(tmp_path / "scratch", journal_routes.catalog())._seed_page(
                 "photo-wall", trip, 0), journal_routes.JournalStore(tmp_path / "scratch", journal_routes.catalog())._seed_page(
                 "postcard-collage", trip, 1)]

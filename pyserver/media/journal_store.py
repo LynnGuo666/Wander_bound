@@ -119,7 +119,7 @@ class JournalStore:
                 if not isinstance(item["photoIndex"], int) or not 0 <= item["photoIndex"] < 10000:
                     raise ValueError("照片序号无效")
                 normalized["photoIndex"] = item["photoIndex"]
-            for name in ("stickerId", "stampId", "assetId", "photoId"):
+            for name in ("stickerId", "stampId", "assetId", "photoId", "videoId"):
                 if item.get(name):
                     try:
                         normalized[name] = str(uuid.UUID(item[name]))

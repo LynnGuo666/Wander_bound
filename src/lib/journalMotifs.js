@@ -51,8 +51,8 @@ export function stickerMotifForItem(page, pageIndex, itemIndex, motifs) {
   return motifs.stickers[(pageIndex + stickerIndex) % motifs.stickers.length];
 }
 
-export function pinAutomaticAssets(page, pageIndex, jobs, motifs, selectedPhotoIds = []) {
-  if (page?.source !== 'system' || page.protected) return page;
+export function pinAutomaticAssets(page, pageIndex, jobs, motifs, selectedPhotoIds = [], videoIds = []) {
+  if (page?.protected) return page;
   let changed = false;
   const items = page.items.map((item, itemIndex) => {
     const references = {};
@@ -77,6 +77,8 @@ export function pinAutomaticAssets(page, pageIndex, jobs, motifs, selectedPhotoI
     }
     if (item.kind === 'photo' && !item.photoId && selectedPhotoIds.length)
       references.photoId = selectedPhotoIds[(item.photoIndex || 0) % selectedPhotoIds.length];
+    if (item.kind === 'video' && !item.videoId && videoIds.length)
+      references.videoId = videoIds[0];
     if (!Object.keys(references).length) return item;
     changed = true;
     return { ...item, ...references };
