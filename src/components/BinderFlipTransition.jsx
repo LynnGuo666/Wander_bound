@@ -44,10 +44,27 @@ function loadPaper() {
   });
 }
 
+function waitForVideoFrame(video) {
+  if (video.readyState >= 2) return Promise.resolve();
+  return new Promise(resolve => {
+    let timer;
+    function finish() {
+      clearTimeout(timer);
+      video.removeEventListener('loadeddata', finish);
+      video.removeEventListener('error', finish);
+      resolve();
+    }
+    video.addEventListener('loadeddata', finish);
+    video.addEventListener('error', finish);
+    timer = setTimeout(finish, 450);
+  });
+}
+
 async function capturePage(node, paper, side) {
   const capture = await toCanvas(node, {
     pixelRatio: CAPTURE_SCALE,
     skipFonts: true,
+    filter: child => !(child instanceof HTMLVideoElement && child.readyState < 2),
     style: { visibility: 'visible' },
   });
   const canvas = document.createElement('canvas');
@@ -99,7 +116,11 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       if (source.length !== 2 || incoming.length !== 2) { failRef.current(); return; }
       const paper = await loadPaper();
       const images = [...source, ...incoming].flatMap(node => [...node.querySelectorAll('img')]);
-      await withTimeout(Promise.all(images.map(image => image.decode().catch(() => {}))), 600)
+      const videos = [...source, ...incoming].flatMap(node => [...node.querySelectorAll('video')]);
+      await withTimeout(Promise.all([
+        ...images.map(image => image.decode().catch(() => {})),
+        ...videos.map(waitForVideoFrame),
+      ]), 600)
         .catch(() => {});
       if (!active) return;
       const captures = await withTimeout(Promise.all([...source, ...incoming].map((node, index) =>

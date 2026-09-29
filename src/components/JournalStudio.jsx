@@ -503,7 +503,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       const video = item.videoId ? videos.find(work => work.id === item.videoId)
         : page.protected ? undefined : videos[0];
       return <div className="studio-prop-wrap studio-film-prop"><img className="studio-prop" src="/art/film-frame.png" alt="千问生成的胶片框" /><div className="studio-video-slot">{video && token
-        ? <PrivateMedia video url={`/api/media/memories/${video.id}/video`} token={token} />
+        ? <PrivateMedia video videoPreload="auto" url={`/api/media/memories/${video.id}/video`} token={token} />
         : <span className="studio-empty">旅途短片将在这里播放</span>}</div></div>;
     }
     if (item.kind === 'sticker') {
