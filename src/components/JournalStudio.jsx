@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Plus, Sparkles, Trash2 } f
 import templates from '../../workflows/journal-templates.json';
 import stickerCategories from '../../workflows/journal-sticker-categories.json';
 import { PrivateMedia } from './PrivateMedia.jsx';
-import BinderFlipTransition from './BinderFlipTransition.jsx';
+import BinderFlipTransition, { prewarmPageFlip } from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 import { addStickerAccents } from '../lib/journalLayout.js';
 import { hasCurrentJournalAsset, itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from '../lib/journalMotifs.js';
@@ -286,6 +286,41 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     catch { setError('排版未能保存在当前浏览器'); }
   }, [pages, trip.id, ready]);
   useEffect(() => {
+    if (previewOnly || !ready || !stageRef.current) return;
+    const stage = stageRef.current;
+    const previews = [nextSpreadPreviewRef, previousSpreadPreviewRef, nextPreviewRef, previousPreviewRef];
+    let timer;
+    let idle;
+    let cancelled = false;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (idle !== undefined && 'cancelIdleCallback' in window) window.cancelIdleCallback(idle);
+      timer = setTimeout(() => {
+        const warm = async () => {
+          for (const ref of previews) {
+            if (cancelled || stage.classList.contains('flip-active')) return;
+            await prewarmPageFlip(stage, ref.current).catch(() => {});
+          }
+        };
+        if ('requestIdleCallback' in window) idle = window.requestIdleCallback(warm, { timeout: 1200 });
+        else idle = setTimeout(warm, 0);
+      }, 400);
+    };
+    const observer = new MutationObserver(schedule);
+    [stage, ...previews.map(ref => ref.current)].filter(Boolean).forEach(node =>
+      observer.observe(node, { subtree: true, childList: true, attributes: true, characterData: true }));
+    schedule();
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      clearTimeout(timer);
+      if (idle !== undefined) {
+        if ('cancelIdleCallback' in window) window.cancelIdleCallback(idle);
+        else clearTimeout(idle);
+      }
+    };
+  }, [ready, previewOnly, spreadIndex, trip.id, nextTrip?.id, previousTrip?.id]);
+  useEffect(() => {
     if (previewOnly || !note || !ready || noteApplied.current) return;
     noteApplied.current = true;
     const firstPage = pagesRef.current[0];
@@ -461,6 +496,11 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   function turnSpread(offset) {
     const target = spreadIndex + offset;
     if (spreadTurn || turnDirection || target < 0 || target >= pages.length / 2) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setSpreadIndex(target);
+      setSelected(null);
+      return;
+    }
     setSpreadTurn({ target, direction: offset > 0 ? 'next' : 'previous' });
   }
   function finishSpreadTurn() {
@@ -500,7 +540,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
       const video = item.videoId ? videos.find(work => work.id === item.videoId)
         : page.protected ? undefined : videos[0];
       return <div className="studio-prop-wrap studio-film-prop"><img className="studio-prop" src="/art/film-frame.png" alt="千问生成的胶片框" /><div className="studio-video-slot">{video && token
-        ? <PrivateMedia video url={`/api/media/memories/${video.id}/video`} token={token} />
+        ? <PrivateMedia video videoPreload="auto" url={`/api/media/memories/${video.id}/video`} token={token} />
         : <span className="studio-empty">旅途短片将在这里播放</span>}</div></div>;
     }
     if (item.kind === 'sticker') {

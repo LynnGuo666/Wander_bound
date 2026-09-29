@@ -324,7 +324,7 @@
 .studio-spread-nav small { min-width: 30px; margin: 0 3px; text-align: center; }
 .studio-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 245px; flex: 1; min-height: 0; gap: 8px; }
 .studio-book-stage { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 0; overflow: hidden; }
-.studio-preview-source { position: fixed; top: -200vh; left: -200vw; width: 1008px; height: 796px; pointer-events: none; visibility: hidden; }
+.studio-preview-source { position: fixed; top: -200vh; left: -200vw; width: 1008px; height: 796px; pointer-events: none; }
 .studio-preview-source .studio-page { position: absolute; top: 5.5%; bottom: 5.5%; width: 42%; }
 .studio-book-spread { position: relative; width: auto; height: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 1008 / 796; min-height: 0; flex: none; background: url('/art/binder-spread.png') center / 100% 100% no-repeat; filter: drop-shadow(0 10px 14px #5c4b3b35); perspective: 1300px; }
 .studio-page { position: absolute; top: 5.5%; bottom: 5.5%; width: 42%; padding: 0; background: transparent !important; border: 0; }
@@ -390,6 +390,8 @@
   .studio-category-grid { grid-template-columns: repeat(4, 1fr); }
 }
 .binder-flip-host { position: absolute; z-index: 80; top: 5.5%; left: 4.5%; width: 91%; height: 89%; pointer-events: none; }
+.binder-curl-host { position: absolute; z-index: 80; top: 5.5%; left: 4.5%; width: 91%; height: 89%; pointer-events: none; }
+.binder-curl-host canvas { display: block; width: 100%; height: 100%; }
 .binder-flip-host .stf__wrapper, .binder-flip-host .stf__block { width: 100%; height: 100%; }
 .binder-flip-page { box-sizing: border-box; overflow: hidden; background: #fff9ed; backface-visibility: hidden; }
 .binder-flip-page::before { content: ''; position: absolute; inset: 0; background: url('/art/binder-paper.webp') center / 100% 100% no-repeat; pointer-events: none; }
