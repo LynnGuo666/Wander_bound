@@ -1,0 +1,40 @@
+
+> travel-memory-agent@0.1.0 test
+> node --test
+
+✔ AI places six distinct trip stickers across a spread without replacing template items (0.750375ms)
+✔ automatic journal scenes use an actual itinerary landmark (2.43875ms)
+✔ automatic scenes remain grounded in the city when stops are unavailable (0.216917ms)
+✔ sticker themes match relevant stops without repeating city names (0.428125ms)
+✔ waterfront postcards request a close detail instead of repeating the landscape (0.2435ms)
+✔ a new trip receives twelve varied stickers plus itinerary-relevant extras (0.635834ms)
+✔ automatic Qwen art fills system pages without changing user-owned pages (0.269875ms)
+✔ outdated Qwen assets are regenerated without blanking an existing system page (0.164917ms)
+✔ automatic stickers land on different pages and user edits pin all visible media (0.509667ms)
+✔ an early edit keeps its pending Qwen themes and does not switch private photos later (0.105333ms)
+✔ adjacent journal preview preserves every page for the same signed-in session (0.488167ms)
+✔ turning onto a cached journal retains private images and sticker metadata within its session (0.337542ms)
+✔ Duffel offer exposes actual aircraft, operating carrier, baggage pieces and fare rules (0.7415ms)
+✔ official CLI commands use documented read-only tool names and arguments (2.243542ms)
+✔ MCP envelope is decoded; redacted trial prices remain unknown schedules (0.899541ms)
+✔ real Tuniu CLI triple-nested envelope unwraps to business data (captured 2026-09-28) (0.545959ms)
+✔ complete FlyAI flight and train results preserve source, date, price and deep link (0.151958ms)
+✔ FlyAI flight detail preserves terminals and cabin while leaving absent aircraft, meals and bags unknown (0.088958ms)
+✔ Tuniu train fare is selected from a seat with actual availability (0.284042ms)
+✔ Tuniu ticket search preserves starting price and its actual price date (0.4055ms)
+✔ OTA adapter invokes only a named MCP tool and sends per-request key outside the JSON-RPC body (0.524959ms)
+✔ data MCP announces only supported normalized read tools (0.276292ms)
+✔ 12306 direct train selects only an actually available seat and retains all seat states (0.419708ms)
+✔ 12306 transfer preserves both train legs and a cross-station change (0.358375ms)
+✔ 12306 adapter calls only get-tickets and falls back to interline when direct seats are scarce (1.205208ms)
+✔ travel data MCP lists four live tools (15.408708ms)
+✔ transport MCP preserves full supplier offers and both directions (0.361667ms)
+✔ hotel, attraction and place MCP keep normalized source data (0.188375ms)
+ℹ tests 28
+ℹ suites 0
+ℹ pass 28
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 171.193792
