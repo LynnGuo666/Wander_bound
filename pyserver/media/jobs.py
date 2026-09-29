@@ -18,6 +18,9 @@ from PIL import Image
 from .comfy import ComfyClient
 from . import workflow_versions, scrapbook
 from .store import MediaStore
+from .dynamic_sources import DynamicPhotoSources
+from .dynamic_selection import DynamicPhotoSelector
+from .dynamic_h3 import DynamicPhotoH3
 from .contracts import (ContractError, original_from_snapshot, product_contract,
                         selected_original_snapshot, validate_snapshot)
 from ..inference import ModelController
@@ -45,6 +48,11 @@ class JobStore:
         self.root = media.root / "jobs"
         self.controller = controller
         self.worker: asyncio.Task | None = None
+        self.dynamic_sources = DynamicPhotoSources(media)
+        self.dynamic_selector = DynamicPhotoSelector(self.dynamic_sources, controller)
+        self.dynamic_h3 = (DynamicPhotoH3(self.dynamic_sources, ComfyClient(
+            video.base_url, video.workflow_file, "dynamic_video"), controller)
+            if isinstance(video, ComfyClient) else None)
 
     def get(self, job_id: str) -> dict | None:
         try:
@@ -156,8 +164,78 @@ class JobStore:
 
     def pending(self) -> list[dict]:
         jobs = (self.get(path.stem) for path in self.root.glob("*.json")) if self.root.exists() else ()
-        return sorted((job for job in jobs if job and job.get("ownerId") and job.get("status") in {"queued", "running", "loading_model"}),
+        dynamic = (self.dynamic_sources.get(path.stem) for path in self.dynamic_sources.root.glob("*.json"))
+        return sorted((job for job in (*jobs, *dynamic) if job and job.get("ownerId") and
+                       job.get("status") in {"queued", "running", "loading_model", "analyzing",
+                                             "selected", "generating"}),
                       key=lambda job: (job.get("createdAt", ""), job["id"]))
+
+    def _save_dynamic(self, job: dict) -> None:
+        path = self.dynamic_sources.root / f"{job['id']}.json"
+        temporary = path.with_name(f"{job['id']}.{uuid.uuid4().hex}.tmp")
+        job["updatedAt"] = now()
+        try:
+            temporary.write_text(json.dumps(job, ensure_ascii=False))
+            os.chmod(temporary, 0o600)
+            os.replace(temporary, path)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+    def enqueue_dynamic(self, job_id: str) -> dict:
+        job = self.dynamic_sources.get(job_id)
+        if not job:
+            raise ContractError("JOB_NOT_FOUND", "动态照片任务不存在", 404)
+        with self.media.selection_guard(job["tripId"]):
+            job = self.dynamic_sources.get(job_id)
+            if job["status"] == "prepared":
+                job.update(status="queued", executionReady=True, attempt=1, enqueuedAt=now())
+                self._save_dynamic(job)
+            elif job["status"] not in {"queued", "analyzing", "selected", "generating",
+                                       "succeeded", "skipped", "failed"}:
+                raise ContractError("JOB_STATE_INVALID", "动态照片任务状态无效", 409)
+        if job["status"] in {"queued", "selected", "generating"}:
+            self._schedule()
+        return job
+
+    async def retry_dynamic(self, job_id: str) -> dict:
+        job = self.dynamic_sources.get(job_id)
+        if not job:
+            raise ContractError("JOB_NOT_FOUND", "动态照片任务不存在", 404)
+        if job["status"] != "failed":
+            raise ContractError("RETRY_NOT_FAILED", "仅失败任务可显式重试", 409)
+        if job.get("attempt", 1) >= MAX_JOB_ATTEMPTS:
+            raise ContractError("RETRY_LIMIT", "动态照片已达到重试上限", 409)
+        prior_updated_at = job["updatedAt"]
+        intent = job.get("h3")
+        prompt_status = None
+        if intent and intent.get("submissionState") in {"submitting", "submitted"}:
+            if self.dynamic_h3 is None:
+                raise ContractError("H3_UNCONFIGURED", "动态照片 H3 服务未配置", 503)
+            try:
+                async with self.controller.use("video"):
+                    prompt_status, _ = await self.dynamic_h3.client.result(intent["promptId"])
+            except Exception as exc:
+                raise ContractError("H3_RECONCILE_UNAVAILABLE", "H3 提交状态无法对账", 503) from exc
+            if prompt_status == "missing":
+                raise ContractError("H3_SUBMISSION_UNKNOWN", "H3 提交状态不明，禁止重投", 409)
+        with self.media.selection_guard(job["tripId"]):
+            current = self.dynamic_sources.get(job_id)
+            if current["status"] != "failed" or current["updatedAt"] != prior_updated_at:
+                return current
+            current["attempt"] = current.get("attempt", 1) + 1
+            current["error"] = None
+            if current.get("selection") is None:
+                current["status"] = "queued"
+            elif prompt_status in {"running", "completed"}:
+                current["status"] = "generating"  # same prompt ID; never requeue
+            elif prompt_status == "failed":
+                current.pop("h3", None)  # confirmed terminal failure, new explicit attempt
+                current["status"] = "selected"
+            else:
+                current["status"] = "selected"  # no outbound call started
+            self._save_dynamic(current)
+        self._schedule()
+        return current
 
     def _validate_job_inputs(self, job: dict) -> None:
         snapshot = job.get("selectionSnapshot")
@@ -257,6 +335,24 @@ class JobStore:
     async def _drain(self):
         while pending := self.pending():
             job = pending[0]
+            if job["kind"] == "dynamic-photo":
+                try:
+                    if job["status"] in {"queued", "analyzing"}:
+                        job = await self.dynamic_selector.run_managed(job["id"])
+                    if job["status"] in {"selected", "generating"}:
+                        if self.dynamic_h3 is None:
+                            raise ContractError("H3_UNCONFIGURED", "动态照片 H3 服务未配置", 503)
+                        await self.dynamic_h3.run(job["id"])
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    current = self.dynamic_sources.get(job["id"]) or job
+                    if current["status"] not in {"failed", "succeeded", "skipped"}:
+                        current["status"] = "failed"
+                        current["error"] = {"code": exc.code if isinstance(exc, ContractError) else "DYNAMIC_UNEXPECTED",
+                                            "message": str(exc)[:200] if isinstance(exc, ContractError) else type(exc).__name__}
+                        self._save_dynamic(current)
+                continue
             try:
                 self._validate_job_inputs(job)
                 if self._can_finish_without_model(job):

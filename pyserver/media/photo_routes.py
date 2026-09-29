@@ -1,6 +1,7 @@
 """Private Spark media photo endpoints."""
 from __future__ import annotations
 
+import asyncio
 import tempfile
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
@@ -14,6 +15,16 @@ from . import images
 from .develop import suggest as suggest_development, review as review_development
 from .vision import vision_base_url, vision_model
 from .mcp_images import MCPImagesClient
+from .dynamic_sources import DynamicPhotoSources
+from .contracts import ContractError
+
+LOCAL_DEVELOP_RENDERER = "pillow-local@1"
+MCP_DEVELOP_RENDERER = "mcp-images+local-curves@1"
+
+
+def development_renderer() -> str:
+    return MCP_DEVELOP_RENDERER if MCPImagesClient().configured else LOCAL_DEVELOP_RENDERER
+
 
 async def _render_development(media: MediaStore, photo_id: str, settings: dict) -> bytes:
     normalized = images.normalize_develop(settings)
@@ -21,6 +32,8 @@ async def _render_development(media: MediaStore, photo_id: str, settings: dict) 
     photo = media.get(photo_id)
     if source is None or photo is None:
         raise FileNotFoundError("照片不存在")
+    if not MCPImagesClient().configured:
+        return await asyncio.to_thread(images.develop, source, normalized)
     media.photos_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
     source_path = media.photos_dir / f"{photo_id}.jpg"
     with tempfile.TemporaryDirectory(prefix="develop-", dir=media.photos_dir) as temporary:
@@ -32,6 +45,7 @@ async def _render_development(media: MediaStore, photo_id: str, settings: dict) 
 def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | None,
                video_client: ComfyClient | None, controller: ModelController) -> APIRouter:
     router = APIRouter()
+    dynamic_sources = DynamicPhotoSources(media)
     def selected_photo(photo_id: str) -> dict:
         photo = media.get(photo_id)
         if not photo or media.bytes(photo_id) is None:
@@ -65,7 +79,7 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
         model_status = await controller.status()
         by_id = {item["id"]: item["state"] for item in model_status["models"]}
         return {"ok": True, "storage": "private-local", "imageProcessor": "Pillow",
-                "photoDevelopBackend": "mcp_images" if MCPImagesClient().configured else "unconfigured",
+                "photoDevelopBackend": development_renderer(),
                 "visionModel": vision_model(),
                 "visionEndpoint": vision_base_url(),
                 "imageEditBackend": "dgx-spark-qwen-image-2.1" if image_client and (await image_client.probe() or by_id.get("image") == "stopped_on_demand") else "unconfigured",
@@ -144,18 +158,27 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
     @router.post("/api/media/photos/{photo_id}/develop/save")
     async def develop_save(photo_id: str, request: Request, payload: dict):
         require_media_auth(request)
-        selected_photo(photo_id)
-        source = media.bytes(photo_id)
+        photo = selected_photo(photo_id)
         try:
+            marker_id, batch_id = dynamic_sources.mark_development_started(photo["tripId"], photo_id)
+        except ContractError as exc:
+            raise HTTPException(exc.status_code, exc.body()) from exc
+        try:
+            source = media.bytes(photo_id)
             params = images.normalize_develop(payload.get("params") or {})
             rendered = await _render_development(media, photo_id, params)
-            result = media.save_develop(photo_id, rendered, params, payload.get("note", ""))
+            result = media.save_develop(photo_id, rendered, params, payload.get("note", ""),
+                                        expected_batch_id=batch_id, renderer_id=development_renderer())
         except FileNotFoundError as exc:
             raise HTTPException(404, str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
             if isinstance(exc, RuntimeError):
                 raise HTTPException(503, str(exc)) from exc
             raise HTTPException(400, str(exc)) from exc
+        finally:
+            dynamic_sources.mark_development_finished(photo["tripId"], marker_id)
+        if result is None:
+            raise HTTPException(409, "照片不再属于当前精选清单")
         return result
 
     @router.post("/api/media/photos/{photo_id}/develop/review")

@@ -12,6 +12,8 @@ import os
 import uuid
 import base64
 import hashlib
+import fcntl
+from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
 from threading import RLock
@@ -78,6 +80,20 @@ class MediaStore:
     def is_selected(self, photo: dict) -> bool:
         return photo["id"] in self.selected(photo["tripId"])["photoIds"]
 
+    @contextmanager
+    def selection_guard(self, trip_id: str):
+        """Serialize a selection update with development saves and batch settlement."""
+        uuid.UUID(trip_id)
+        self.selections_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with self.lock:
+            with (self.selections_dir / f"{trip_id}.lock").open("a+b") as lock_file:
+                os.chmod(lock_file.fileno(), 0o600)
+                fcntl.flock(lock_file, fcntl.LOCK_EX)
+                try:
+                    yield
+                finally:
+                    fcntl.flock(lock_file, fcntl.LOCK_UN)
+
     def set_selected(self, trip_id: str, payload: dict) -> dict:
         photo_ids = payload.get("photoIds")
         batch_id = payload.get("batchId")
@@ -92,22 +108,22 @@ class MediaStore:
             raise ValueError("source 必须是 1 到 128 字符的字符串")
         if any(not (photo := self.get(photo_id)) or photo.get("tripId") != trip_id for photo_id in photo_ids):
             raise ValueError("photoIds 包含不存在或不属于该行程的照片")
-        previous = self.selected(trip_id)
-        if all(previous[key] == value for key, value in
-               (("batchId", batch_id), ("source", source), ("photoIds", photo_ids))):
-            return previous
-        self.selections_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
-        selection = {"tripId": trip_id, "batchId": batch_id, "source": source,
-                     "photoIds": photo_ids, "updatedAt": now()}
-        destination = self.selections_dir / f"{trip_id}.json"
-        temporary = self.selections_dir / f"{trip_id}.{uuid.uuid4().hex}.tmp"
-        try:
-            temporary.write_text(json.dumps(selection, ensure_ascii=False))
-            os.chmod(temporary, 0o600)
-            os.replace(temporary, destination)
-        finally:
-            temporary.unlink(missing_ok=True)
-        return self.selected(trip_id)
+        with self.selection_guard(trip_id):
+            previous = self.selected(trip_id)
+            if all(previous[key] == value for key, value in
+                   (("batchId", batch_id), ("source", source), ("photoIds", photo_ids))):
+                return previous
+            selection = {"tripId": trip_id, "batchId": batch_id, "source": source,
+                         "photoIds": photo_ids, "updatedAt": now()}
+            destination = self.selections_dir / f"{trip_id}.json"
+            temporary = self.selections_dir / f"{trip_id}.{uuid.uuid4().hex}.tmp"
+            try:
+                temporary.write_text(json.dumps(selection, ensure_ascii=False))
+                os.chmod(temporary, 0o600)
+                os.replace(temporary, destination)
+            finally:
+                temporary.unlink(missing_ok=True)
+            return self.selected(trip_id)
 
     def add(self, image_bytes: bytes, trip_id: str, captured_day: str | None,
             asset_key: str | None = None) -> dict:
@@ -211,17 +227,63 @@ class MediaStore:
         (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
         return photo
 
-    def save_develop(self, photo_id: str, image_bytes: bytes, settings: dict, note: str = "") -> dict | None:
+    def save_develop(self, photo_id: str, image_bytes: bytes, settings: dict, note: str = "",
+                     expected_batch_id: str | None = None,
+                     expected_selection_updated_at: str | None = None,
+                     operation_id: str | None = None,
+                     renderer_id: str | None = None) -> dict | None:
         photo = self.get(photo_id)
         if not photo:
             return None
-        normalized, width, height = images.normalize(image_bytes)
-        variant = f"develop-{uuid.uuid4().hex[:12]}"
-        filename = self.photos_dir / f"{photo_id}-{variant}.jpg"
-        filename.write_bytes(normalized)
-        os.chmod(filename, 0o600)
-        photo["variants"] = sorted(set([*photo.get("variants", []), variant]))
-        photo.setdefault("developments", []).append({"variant": variant, "settings": settings,
-            "note": str(note)[:300], "width": width, "height": height, "createdAt": now()})
-        (self.meta_dir / f"{photo_id}.json").write_text(json.dumps(photo, ensure_ascii=False))
-        return {"photo": photo, "variant": variant}
+        with self.selection_guard(photo["tripId"]):
+            photo = self.get(photo_id)
+            selection = self.selection_record(photo["tripId"])
+            if (not photo or not selection or photo_id not in selection.get("photoIds", [])
+                    or expected_batch_id is not None and selection.get("batchId") != expected_batch_id
+                    or expected_selection_updated_at is not None and
+                    selection.get("updatedAt") != expected_selection_updated_at):
+                return None
+            if operation_id is not None:
+                operation_id = str(uuid.UUID(operation_id))
+                prior = next((item for item in photo.get("developments", [])
+                              if item.get("operationId") == operation_id), None)
+                if prior:
+                    content = self.bytes(photo_id, prior["variant"])
+                    if not content:
+                        raise ValueError("已保存的精修操作文件丢失")
+                    return {"photo": photo, "variant": prior["variant"]}
+            variant = (f"develop-{uuid.uuid5(uuid.NAMESPACE_URL, f'travel.develop:{photo_id}:{operation_id}').hex[:12]}"
+                       if operation_id else f"develop-{uuid.uuid4().hex[:12]}")
+            filename = self.photos_dir / f"{photo_id}-{variant}.jpg"
+            if filename.exists():
+                normalized, width, height = images.normalize(filename.read_bytes())
+            else:
+                normalized, width, height = images.normalize(image_bytes)
+                filename.write_bytes(normalized)
+                os.chmod(filename, 0o600)
+            photo["variants"] = sorted(set([*photo.get("variants", []), variant]))
+            photo.setdefault("developments", []).append({"variant": variant, "settings": settings,
+                "note": str(note)[:300], "width": width, "height": height, "createdAt": now(),
+                "selectionBatchId": selection["batchId"],
+                **({"rendererId": renderer_id} if renderer_id else {}),
+                **({"operationId": operation_id} if operation_id else {})})
+            metadata = self.meta_dir / f"{photo_id}.json"
+            temporary = self.meta_dir / f"{photo_id}.{uuid.uuid4().hex}.tmp"
+            try:
+                temporary.write_text(json.dumps(photo, ensure_ascii=False))
+                os.chmod(temporary, 0o600)
+                os.replace(temporary, metadata)
+            finally:
+                temporary.unlink(missing_ok=True)
+            return {"photo": photo, "variant": variant}
+
+    def development_for_operation(self, photo_id: str, operation_id: str) -> dict | None:
+        photo = self.get(photo_id)
+        if not photo:
+            return None
+        return next((item for item in photo.get("developments", [])
+                     if item.get("operationId") == operation_id), None)
+
+    def development_artifact_for_operation(self, photo_id: str, operation_id: str) -> Path:
+        variant = f"develop-{uuid.uuid5(uuid.NAMESPACE_URL, f'travel.develop:{photo_id}:{operation_id}').hex[:12]}"
+        return self.photos_dir / f"{photo_id}-{variant}.jpg"

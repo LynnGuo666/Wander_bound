@@ -19,7 +19,7 @@ def _digest(value: object) -> str:
 
 
 def _spec(kind: str) -> dict:
-    if kind not in {"image", "video"}:
+    if kind not in {"image", "video", "dynamic_video"}:
         raise ValueError("未知工作流类型")
     return json.loads(MANIFEST.read_text())[kind]
 
@@ -125,4 +125,20 @@ def prepare_image(image: bytes, ratio: str, policy: str, fit_mode: str | None = 
                                   (target[1] - fitted.height) // 2))
         output = io.BytesIO()
         canvas.save(output, format="JPEG", quality=92)
+        return output.getvalue()
+
+
+def prepare_dynamic_image(image: bytes, width: int, height: int) -> bytes:
+    """Resize without crop or stretch; small alignment bands preserve every source pixel."""
+    if (type(width) is not int or type(height) is not int or width % 32 or height % 32
+            or width < 256 or height < 256 or width > 1344 or height > 1344
+            or width * height > 768 * 1344):
+        raise ValueError("动态照片画布不符合 H3 约束")
+    with Image.open(io.BytesIO(image)) as source:
+        source = ImageOps.exif_transpose(source).convert("RGB")
+        fitted = ImageOps.contain(source, (width, height), method=Image.Resampling.LANCZOS)
+        canvas = Image.new("RGB", (width, height), (12, 12, 12))
+        canvas.paste(fitted, ((width - fitted.width) // 2, (height - fitted.height) // 2))
+        output = io.BytesIO()
+        canvas.save(output, format="JPEG", quality=94)
         return output.getvalue()
