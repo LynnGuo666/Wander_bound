@@ -52,9 +52,24 @@ class JournalStore:
 
     def _read(self, trip: dict) -> dict:
         try:
-            return json.loads(self._path(trip["id"]).read_text())
+            document = json.loads(self._path(trip["id"]).read_text())
         except FileNotFoundError:
             return self._initial(trip)
+        collage = self.templates.get("book-and-clip", {}).get("slots", [])
+        if not collage or collage[-1]["kind"] != "illustration":
+            return document
+        upgraded = False
+        for page in document["pages"]:
+            if (page.get("source") != "system" or page.get("protected")
+                    or page.get("templateId") != "book-and-clip"):
+                continue
+            items = page.get("items") or []
+            if len(items) != len(collage) - 1 or any(
+                    item.get("kind") != slot["kind"] for item, slot in zip(items, collage)):
+                continue
+            items.append({**collage[-1], "id": str(uuid.uuid4())})
+            upgraded = True
+        return self._write(document) if upgraded else document
 
     def get(self, trip: dict) -> dict:
         with self.lock:
