@@ -47,9 +47,16 @@ export function itineraryMotifs(trip, categories, { includeAllCategories = false
 export function selectJournalAsset(page, explicitId, jobs, kind, motif, pinnedMotif = '') {
   if (explicitId) return jobs.find(job => job.id === explicitId);
   const matching = job => job.kind === kind && job.motif === (pinnedMotif || motif);
-  if (pinnedMotif) return jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
+  const best = () => jobs.find(job => matching(job) && job.status === 'succeeded')
+    || jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
+  if (pinnedMotif) return best();
   if (page?.source !== 'system' || page.protected) return undefined;
-  return jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
+  return best();
+}
+
+export function hasCurrentJournalAsset(jobs, kind, motif, promptVersions = {}) {
+  return jobs.some(job => job.kind === kind && job.motif === motif && job.status !== 'failed'
+    && (!promptVersions[kind] || job.promptVersion === promptVersions[kind]));
 }
 
 export function stickerMotifForItem(page, pageIndex, itemIndex, motifs) {

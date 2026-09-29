@@ -79,7 +79,7 @@ def isolate_sticker(image: Image.Image) -> Image.Image:
 
 
 def public(job: dict) -> dict:
-    return {key: job.get(key) for key in ("id", "tripId", "kind", "motif", "status", "createdAt", "error")}
+    return {key: job.get(key) for key in ("id", "tripId", "kind", "motif", "status", "createdAt", "error", "promptVersion")}
 
 
 class StickerStore:
@@ -89,6 +89,10 @@ class StickerStore:
         self.controller = controller
         self.worker: asyncio.Task | None = None
         self.prompt_dir = Path(__file__).resolve().parents[2] / "prompts"
+
+    def prompt_versions(self) -> dict[str, str]:
+        return {kind: json.loads((self.prompt_dir / f"journal-{kind}.qwen-image-2.1.json").read_text())["id"]
+                for kind in ("sticker", "stamp", "postcard", "illustration")}
 
     def get(self, sticker_id: str) -> dict | None:
         try:
