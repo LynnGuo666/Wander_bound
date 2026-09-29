@@ -10,15 +10,15 @@
 - [H3 工作流说明](dynamic-photo-h3.md)：`travel.minimax-h3.dynamic-photo.i2v@1.0.0`、比例画布、prompt/seed 和共享模型控制器。
 - [Spark 真实验证报告](dynamic-photo-real-validation-2026-09-29.md)：部署隔离与恢复、素材许可和哈希、真实精修/AI/H3、耗时、ffprobe/完整解码、鉴权、重启与 skipped。逐项机器收据在 [JSON](generated-evidence/dynamic-photo-real-validation-receipt.json)；[密集帧联系图](generated-evidence/dynamic-photo-real-dense-contact.jpg) 供画面审查。
 
-实证 MP4 私有副本：`/Users/chenm0m/LocalRepo/travel-agent/private-artifacts/dynamic-photo-20260929/yosemite-falls.mp4`，SHA-256 `acbef4a8459207181e6834bdfb58e7cacbeba7d469f6cf418fd1c6cd8275a17c`。该目录不提交 Git；原始 Spark 文件位置及鉴权 API 取回方法见真实验证报告。视频源于竖幅真实照片的非零精修版本，经真实 Qwen38 选择和真实 MiniMax H3 生成，非测试替身。
+实证 MP4 私有副本保存在本机原控制根的私有 artifact 目录，SHA-256 `acbef4a8459207181e6834bdfb58e7cacbeba7d469f6cf418fd1c6cd8275a17c`，不提交 Git。拥有环境权限的维护者可用收据中的 job ID 和输出 hash 定位并核对私有文件。视频源于竖幅真实照片的非零精修版本，经真实 Qwen38 选择和真实 MiniMax H3 生成，非测试替身。
 
 ## 最终回归
 
-在隔离工作树 `/private/tmp/travel-agent-dynamic-photo-20260929` 执行：
+在隔离工作树执行，Python 命令使用项目虚拟环境的解释器：
 
 | 检查 | 命令 | 结果与日志 |
 | --- | --- | --- |
-| Python 全量 | `PYTHONPYCACHEPREFIX=/private/tmp/travel-agent-dynamic-pycache /Users/chenm0m/LocalRepo/travel-agent/.venv/bin/python -m pytest -q pyserver/tests` | 188 passed、25 warnings、7.73 秒；[日志](generated-evidence/dynamic-photo-final-pyserver-tests.txt) |
+| Python 全量 | `python -m pytest -q pyserver/tests` | 188 passed、25 warnings、7.73 秒；[日志](generated-evidence/dynamic-photo-final-pyserver-tests.txt) |
 | Node 全量 | `npm test` | 28/28 passed；[日志](generated-evidence/dynamic-photo-final-node-tests.txt) |
 | 应用构建 | `npm run build` | Vite 构建成功，2153 modules transformed、271 ms；[日志](generated-evidence/dynamic-photo-final-build.txt) |
 
