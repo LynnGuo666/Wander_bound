@@ -1,4 +1,5 @@
 """User-owned pages survive repeated Agent compositions and process restarts."""
+import json
 import pytest
 
 from pyserver.media.journal_routes import catalog
@@ -46,3 +47,27 @@ def test_invalid_page_payload_is_rejected(tmp_path):
     with pytest.raises(ValueError, match="素材类型"):
         store.edit_page(trip, 0, {**page, "items": [{**page["items"][0], "kind": "html"}]}, 0)
     assert store.get(trip)["version"] == 0
+
+
+def test_default_collage_shows_city_illustration_and_migrates_only_system_pages(tmp_path):
+    trip = {"id": "2e088653-e62a-4335-9a0d-83604436e95b", "title": "上海重游",
+            "plan": {"destination": "上海"}}
+    store = JournalStore(tmp_path, catalog())
+    initial = store.get(trip)
+    assert any(item["kind"] == "illustration" for item in initial["pages"][1]["items"])
+
+    old = {**initial, "pages": [dict(page) for page in initial["pages"]]}
+    old["pages"][0].update(source="user", protected=True)
+    old["pages"][1]["items"] = old["pages"][1]["items"][:-1]
+    tmp_path.mkdir(exist_ok=True)
+    store._path(trip["id"]).write_text(json.dumps(old, ensure_ascii=False))
+
+    migrated = store.get(trip)
+    assert migrated["version"] == 1
+    assert migrated["pages"][0] == old["pages"][0]
+    assert [item["kind"] for item in migrated["pages"][1]["items"]][-1] == "illustration"
+    assert store.get(trip) == migrated
+
+    old["pages"][1].update(source="user", protected=True)
+    store._path(trip["id"]).write_text(json.dumps(old, ensure_ascii=False))
+    assert store.get(trip) == old
