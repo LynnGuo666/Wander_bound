@@ -29,3 +29,42 @@ export function selectJournalAsset(page, explicitId, jobs, kind, motif) {
   if (page?.source !== 'system' || page.protected) return undefined;
   return jobs.find(job => job.kind === kind && job.motif === motif);
 }
+
+export function stickerMotifForItem(page, pageIndex, itemIndex, motifs) {
+  if (!motifs.stickers.length) return '';
+  const stickerIndex = page.items.slice(0, itemIndex).filter(item => item.kind === 'sticker').length;
+  return motifs.stickers[(pageIndex + stickerIndex) % motifs.stickers.length];
+}
+
+export function pinAutomaticAssets(page, pageIndex, jobs, motifs, selectedPhotoIds = []) {
+  if (page?.source !== 'system' || page.protected) return page;
+  let changed = false;
+  const items = page.items.map((item, itemIndex) => {
+    const references = {};
+    if (item.kind === 'sticker' && !item.stickerId) {
+      const motif = stickerMotifForItem(page, pageIndex, itemIndex, motifs);
+      const job = selectJournalAsset(page, '', jobs, 'sticker', motif);
+      if (job && job.status !== 'failed') references.stickerId = job.id;
+    }
+    if (['cover', 'illustration'].includes(item.kind) && !item.assetId) {
+      const job = selectJournalAsset(page, '', jobs, 'illustration', motifs.illustration);
+      if (job && job.status !== 'failed') references.assetId = job.id;
+    }
+    if (item.kind === 'postcard') {
+      if (!item.assetId) {
+        const job = selectJournalAsset(page, '', jobs, 'postcard', motifs.postcard);
+        if (job && job.status !== 'failed') references.assetId = job.id;
+      }
+      if (!item.stampId) {
+        const job = selectJournalAsset(page, '', jobs, 'stamp', motifs.stamp);
+        if (job && job.status !== 'failed') references.stampId = job.id;
+      }
+    }
+    if (item.kind === 'photo' && !item.photoId && selectedPhotoIds.length)
+      references.photoId = selectedPhotoIds[(item.photoIndex || 0) % selectedPhotoIds.length];
+    if (!Object.keys(references).length) return item;
+    changed = true;
+    return { ...item, ...references };
+  });
+  return changed ? { ...page, items } : page;
+}
