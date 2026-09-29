@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 
 import httpx
 import pytest
@@ -168,3 +169,21 @@ def test_controller_unavailable_is_diagnostic_failed(tmp_path):
             raise RuntimeError("offline")
     result = asyncio.run(DynamicPhotoSelector(sources, Down()).run_managed(job["id"]))
     assert result["status"] == "failed" and result["error"]["code"] == "VISION_UNAVAILABLE"
+
+
+def test_managed_selector_uses_active_controller_chat_endpoint(tmp_path, monkeypatch):
+    _, sources, job, _, _, _ = ready(tmp_path)
+    seen = []
+    class Controller:
+        enabled = True
+        @asynccontextmanager
+        async def use(self, name):
+            assert name == "chat"
+            yield type("Spec", (), {"url": "http://127.0.0.1:8192"})()
+    def analyze(_image, pid, *, base_url=None):
+        seen.append(base_url)
+        return verdict(pid, suitable=False, score=10, reason="不适合")
+    monkeypatch.setattr("pyserver.media.dynamic_selection.analyze_image", analyze)
+    result = asyncio.run(DynamicPhotoSelector(sources, Controller()).run_managed(job["id"]))
+    assert result["status"] == "skipped"
+    assert seen == ["http://127.0.0.1:8192/v1"] * 2

@@ -11,12 +11,20 @@ import json
 import os
 import time
 import uuid
+from pathlib import Path
 
 from PIL import Image
 
 from ..accounts import current_user
 from ..trips import now
 from .contracts import ContractError
+from .vision import vision_model
+from . import workflow_versions
+
+
+PRODUCT_VERSION = "dynamic-photo@1"
+SELECTOR_PROMPT_VERSION = "dynamic-photo-selection@1"
+H3_RUNNER_VERSION = "dynamic-photo-h3@1"
 
 
 def _digest(value: object) -> str:
@@ -41,24 +49,94 @@ class DynamicPhotoSources:
         self.media = media
         self.root = media.root / "dynamic-photo" / "jobs"
         self.developing = media.root / "dynamic-photo" / "developing"
+        self.batches = media.root / "dynamic-photo" / "batch-operations"
 
-    def _existing_settlement(self, trip_id: str, selection_sha: str, outcomes: list[dict]) -> dict | None:
+    def begin_batch_operation(self, trip_id: str, payload: dict) -> dict:
+        try:
+            operation_id = str(uuid.UUID(payload["operationId"]))
+        except (KeyError, TypeError, ValueError):
+            raise ContractError("OPERATION_ID_INVALID", "批次操作编号必须是 UUID") from None
+        if operation_id != payload["operationId"]:
+            raise ContractError("OPERATION_ID_INVALID", "批次操作编号必须是规范 UUID")
+        owner = (current_user.get() or {}).get("id")
+        if not owner:
+            raise ContractError("OWNER_MISSING", "需要登录后才能处理精修批次", 401)
+        fingerprint = _digest(payload)
+        with self.media.selection_guard(trip_id):
+            self.batches.mkdir(parents=True, exist_ok=True, mode=0o700)
+            path = self.batches / f"{operation_id}.json"
+            try:
+                existing = json.loads(path.read_text())
+            except FileNotFoundError:
+                existing = None
+            except (OSError, ValueError):
+                raise ContractError("OPERATION_INVALID", "已保存的批次操作记录损坏", 409) from None
+            if existing:
+                if (existing.get("ownerId") != owner or existing.get("tripId") != trip_id
+                        or existing.get("payloadSha256") != fingerprint):
+                    raise ContractError("OPERATION_CONFLICT", "批次操作编号已用于不同输入", 409)
+                self._selection(trip_id, payload["batchId"], payload["selectionUpdatedAt"],
+                                [entry["photoId"] for entry in payload["photos"]])
+                return existing
+            self._selection(trip_id, payload["batchId"], payload["selectionUpdatedAt"],
+                            [entry["photoId"] for entry in payload["photos"]])
+            receipt = {"operationId": operation_id, "ownerId": owner, "tripId": trip_id,
+                       "batchId": payload["batchId"], "selectionUpdatedAt": payload["selectionUpdatedAt"],
+                       "payloadSha256": fingerprint, "completedPhotoIds": [],
+                       "status": "running", "jobId": None, "createdAt": now(), "updatedAt": now()}
+            temporary = self.batches / f"{operation_id}.{uuid.uuid4().hex}.tmp"
+            try:
+                temporary.write_text(json.dumps(receipt, ensure_ascii=False))
+                os.chmod(temporary, 0o600)
+                os.link(temporary, path)
+            finally:
+                temporary.unlink(missing_ok=True)
+            return receipt
+
+    def update_batch_operation(self, receipt: dict, *, completed_photo_id: str | None = None,
+                               job_id: str | None = None) -> dict:
+        with self.media.selection_guard(receipt["tripId"]):
+            path = self.batches / f"{receipt['operationId']}.json"
+            current = json.loads(path.read_text())
+            if current["payloadSha256"] != receipt["payloadSha256"]:
+                raise ContractError("OPERATION_CONFLICT", "精修批次操作已改变", 409)
+            if completed_photo_id and completed_photo_id not in current["completedPhotoIds"]:
+                current["completedPhotoIds"].append(completed_photo_id)
+            if job_id:
+                current["jobId"] = job_id
+                current["status"] = "settled"
+            current["updatedAt"] = now()
+            temporary = self.batches / f"{receipt['operationId']}.{uuid.uuid4().hex}.tmp"
+            try:
+                temporary.write_text(json.dumps(current, ensure_ascii=False))
+                os.chmod(temporary, 0o600)
+                os.replace(temporary, path)
+            finally:
+                temporary.unlink(missing_ok=True)
+            return current
+
+    def _existing_settlement(self, trip_id: str, selection_sha: str, outcomes: list[dict],
+                             execution_sha: str) -> dict | None:
         for path in self.root.glob("*.json"):
             job = self.get(path.stem)
             snapshot = (job or {}).get("sourceSnapshot") or {}
             if (job and job.get("tripId") == trip_id
                     and (snapshot.get("selection") or {}).get("sha256") == selection_sha
-                    and (snapshot.get("settlement") or {}).get("photos") == outcomes):
+                    and (snapshot.get("settlement") or {}).get("photos") == outcomes
+                    and ((job.get("executionContract") or {}).get("sha256") == execution_sha)):
                 return job
         return None
 
-    def mark_development_started(self, trip_id: str, photo_id: str) -> tuple[str, str]:
+    def mark_development_started(self, trip_id: str, photo_id: str,
+                                 expected_updated_at: str | None = None) -> tuple[str, str]:
         """Record an in-flight save before its slow rendering starts."""
         with self.media.selection_guard(trip_id):
             selection = self.media.selection_record(trip_id)
             photo = self.media.get(photo_id)
             if not selection or not photo or photo.get("tripId") != trip_id or photo_id not in selection.get("photoIds", []):
                 raise ContractError("PHOTO_NOT_SELECTED", "照片不在当前精选清单中", 409)
+            if expected_updated_at is not None and selection.get("updatedAt") != expected_updated_at:
+                raise ContractError("SELECTION_CHANGED", "精选清单版本已改变", 409)
             fields = {key: selection.get(key) for key in ("tripId", "batchId", "source", "updatedAt", "photoIds")}
             # Any settlement for this exact committed selection closes it.
             for path in self.root.glob("*.json"):
@@ -199,6 +277,16 @@ class DynamicPhotoSources:
         owner = (current_user.get() or {}).get("id")
         if not owner:
             raise ContractError("OWNER_MISSING", "需要登录后才能结算", 401)
+        workflow_file = Path(os.getenv("SPARK_H3_WORKFLOW_FILE", "workflows/minimax-h3-i2v-api.json"))
+        try:
+            workflow = workflow_versions.freeze_workflow(workflow_file, "dynamic_video")
+        except (OSError, ValueError) as exc:
+            raise ContractError("WORKFLOW_UNAVAILABLE", "动态照片 H3 工作流不可用", 503) from exc
+        execution_fields = {"productVersion": PRODUCT_VERSION, "visionModel": vision_model(),
+                            "selectionPromptVersion": SELECTOR_PROMPT_VERSION,
+                            "h3RunnerVersion": H3_RUNNER_VERSION,
+                            "h3WorkflowSnapshot": workflow}
+        execution = {**execution_fields, "sha256": _digest(execution_fields)}
 
         # Shared with set_selected and save_develop, including across processes.
         with self.media.selection_guard(trip_id):
@@ -207,7 +295,8 @@ class DynamicPhotoSources:
             if attempt_state:
                 code = "DEVELOPMENT_IN_PROGRESS" if attempt_state == "in_progress" else "DEVELOPMENT_INTERRUPTED"
                 raise ContractError(code, "本批精修尝试尚未结算，请检查并恢复", 409)
-            existing = self._existing_settlement(trip_id, selection["sha256"], outcomes)
+            existing = self._existing_settlement(trip_id, selection["sha256"], outcomes,
+                                                 execution["sha256"])
             if existing:
                 for source in existing["sourceSnapshot"]["inputs"]:
                     self._frozen_bytes(existing, source)
@@ -248,7 +337,8 @@ class DynamicPhotoSources:
             snapshot = {"schemaVersion": 1, "sourceContractVersion": "dynamic-photo-sources@1",
                         "tripId": trip_id, "selection": selection,
                         "settlement": {**settlement, "sha256": _digest(settlement)}, "inputs": inputs}
-            identity = _digest({"ownerId": owner, "snapshot": snapshot})
+            identity = _digest({"ownerId": owner, "snapshot": snapshot,
+                                "executionContract": execution})
             job_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"travel.dynamic-photo.sources:{identity}"))
             existing = self.get(job_id)
             if existing:
@@ -256,6 +346,7 @@ class DynamicPhotoSources:
             job = {"id": job_id, "kind": "dynamic-photo", "tripId": trip_id, "ownerId": owner,
                    "batchId": batch_id, "status": "prepared", "executionReady": False,
                    "identitySha256": identity, "sourceSnapshot": snapshot,
+                   "executionContract": execution,
                    "associations": [{"photoId": source["photoId"],
                                      "sourceVariant": source["sourceVariant"], "dynamicVersionId": None}
                                     for source in inputs],
@@ -317,7 +408,11 @@ class DynamicPhotoSources:
                 or settlement.get("sha256") != _digest(settlement_fields)
                 or settlement_fields["selectionSha256"] != selection["sha256"]
                 or settlement_fields["batchId"] != selection["batchId"]
-                or job.get("identitySha256") != _digest({"ownerId": job.get("ownerId"), "snapshot": snapshot})
+                or (job.get("executionContract") or {}).get("sha256") != _digest({
+                    key: value for key, value in (job.get("executionContract") or {}).items()
+                    if key != "sha256"})
+                or job.get("identitySha256") != _digest({"ownerId": job.get("ownerId"),
+                    "snapshot": snapshot, "executionContract": job.get("executionContract")})
                 or job.get("id") != str(uuid.uuid5(uuid.NAMESPACE_URL,
                     f"travel.dynamic-photo.sources:{job.get('identitySha256')}"))):
             raise ContractError("SNAPSHOT_INVALID", "动态照片输入快照身份或哈希无效", 409)

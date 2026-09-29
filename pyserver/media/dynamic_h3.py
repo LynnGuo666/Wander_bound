@@ -15,11 +15,11 @@ from fractions import Fraction
 
 from ..trips import now
 from .contracts import ContractError
-from .dynamic_sources import DynamicPhotoSources
+from .dynamic_sources import DynamicPhotoSources, H3_RUNNER_VERSION
 from . import workflow_versions
 
 
-RUNNER_VERSION = "dynamic-photo-h3@1"
+RUNNER_VERSION = H3_RUNNER_VERSION
 MAX_PIXELS = 768 * 1344
 FRAMES = 124
 FPS = 24
@@ -163,7 +163,11 @@ class DynamicPhotoH3:
                 intent = job.get("h3")
                 if intent is None:
                     canvas = choose_canvas(source["width"], source["height"])
-                    snapshot = self.client.freeze_workflow()
+                    execution = job.get("executionContract") or {}
+                    if execution.get("h3RunnerVersion") != RUNNER_VERSION:
+                        raise ContractError("H3_VERSION_CHANGED", "H3 执行器版本不匹配", 409)
+                    snapshot = workflow_versions.validate_snapshot(
+                        execution.get("h3WorkflowSnapshot"), "dynamic_video")
                     parameters = {"width": canvas["width"], "height": canvas["height"],
                                   "frames": FRAMES, "fps": FPS}
                     workflow_versions.validate_parameters(snapshot, parameters, 0)
@@ -239,10 +243,17 @@ class DynamicPhotoH3:
     def _complete(self, job: dict, intent: dict, metadata: dict) -> dict:
         job["status"] = "succeeded"
         job["error"] = None
+        version_id = str(uuid.uuid5(uuid.NAMESPACE_URL,
+                                    f"travel.dynamic-photo.version:{job['id']}:{intent['photoId']}"))
+        for association in job["associations"]:
+            if association["photoId"] == intent["photoId"]:
+                association["dynamicVersionId"] = version_id
         job["result"] = {"photoId": intent["photoId"], "sourceVariant": next(
             item["sourceVariant"] for item in job["sourceSnapshot"]["inputs"]
             if item["photoId"] == intent["photoId"]),
-            "videoPath": f"{job['id']}/dynamic.mp4", "coverPath": f"{job['id']}/cover.jpg",
+            "dynamicVersionId": version_id,
+            "videoUrl": f"/api/media/dynamic-photo/jobs/{job['id']}/video",
+            "coverUrl": f"/api/media/dynamic-photo/jobs/{job['id']}/cover",
             "canvas": intent["canvas"], "media": metadata, "workflowId": intent["workflowSnapshot"]["workflow_id"],
             "workflowVersion": intent["workflowSnapshot"]["workflow_version"],
             "workflowHash": intent["workflowSnapshot"]["workflow_hash"],

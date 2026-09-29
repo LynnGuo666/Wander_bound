@@ -15,5 +15,5 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore, image_client
     router = APIRouter()
     router.include_router(photo_routes.router_for(trips, media, image_client, video_client, controller))
     router.include_router(job_routes.router_for(trips, media, jobs))
-    router.include_router(dynamic_routes.router_for(trips, DynamicPhotoSources(media)))
+    router.include_router(dynamic_routes.router_for(trips, jobs.dynamic_sources, jobs))
     return router
