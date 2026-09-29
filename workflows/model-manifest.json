@@ -15,6 +15,28 @@
       "seed": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615, "default": 0}
     }
   },
+  "dynamic_video": {
+    "workflow_id": "travel.minimax-h3.dynamic-photo.i2v",
+    "workflow_version": "1.0.0",
+    "input_policy": "source-contain-canvas-v1",
+    "engine": {"comfyui": "0.34.0", "commit": "e80c1570b6b44a2557d5d8e341e05782d18c9bbb", "frontend": "1.51.9"},
+    "custom_nodes": {"ComfyUI_MiniMaxH3_Director": "7de4a95243ce1a25fedc634a0eda62672610afd1", "minimax-h3-hybrid-cond": "a1f20e01831de84243f672285611ba9b89e4f249"},
+    "model_nodes": {
+      "1": {"class_type": "UNETLoader", "file": "minimax_h3_fl2va_pruned_int8_convrot.safetensors", "bytes": 20970379616},
+      "2": {"class_type": "CLIPLoader", "file": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors", "bytes": 15687142551},
+      "3": {"class_type": "VAELoader", "file": "minimax_h3_video_vae_fp16.safetensors", "bytes": 5207808496},
+      "4": {"class_type": "VAELoader", "file": "minimax_h3_audio_vae_fp32.safetensors", "bytes": 605254808},
+      "6": {"class_type": "MiniMaxH3ImageToVideo", "source": "comfy_extras/nodes_minimax_h3.py", "canvas_grid": 32, "max_pixels": 1032192, "frame_grid": "17k+5"},
+      "7": {"class_type": "RandomNoise", "seed_input": "noise_seed"}
+    },
+    "parameter_schema": {
+      "width": {"type": "integer", "minimum": 256, "maximum": 1344, "step": 32},
+      "height": {"type": "integer", "minimum": 256, "maximum": 1344, "step": 32},
+      "frames": {"type": "integer", "const": 124},
+      "fps": {"type": "integer", "const": 24},
+      "seed": {"type": "integer", "minimum": 0, "maximum": 18446744073709551615, "default": 0}
+    }
+  },
   "video": {
     "workflow_id": "travel.minimax-h3.i2v",
     "workflow_version": "1.1.0",
