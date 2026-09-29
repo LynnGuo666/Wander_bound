@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { toCanvas } from 'html-to-image';
 import * as THREE from 'three';
 import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
-import { posePageCurl } from '../lib/pageCurl.js';
+import { mirrorPageUV, posePageCurl } from '../lib/pageCurl.js';
 
 const TURN_MS = 1050;
 const CAPTURE_SCALE = 1.5;
@@ -50,21 +50,20 @@ async function capturePage(node, paper, side) {
     skipFonts: true,
     style: { visibility: 'visible' },
   });
-  const width = Math.max(1, Math.round(capture.width / .923));
   const canvas = document.createElement('canvas');
-  canvas.width = width;
+  canvas.width = capture.width;
   canvas.height = capture.height;
   const context = canvas.getContext('2d');
   context.fillStyle = '#fff9ed';
-  context.fillRect(0, 0, width, canvas.height);
+  context.fillRect(0, 0, canvas.width, canvas.height);
   if (side === 'left') {
     context.save();
-    context.translate(width, 0);
+    context.translate(canvas.width, 0);
     context.scale(-1, 1);
-    context.drawImage(paper, 0, 0, width, canvas.height);
+    context.drawImage(paper, 0, 0, canvas.width, canvas.height);
     context.restore();
-  } else context.drawImage(paper, 0, 0, width, canvas.height);
-  context.drawImage(capture, side === 'left' ? 0 : width - capture.width, 0);
+  } else context.drawImage(paper, 0, 0, canvas.width, canvas.height);
+  context.drawImage(capture, 0, 0);
   return canvas;
 }
 
@@ -111,6 +110,14 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       const width = host.clientWidth;
       const height = host.clientHeight;
       if (width < 1 || height < 1) throw new Error('Book has no visible size');
+      const hostBounds = host.getBoundingClientRect();
+      const leftBounds = source[0].getBoundingClientRect();
+      const rightBounds = source[1].getBoundingClientRect();
+      const pageWidth = 2 * rightBounds.width / hostBounds.width;
+      const gutter = 2 * (rightBounds.left - leftBounds.right) / hostBounds.width;
+      if (pageWidth <= 0 || gutter < 0 || pageWidth * 2 + gutter > 2.1) {
+        throw new Error('Book page dimensions are invalid');
+      }
       renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(width, height);
@@ -129,7 +136,7 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       const current = textures.slice(0, 2);
       const target = textures.slice(2);
       function flatPage(texture, x) {
-        const geometry = new THREE.PlaneGeometry(1, pageHeight);
+        const geometry = new THREE.PlaneGeometry(pageWidth, pageHeight);
         const material = new THREE.MeshBasicMaterial({ map: texture });
         resources.push(geometry, material);
         const mesh = new THREE.Mesh(geometry, material);
@@ -137,11 +144,11 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
         scene.add(mesh);
       }
       if (direction === 'next') {
-        flatPage(current[0], -.5);
-        flatPage(target[1], .5);
+        flatPage(current[0], -(pageWidth + gutter) / 2);
+        flatPage(target[1], (pageWidth + gutter) / 2);
       } else {
-        flatPage(target[0], -.5);
-        flatPage(current[1], .5);
+        flatPage(target[0], -(pageWidth + gutter) / 2);
+        flatPage(current[1], (pageWidth + gutter) / 2);
       }
       const shadowCanvas = document.createElement('canvas');
       shadowCanvas.width = 256;
@@ -155,33 +162,38 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       shadowContext.fillRect(0, 0, 256, 2);
       const shadowTexture = textureFrom(shadowCanvas);
       resources.push(shadowTexture);
-      const shadowGeometry = new THREE.PlaneGeometry(1, pageHeight);
+      const shadowGeometry = new THREE.PlaneGeometry(pageWidth, pageHeight);
       resources.push(shadowGeometry);
       const shadowMaterials = [0, 1].map(() => new THREE.MeshBasicMaterial({ map: shadowTexture,
         transparent: true, depthWrite: false, opacity: 0 }));
       resources.push(...shadowMaterials);
       const shadows = shadowMaterials.map((material, index) => {
         const mesh = new THREE.Mesh(shadowGeometry, material);
-        mesh.position.set(index ? .5 : -.5, 0, .015);
+        mesh.position.set((index ? 1 : -1) * (pageWidth + gutter) / 2, 0, .015);
         mesh.scale.x = index ? 1 : -1;
         scene.add(mesh);
         return mesh;
       });
-      const geometry = new THREE.PlaneGeometry(1, pageHeight, 36, 12);
+      const geometry = new THREE.PlaneGeometry(pageWidth, pageHeight, 36, 12);
+      const reverseGeometry = geometry.clone();
       const base = geometry.attributes.position.array.slice();
       const frontTexture = direction === 'next' ? current[1] : current[0];
       const backTexture = direction === 'next' ? target[0] : target[1];
-      const front = new THREE.MeshStandardMaterial({ map: frontTexture, roughness: 1, side: THREE.DoubleSide });
-      const back = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 1, side: THREE.DoubleSide });
-      resources.push(geometry, front, back);
-      const leaf = new THREE.Mesh(geometry, front);
-      leaf.position.z = .04;
-      scene.add(leaf);
-      let face = 'front';
+      if (direction === 'next') mirrorPageUV(reverseGeometry);
+      else mirrorPageUV(geometry);
+      const front = new THREE.MeshStandardMaterial({ map: frontTexture, roughness: 1,
+        side: direction === 'next' ? THREE.FrontSide : THREE.BackSide });
+      const back = new THREE.MeshStandardMaterial({ map: backTexture, roughness: 1,
+        side: direction === 'next' ? THREE.BackSide : THREE.FrontSide });
+      resources.push(geometry, reverseGeometry, front, back);
+      const frontLeaf = new THREE.Mesh(geometry, front);
+      const backLeaf = new THREE.Mesh(reverseGeometry, back);
+      frontLeaf.position.z = backLeaf.position.z = .04;
+      scene.add(frontLeaf, backLeaf);
       function draw(progress) {
         const sine = Math.sin(Math.PI * progress);
-        const nextFace = posePageCurl(geometry, base, progress, direction);
-        if (nextFace !== face) { leaf.material = nextFace === 'front' ? front : back; face = nextFace; }
+        posePageCurl(geometry, base, progress, direction, pageWidth, gutter);
+        posePageCurl(reverseGeometry, base, progress, direction, pageWidth, gutter);
         shadows[0].material.opacity = .68 * sine * (direction === 'next' ? progress : 1 - progress);
         shadows[1].material.opacity = .68 * sine * (direction === 'next' ? 1 - progress : progress);
         renderer.render(scene, camera);

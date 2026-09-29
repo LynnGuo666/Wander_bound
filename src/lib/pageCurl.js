@@ -1,23 +1,25 @@
-/** Pose one paper leaf; the caller swaps front/back textures at the edge-on phase. */
-export function posePageCurl(geometry, basePositions, progress, direction) {
+/** Bend a leaf continuously between the measured left and right page bounds. */
+export function posePageCurl(geometry, basePositions, progress, direction, pageWidth = 1, gutter = 0) {
   const angle = Math.PI * progress;
   const sine = Math.sin(angle);
   const cosine = Math.cos(angle);
   const faceDirection = direction === 'next' ? 1 : -1;
-  const face = progress < .5 ? 'front' : 'back';
-  const mirror = (face === 'front') === (direction !== 'next');
   const positions = geometry.attributes.position;
-  const uvs = geometry.attributes.uv;
   for (let index = 0; index < positions.count; index++) {
-    const edgeDistance = basePositions[index * 3] + .5;
+    const edgeDistance = basePositions[index * 3] + pageWidth / 2;
+    const alongPage = edgeDistance / pageWidth;
     const y = basePositions[index * 3 + 1];
-    const bow = .25 * Math.sin(Math.PI * edgeDistance) * sine;
-    positions.setXYZ(index, faceDirection * (edgeDistance * cosine + bow), y,
-      .13 * edgeDistance * sine + .22 * Math.sin(Math.PI * edgeDistance) * sine);
-    uvs.setX(index, mirror ? 1 - edgeDistance : edgeDistance);
+    const bow = .25 * pageWidth * Math.sin(Math.PI * alongPage) * sine;
+    positions.setXYZ(index, faceDirection * ((gutter / 2 + edgeDistance) * cosine + bow), y,
+      .13 * edgeDistance * sine + .22 * pageWidth * Math.sin(Math.PI * alongPage) * sine);
   }
   positions.needsUpdate = true;
-  uvs.needsUpdate = true;
   geometry.computeVertexNormals();
-  return face;
+}
+
+/** The reverse side of a leaf reads in the opposite horizontal direction. */
+export function mirrorPageUV(geometry) {
+  const uvs = geometry.attributes.uv;
+  for (let index = 0; index < uvs.count; index++) uvs.setX(index, 1 - uvs.getX(index));
+  uvs.needsUpdate = true;
 }
