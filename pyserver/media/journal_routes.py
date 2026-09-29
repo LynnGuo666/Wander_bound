@@ -194,7 +194,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
     async def list_stickers(trip_id: str, request: Request):
         require_media_auth(request)
         trip_or_404(trip_id)
-        return {"stickers": stickers.list_for_trip(trip_id)}
+        return {"stickers": stickers.list_for_trip(trip_id), "promptVersions": stickers.prompt_versions()}
 
     @router.post("/api/media/trips/{trip_id}/stickers")
     async def create_sticker(trip_id: str, request: Request, payload: dict):
