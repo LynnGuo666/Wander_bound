@@ -16,6 +16,10 @@ ios/.build/
 ios/.swiftpm/
 ios/TravelMemory.xcodeproj/project.xcworkspace/xcuserdata/
 ios/TravelMemory.xcodeproj/xcuserdata/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
 .venv/
 __pycache__/
 .pytest_cache/
