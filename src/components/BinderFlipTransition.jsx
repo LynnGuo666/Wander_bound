@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { toCanvas } from 'html-to-image';
 import * as THREE from 'three';
 import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
+import { posePageCurl } from '../lib/pageCurl.js';
 
 const TURN_MS = 1050;
 const CAPTURE_SCALE = 1.5;
@@ -168,7 +169,6 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       });
       const geometry = new THREE.PlaneGeometry(1, pageHeight, 36, 12);
       const base = geometry.attributes.position.array.slice();
-      const uvs = geometry.attributes.uv;
       const frontTexture = direction === 'next' ? current[1] : current[0];
       const backTexture = direction === 'next' ? target[0] : target[1];
       const front = new THREE.MeshStandardMaterial({ map: frontTexture, roughness: 1, side: THREE.DoubleSide });
@@ -177,30 +177,11 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       const leaf = new THREE.Mesh(geometry, front);
       leaf.position.z = .04;
       scene.add(leaf);
-      const faceDirection = direction === 'next' ? 1 : -1;
       let face = 'front';
       function draw(progress) {
-        const theta = Math.PI * progress;
-        const sine = Math.sin(theta);
-        const cosine = Math.cos(theta);
-        const positions = geometry.attributes.position;
-        for (let i = 0; i < positions.count; i++) {
-          const s = base[i * 3] + .5;
-          const y = base[i * 3 + 1];
-          const bow = .25 * Math.sin(Math.PI * s) * sine;
-          positions.setXYZ(i, faceDirection * (s * cosine + bow), y,
-            .13 * s * sine + .22 * Math.sin(Math.PI * s) * sine);
-        }
-        positions.needsUpdate = true;
-        geometry.computeVertexNormals();
-        const nextFace = progress < .5 ? 'front' : 'back';
+        const sine = Math.sin(Math.PI * progress);
+        const nextFace = posePageCurl(geometry, base, progress, direction);
         if (nextFace !== face) { leaf.material = nextFace === 'front' ? front : back; face = nextFace; }
-        for (let i = 0; i < uvs.count; i++) {
-          const s = base[i * 3] + .5;
-          const mirror = (face === 'front') === (direction !== 'next');
-          uvs.setX(i, mirror ? 1 - s : s);
-        }
-        uvs.needsUpdate = true;
         shadows[0].material.opacity = .68 * sine * (direction === 'next' ? progress : 1 - progress);
         shadows[1].material.opacity = .68 * sine * (direction === 'next' ? 1 - progress : progress);
         renderer.render(scene, camera);
