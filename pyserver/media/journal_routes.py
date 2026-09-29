@@ -24,18 +24,31 @@ def catalog() -> list[dict]:
     return json.loads(TEMPLATES.read_text())
 
 
+def valid_motif(value: object) -> bool:
+    return (isinstance(value, str) and 2 <= len(value.strip()) <= 60
+            and not any(ord(char) < 32 for char in value))
+
+
 def photo_context(media: MediaStore, trip_id: str) -> list[dict]:
     """Only selected photos' text tags go to StepFun; image bytes and private EXIF stay local."""
+    def text_tag(value: object, limit: int) -> str:
+        return value[:limit] if isinstance(value, str) else ""
+
     result = []
     for photo in media.selected(trip_id)["photos"][:12]:
-        tags = photo.get("tags") or {}
+        tags = photo.get("tags")
+        tags = tags if isinstance(tags, dict) else {}
+        objects = tags.get("objects")
+        objects = objects if isinstance(objects, list) else []
+        quality = tags.get("quality")
+        quality = quality if isinstance(quality, dict) else {}
         result.append({"photoId": photo["id"], "capturedDay": photo.get("capturedDay"),
-                       "scene": str(tags.get("scene") or "")[:100],
-                       "activity": str(tags.get("activity") or "")[:40],
-                       "objects": [str(item)[:40] for item in (tags.get("objects") or [])[:5] if isinstance(item, str)],
-                       "locationClue": str(tags.get("location_clue") or "")[:80],
-                       "mood": str(tags.get("mood") or "")[:40],
-                       "highlight": (tags.get("quality") or {}).get("highlight") is True})
+                       "scene": text_tag(tags.get("scene"), 100),
+                       "activity": text_tag(tags.get("activity"), 40),
+                       "objects": [item[:40] for item in objects[:5] if isinstance(item, str)],
+                       "locationClue": text_tag(tags.get("location_clue"), 80),
+                       "mood": text_tag(tags.get("mood"), 40),
+                       "highlight": quality.get("highlight") is True})
     return result
 
 
@@ -61,6 +74,10 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                     continue
                 if item.get("photoId") and item["photoId"] not in allowed_photos:
                     raise HTTPException(400, "页面引用了未授权的旅途照片")
+                if item.get("videoId"):
+                    video = jobs.get(item["videoId"])
+                    if not video or video.get("tripId") != trip_id or video.get("kind") != "memory":
+                        raise HTTPException(400, "页面引用了其他行程的旅途短片")
                 for name in ("stickerId", "stampId", "assetId"):
                     if item.get(name):
                         job = stickers.get(item[name])
@@ -88,7 +105,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                       "templates": [{"id": item["id"], "description": item["description"],
                                      "slots": [slot["kind"] for slot in item["slots"]]} for item in templates]}
         messages = [
-            {"role": "system", "content": "你是旅行手账设计师。根据城市、行程地点以及已精选照片的识别标签，为左右页各挑一个不同的模板，并构思 4 到 6 枚不同主题的贴纸、一枚邮票、一张风景插图和一张明信片图案。照片有标签时优先复用真实识别到的食物、建筑、风景和活动；没有标签时只依据行程，不得编造照片事实。还要写简短手账日记和明信片留言，不能把未识别的细节写成真实经历。用户保护的页面不能由你改动，这由服务端执行。只返回 JSON：{\"templates\":[\"左页模板id\",\"右页模板id\"],\"photoOrder\":[\"精选照片id\"],\"stickerMotifs\":[\"具体图案1\",\"具体图案2\",\"具体图案3\",\"具体图案4\"],\"stampMotif\":\"城市邮票图案\",\"postcardMotif\":\"明信片风景图案\",\"illustrationMotif\":\"页面插图图案\",\"diaryText\":\"不超过45字、只写可核实场景的手账短句\",\"postcardText\":\"不超过28字的明信片短句\"}。只使用给定的模板和照片 id。图案不超过 60 字，不含文字、品牌或排版指令。只用照片的文字标签，不请求原图。"},
+            {"role": "system", "content": "你是旅行手账设计师。根据城市、行程地点以及已精选照片的识别标签，为左右页各挑一个不同的模板，并构思 6 到 8 枚互不重复的贴纸、一枚邮票、一张风景插图和一张明信片图案。贴纸应覆盖照片中真实识别到的食物、建筑、风景或活动，以及行程中确有的地点；没有标签时只依据行程，不得编造照片事实。插画选城市远景；明信片从给定行程地点或精选照片标签中挑一个与插画不同的可见主体局部，点名建筑立面、门窗、檐口、水面纹理或标签中确有的食物主体，不能只写城市夜景、风景、街景等笼统主题。两种图案只描述确有的地点、建筑、风景或食物静物，不添加没有依据的食物与物件，也不安排人物、游客或旅伴。还要写简短手账日记和明信片留言，不能把未识别的细节写成真实经历。用户保护的页面不能由你改动，这由服务端执行。只返回 JSON：{\"templates\":[\"左页模板id\",\"右页模板id\"],\"photoOrder\":[\"精选照片id\"],\"stickerMotifs\":[\"具体图案1\",\"具体图案2\",\"具体图案3\",\"具体图案4\",\"具体图案5\",\"具体图案6\"],\"stampMotif\":\"城市邮票图案\",\"postcardMotif\":\"明信片风景图案\",\"illustrationMotif\":\"页面插图图案\",\"diaryText\":\"不超过45字、只写可核实场景的手账短句\",\"postcardText\":\"不超过28字的明信片短句\"}。只使用给定的模板和照片 id。图案不超过 60 字，不含文字、品牌或排版指令。只用照片的文字标签，不请求原图。"},
             {"role": "user", "content": json.dumps(input_data, ensure_ascii=False)},
         ]
         try:
@@ -103,6 +120,10 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
             selected = choice.get("templates")
             motifs = choice.get("stickerMotifs")
             stamp = choice.get("stampMotif")
+            postcard = choice.get("postcardMotif")
+            illustration = choice.get("illustrationMotif")
+            diary = choice.get("diaryText")
+            postcard_text = choice.get("postcardText")
             photo_order = choice.get("photoOrder", [])
             available_photos = {item["photoId"] for item in recognized}
             if not isinstance(photo_order, list) or len(photo_order) != len(set(photo_order)) or any(
@@ -110,22 +131,19 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
                 raise ValueError("StepFun 返回了不属于精选清单的照片")
             if (not isinstance(selected, list) or len(selected) != 2 or selected[0] == selected[1]
                     or any(item not in ids for item in selected)
-                    or not isinstance(motifs, list) or not 4 <= len(motifs) <= 6
-                    or any(not isinstance(item, str) or not 2 <= len(item.strip()) <= 60
-                           or any(ord(char) < 32 for char in item) for item in motifs)
-                    or not isinstance(stamp, str) or not 2 <= len(stamp.strip()) <= 60
-                    or any(ord(char) < 32 for char in stamp)):
-                raise ValueError("StepFun 返回了无效的模板或贴纸主题")
-            diary = choice.get("diaryText")
-            postcard_text = choice.get("postcardText")
-            if (diary is not None and (not isinstance(diary, str) or len(diary) > 120)) or (
-                    postcard_text is not None and (not isinstance(postcard_text, str) or len(postcard_text) > 80)):
-                raise ValueError("StepFun 返回的手账文字过长")
-            return {"templates": selected, "stickerMotifs": [item.strip() for item in motifs],
-                    "stampMotif": stamp.strip(), "postcardMotif": str(choice.get("postcardMotif") or stamp).strip()[:60],
-                    "illustrationMotif": str(choice.get("illustrationMotif") or motifs[0]).strip()[:60],
+                    or not isinstance(motifs, list) or not 4 <= len(motifs) <= 8
+                    or any(not valid_motif(item) for item in motifs)
+                    or len({item.strip() for item in motifs}) < 4
+                    or not all(valid_motif(item) for item in (stamp, postcard, illustration))):
+                raise ValueError("StepFun 返回了不完整或无效的模板与素材主题")
+            if (not isinstance(diary, str) or not 1 <= len(diary.strip()) <= 120
+                    or not isinstance(postcard_text, str) or not 1 <= len(postcard_text.strip()) <= 80):
+                raise ValueError("StepFun 未写完手账日记或明信片留言")
+            return {"templates": selected, "stickerMotifs": list(dict.fromkeys(item.strip() for item in motifs)),
+                    "stampMotif": stamp.strip(), "postcardMotif": postcard.strip(),
+                    "illustrationMotif": illustration.strip(),
                     "photoOrder": photo_order or [item["photoId"] for item in recognized],
-                    "diaryText": (diary or "")[:45], "postcardText": (postcard_text or "")[:28],
+                    "diaryText": diary.strip()[:45], "postcardText": postcard_text.strip()[:28],
                     "source": step.MODEL}
         except Exception as exc:
             raise HTTPException(502, f"StepFun 手账排版失败：{str(exc)[:100]}") from exc
@@ -176,7 +194,7 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
     async def list_stickers(trip_id: str, request: Request):
         require_media_auth(request)
         trip_or_404(trip_id)
-        return {"stickers": stickers.list_for_trip(trip_id)}
+        return {"stickers": stickers.list_for_trip(trip_id), "promptVersions": stickers.prompt_versions()}
 
     @router.post("/api/media/trips/{trip_id}/stickers")
     async def create_sticker(trip_id: str, request: Request, payload: dict):
