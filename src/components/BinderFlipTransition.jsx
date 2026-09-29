@@ -16,13 +16,14 @@ export default function BinderFlipTransition({ direction, stageRef, incomingRef,
     let cancelWait = () => {};
     let imageTimer;
     const preview = incomingRef.current;
-    const previewPainted = () => preview?.dataset.previewReady === 'true';
+    const previewPainted = () => preview?.dataset.previewReady === 'true'
+      && ![...preview.querySelectorAll('.media-placeholder')].some(node => node.textContent?.includes('正在加载'));
     const waitForPreview = () => new Promise(resolve => {
       if (previewPainted()) { resolve(true); return; }
       if (!preview) { resolve(false); return; }
       let settled = false;
       const observer = new MutationObserver(() => { if (previewPainted()) finish(true); });
-      const timer = setTimeout(() => finish(false), 1500);
+      const timer = setTimeout(() => finish(preview?.dataset.previewReady === 'true'), 2500);
       function finish(ready) {
         if (settled) return;
         settled = true;
