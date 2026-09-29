@@ -14,13 +14,14 @@ test('automatic journal scenes use an actual itinerary landmark', () => {
   assert.equal(motifs.stickers[0], '上海小笼包店的食物');
   assert.match(motifs.illustration, /上海外滩/);
   assert.match(motifs.postcard, /上海外滩/);
+  assert.match(motifs.postcard, /建筑立面局部/);
   assert.match(motifs.stamp, /上海外滩/);
 });
 
 test('automatic scenes remain grounded in the city when stops are unavailable', () => {
   const motifs = itineraryMotifs({ plan: { destination: '柳州', itinerary: [] } }, []);
   assert.equal(motifs.illustration, '柳州的建筑、街道与自然光线');
-  assert.equal(motifs.postcard, '柳州的旅途风景');
+  assert.equal(motifs.postcard, '柳州的一处近景细节');
 });
 
 test('sticker themes match relevant stops without repeating city names', () => {
@@ -39,6 +40,14 @@ test('sticker themes match relevant stops without repeating city names', () => {
     [categories.find(category => category.id === 'mountain')], { includeAllCategories: true });
   assert.equal(manualMountain.stickers.length, 1);
   assert.ok(manualMountain.stickers[0].startsWith('以柳州为灵感'));
+});
+
+test('waterfront postcards request a close detail instead of repeating the landscape', () => {
+  const motifs = itineraryMotifs({ plan: { destination: '上海', itinerary: [
+    { stops: [{ name: '黄浦江' }] },
+  ] } }, []);
+  assert.equal(motifs.postcard, '上海黄浦江的水面波纹与光影局部');
+  assert.notEqual(motifs.postcard, motifs.illustration);
 });
 
 test('a new trip receives twelve varied stickers plus itinerary-relevant extras', () => {
