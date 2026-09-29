@@ -1,0 +1,14 @@
+................................                                         [100%]
+=============================== warnings summary ===============================
+pyserver/tests/test_photo_develop.py::test_develop_validates_bounds_and_renders_without_mutating_source
+pyserver/tests/test_photo_develop.py::test_develop_api_auth_preview_and_saved_version
+pyserver/tests/test_photo_develop.py::test_develop_api_auth_preview_and_saved_version
+pyserver/tests/test_photo_develop.py::test_develop_api_auth_preview_and_saved_version
+pyserver/tests/test_photo_develop.py::test_develop_api_auth_preview_and_saved_version
+pyserver/tests/test_photo_develop.py::test_dgx_suggest_and_review_are_injectable_without_spark
+pyserver/tests/test_photo_develop.py::test_dgx_provider_contract_sends_only_private_jpeg_data_and_parses_responses
+  /private/tmp/travel-agent-dynamic-photo-20260929/pyserver/media/images.py:269: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(image.getdata())
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+32 passed, 7 warnings in 0.74s
