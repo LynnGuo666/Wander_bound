@@ -31,6 +31,24 @@ class Jobs:
         return self.entries.get(job_id)
 
 
+def test_step_photo_context_ignores_malformed_recognition_fields():
+    class SelectedPhotos:
+        def selected(self, _trip_id):
+            return {"photos": [{"id": "photo-a", "capturedDay": "2026-09-29",
+                                "tags": {"scene": {"unexpected": "object"}, "objects": "外滩游船",
+                                         "quality": "highlight", "activity": ["赏景"]}},
+                               {"id": "photo-b", "tags": {"scene": "黄浦江", "objects": ["游船", 42],
+                                                          "quality": {"highlight": True}}}]}
+
+    context = journal_routes.photo_context(SelectedPhotos(), "trip-a")
+    assert context[0] == {"photoId": "photo-a", "capturedDay": "2026-09-29",
+                          "scene": "", "activity": "", "objects": [], "locationClue": "",
+                          "mood": "", "highlight": False}
+    assert context[1]["scene"] == "黄浦江"
+    assert context[1]["objects"] == ["游船"]
+    assert context[1]["highlight"] is True
+
+
 def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_path, monkeypatch):
     user = {"id": "journal-test-user", "role": "member"}
     trips = TripStore(tmp_path / "trips")
