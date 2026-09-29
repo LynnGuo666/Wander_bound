@@ -99,6 +99,34 @@ def test_batch_recovers_file_written_before_metadata_receipt_without_rerender(tm
     asyncio.run(scenario())
 
 
+def test_batch_uses_real_local_renderer_and_freezes_its_version(tmp_path, monkeypatch):
+    monkeypatch.delenv("MCP_IMAGES_COMMAND", raising=False)
+    app, _, media, trip, _, first, second, _ = setup(tmp_path, monkeypatch)
+    data = batch_payload(media, trip, first, second)
+    data["photos"] = [{"photoId": first["id"], "action": "develop",
+                       "params": {"crop": {"left": 0.1, "top": 0, "width": 0.8, "height": 1},
+                                  "exposure": 0.4}, "note": "real local render"},
+                      {"photoId": second["id"], "action": "none"}]
+
+    async def scenario():
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(f"/api/media/trips/{trip['id']}/dynamic-photo/develop-batch-and-settle",
+                                         json=data, headers=headers())
+            assert response.status_code == 202, response.text
+            record = media.development_for_operation(first["id"], data["operationId"])
+            assert record["rendererId"] == "pillow-local@1"
+            assert media.bytes(first["id"], record["variant"]) != media.bytes(first["id"])
+            receipt = json.loads((DynamicPhotoSources(media).batches / f"{data['operationId']}.json").read_text())
+            assert receipt["rendererId"] == "pillow-local@1"
+            monkeypatch.setenv("MCP_IMAGES_COMMAND", "mcp-images")
+            changed = await client.post(f"/api/media/trips/{trip['id']}/dynamic-photo/develop-batch-and-settle",
+                                        json=data, headers=headers())
+            assert changed.status_code == 409
+            assert changed.json()["detail"]["code"] == "RENDERER_CHANGED"
+
+    asyncio.run(scenario())
+
+
 def test_execution_contract_change_gets_new_job_identity(tmp_path, monkeypatch):
     _, _, media, trip, _, first, second, _ = setup(tmp_path, monkeypatch)
     sources = DynamicPhotoSources(media)

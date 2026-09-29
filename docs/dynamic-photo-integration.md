@@ -24,6 +24,8 @@ Content-Type: application/json
 
 `operationId` 是请求方为整批生成的一次稳定 UUID。服务保存 payload SHA-256 和逐张完成收据；重复 ID 配不同输入拒绝。中途失败返回 `settled:false`、`completedPhotoIds` 和失败码，不创建动态任务；同请求恢复只处理未完成项。每张精修按 `operationId+photoId` 得到确定性 variant；即使崩溃发生在文件写入之后、元数据/批次收据之前，也核查已有文件并恢复同一版本。精选批次或 `updatedAt` 变化时明确拒绝，需发起新批次。已有精修结果缺失或损坏时不能静默回退原图。
 
+精修渲染器由部署配置决定并记录在批次收据与逐张 `developments[].rendererId`：外部 MCP 已配置时为 `mcp-images+local-curves@1`，其调用失败直接报错；未配置时使用仓库现有完整的 Pillow `images.develop`，标记 `pillow-local@1`。本地实现按同一组正规化参数执行裁切、曝光、对比度、gamma、曲线、HSL 与锐度。恢复同一 operationId 时若渲染器版本已变，返回 `RENDERER_CHANGED`，不得用另一实现静默补完批次。实际精修应核对来源和精修图的 SHA-256 及像素，而不能仅以 variant 存在断言成功。
+
 可直接运行的请求顺序如下。先设置部署地址、自己的账户令牌、行程 ID，并安装 `jq`；`operationId` 和请求体文件在同批重试时保持原值。示例把前一张交给精修、后一张明确为无新增精修，其余照片也须逐张加入完整清单。
 
 ```sh
