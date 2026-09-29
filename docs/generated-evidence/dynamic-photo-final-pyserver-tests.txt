@@ -1,0 +1,31 @@
+........................................................................ [ 38%]
+........................................................................ [ 76%]
+............................................                             [100%]
+=============================== warnings summary ===============================
+pyserver/tests/test_curate.py: 7 warnings
+pyserver/tests/test_private_client_contracts.py: 1 warning
+pyserver/tests/test_quality.py: 7 warnings
+  /private/tmp/travel-agent-dynamic-photo-20260929/pyserver/media/quality.py:38: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    px = list(small.getdata())
+
+pyserver/tests/test_dynamic_integration.py::test_batch_uses_real_local_renderer_and_freezes_its_version
+pyserver/tests/test_photo_develop.py::test_develop_validates_bounds_and_renders_without_mutating_source
+pyserver/tests/test_photo_develop.py::test_develop_api_auth_preview_and_saved_version
+pyserver/tests/test_photo_develop.py::test_develop_api_auth_preview_and_saved_version
+pyserver/tests/test_photo_develop.py::test_unconfigured_mcp_uses_versioned_local_development
+pyserver/tests/test_photo_develop.py::test_unconfigured_mcp_uses_versioned_local_development
+pyserver/tests/test_photo_develop.py::test_dgx_suggest_and_review_are_injectable_without_spark
+pyserver/tests/test_photo_develop.py::test_dgx_provider_contract_sends_only_private_jpeg_data_and_parses_responses
+  /private/tmp/travel-agent-dynamic-photo-20260929/pyserver/media/images.py:269: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    pixels = list(image.getdata())
+
+pyserver/tests/test_journal_sticker_crop.py::test_remote_artifact_is_not_cropped_into_the_sticker
+  /private/tmp/travel-agent-dynamic-photo-20260929/pyserver/tests/test_journal_sticker_crop.py:16: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    assert not any(pixel[:3] == (70, 90, 120) and pixel[3] for pixel in cropped.getdata())
+
+pyserver/tests/test_quality.py::test_motion_anisotropy_responds_to_directional_texture
+  /private/tmp/travel-agent-dynamic-photo-20260929/pyserver/tests/test_quality.py:145: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    assert len(set(vertical_bars.getdata())) == 2      # 确认不是无缝铺满的纯色
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+188 passed, 25 warnings in 7.73s

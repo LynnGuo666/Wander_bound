@@ -33,7 +33,7 @@ H3 prompt `252f9f91-2008-410f-9dff-f0de3ebcd75a` 于 14:03:20 CST 提交，并�
 
 ## 视频取得方式与验收边界
 
-私有可播放 MP4 持久留在 Spark：`/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4`；封面和脱敏收据也在同一隔离目录下。验证服务现已停止，若需本机播放，可经已授权的 SSH 身份认证下载该文件：
+私有可播放 MP4 已另存至本机原控制根的 `private-artifacts/dynamic-photo-20260929/yosemite-falls.mp4`，权限为仅所有者读写，SHA-256 与真实输出相同；没有纳入 Git。原文件持久留在 Spark：`/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4`；封面和脱敏收据也在同一隔离目录下。验证服务现已停止，若需再次下载，可经已授权的 SSH 身份认证：
 
 ```sh
 scp -P 6082 Developer@106.13.186.155:/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4 ./dynamic-photo-validation.mp4
