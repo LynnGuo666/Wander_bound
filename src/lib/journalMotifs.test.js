@@ -9,7 +9,7 @@ test('automatic journal scenes use an actual itinerary landmark', () => {
   const trip = { plan: { destination: '上海', itinerary: [
     { stops: [{ name: '小笼包店' }, { name: '外滩' }] },
   ] } };
-  const categories = [{ motif: '{{city}}{{place}}的食物' }];
+  const categories = [{ id: 'food', motif: '{{city}}{{place}}的食物' }];
   const motifs = itineraryMotifs(trip, categories);
   assert.equal(motifs.stickers[0], '上海小笼包店的食物');
   assert.match(motifs.illustration, /上海外滩/);
@@ -21,6 +21,24 @@ test('automatic scenes remain grounded in the city when stops are unavailable', 
   const motifs = itineraryMotifs({ plan: { destination: '柳州', itinerary: [] } }, []);
   assert.equal(motifs.illustration, '柳州的建筑、街道与自然光线');
   assert.equal(motifs.postcard, '柳州的旅途风景');
+});
+
+test('sticker themes match relevant stops without repeating city names', () => {
+  const trip = { plan: { destination: '上海', itinerary: [
+    { stops: [{ name: '上海外滩' }, { name: '小笼包店' }, { name: '上海火车站' }] },
+  ] } };
+  const chosen = categories.filter(category => ['food', 'architecture', 'transport'].includes(category.id));
+  const motifs = itineraryMotifs(trip, chosen);
+  assert.match(motifs.stickers[0], /上海小笼包店附近/);
+  assert.match(motifs.stickers[1], /上海外滩的代表性建筑/);
+  assert.match(motifs.stickers[2], /上海火车站附近/);
+  assert.ok(motifs.stickers.every(motif => !motif.includes('上海上海')));
+  const cityOnly = itineraryMotifs({ plan: { destination: '柳州', itinerary: [] } }, chosen);
+  assert.ok(cityOnly.stickers.every(motif => !motif.includes('柳州柳州')));
+  const manualMountain = itineraryMotifs({ plan: { destination: '柳州', itinerary: [] } },
+    [categories.find(category => category.id === 'mountain')], { includeAllCategories: true });
+  assert.equal(manualMountain.stickers.length, 1);
+  assert.ok(manualMountain.stickers[0].startsWith('以柳州为灵感'));
 });
 
 test('a new trip receives twelve varied stickers plus itinerary-relevant extras', () => {
