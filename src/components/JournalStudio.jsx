@@ -395,11 +395,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   async function generateCategory(category) {
     setBusy(true); setError(''); setNotice('');
     try {
-      const city = trip.plan?.destination || tripTitle(trip);
-      const stops = (trip.plan?.itinerary || []).flatMap(day => day.stops || [])
-        .map(stop => stop.name).filter(Boolean);
-      const place = stops[stickerCategories.findIndex(item => item.id === category.id) % Math.max(stops.length, 1)] || city;
-      const nextMotif = category.motif.replaceAll('{{city}}', city).replaceAll('{{place}}', place);
+      const nextMotif = itineraryMotifs(trip, [category], { includeAllCategories: true }).stickers[0];
       const id = await queueSticker(nextMotif);
       const pageIndex = selected?.pageIndex ?? spreadIndex * 2;
       const item = { id: itemId(), kind: 'sticker', stickerId: id, x: 63, y: 59,
