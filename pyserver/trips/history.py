@@ -106,10 +106,10 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
                   f"\n线索：{json.dumps(evidence, ensure_ascii=False)}")
         try:
             async with controller.use("chat") as spec:
-                async with httpx.AsyncClient(timeout=180) as client:
+                async with httpx.AsyncClient(timeout=400) as client:
                     response = await client.post(spec.url.rstrip("/") + "/v1/chat/completions", json={
                         "model": os.getenv("SPARK_QWEN38_MODEL", "qwen38-27b"),
-                        "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": 1100,
+                        "messages": [{"role": "user", "content": prompt}], "temperature": 0, "max_tokens": 2400,
                         "response_format": {"type": "json_object"}, "stream": False,
                         "chat_template_kwargs": {"enable_thinking": False}})
                 response.raise_for_status()
