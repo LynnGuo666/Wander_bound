@@ -52,17 +52,20 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
     stickers = StickerStore(media.root / "stickers", client, ModelController())
     monkeypatch.setattr(stickers, "schedule", lambda: None)
     captured = []
+    valid_plan = {
+        "templates": ["photo-wall", "book-and-clip"],
+        "photoOrder": [photo["id"]],
+        "stickerMotifs": ["绿色电车和银杏", "黄浦江上的小船", "外滩建筑", "旅途美食",
+                          "外滩夜色倒影", "黄浦江边的相机"],
+        "stampMotif": "外滩江景", "postcardMotif": "黄浦江夜景明信片",
+        "illustrationMotif": "江边建筑和游船", "diaryText": "黄浦江边看到了游船。",
+        "postcardText": "寄一张黄浦江夜景给未来的我。",
+    }
 
     async def complete(messages, tools, key):
         captured.append(messages)
         assert tools == [] and key == "test-step-key"
-        yield {"type": "completion", "message": {"content": json.dumps({
-            "templates": ["photo-wall", "book-and-clip"],
-            "photoOrder": [photo["id"]],
-            "stickerMotifs": ["绿色电车和银杏", "黄浦江上的小船", "外滩建筑", "旅途美食",
-                               "外滩夜色倒影", "黄浦江边的相机"],
-            "stampMotif": "外滩江景", "postcardMotif": "黄浦江夜景明信片",
-            "illustrationMotif": "江边建筑和游船", "diaryText": "黄浦江边看到了游船。"})}}
+        yield {"type": "completion", "message": {"content": json.dumps(valid_plan)}}
 
     monkeypatch.setattr(journal_routes.step, "complete", complete)
     app = FastAPI()
@@ -95,8 +98,20 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             assert photo["id"] in response.json()["photoOrder"]
             assert len(response.json()["stickerMotifs"]) == 6
             assert response.json()["diaryText"] == "黄浦江边看到了游船。"
+            assert response.json()["postcardText"] == valid_plan["postcardText"]
             assert "base64" not in json.dumps(captured)
             assert "sourceSha256" not in json.dumps(captured)
+            async def incomplete(_messages, _tools, _key):
+                yield {"type": "completion", "message": {"content": json.dumps({
+                    **valid_plan, "postcardMotif": {"unexpected": "object"}})}}
+            monkeypatch.setattr(journal_routes.step, "complete", incomplete)
+            assert (await http.post(base + "/journal/compose")).status_code == 502
+            async def unwritten(_messages, _tools, _key):
+                yield {"type": "completion", "message": {"content": json.dumps({
+                    **valid_plan, "postcardText": ""})}}
+            monkeypatch.setattr(journal_routes.step, "complete", unwritten)
+            assert (await http.post(base + "/journal/compose")).status_code == 502
+            assert (await http.get(base + "/journal")).json()["version"] == 0
             created = await http.post(base + "/stickers", json={"motif": "绿色电车和银杏"})
             assert created.status_code == 202, created.text
             body = created.json()
