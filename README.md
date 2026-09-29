@@ -20,7 +20,7 @@ Python 主服务只在本机调试；Spark 上运行 OTA、12306、道旅与旅�
 | `pyserver/providers/` | MCP HTTP 客户端与非 MCP 的高德 API |
 | `server/ota/`, `server/providers/`, `server/mcp-data/` | Node 供应商解析与高层 MCP 工具实现；无主服务、Agent 或媒体 API |
 | `deploy/*-mcp/` | Spark 上相互独立的 Docker MCP 容器 |
-| `src/`, `ios/` | React 和 SwiftUI 客户端 |
+| `src/`, `ios/`, `android/` | React、SwiftUI 和 Android 相册上传客户端 |
 
 数据路径：Python Agent → `travel-data-mcp` 四个工具 → OTA/12306/道旅 Docker MCP → 供应商。途牛三层信封与道旅 `hotelInformationList`/`price.lowestPrice` 都在 Node 层解析，Python 收到归一化结果。密钥通过仅供本次请求的 MCP HTTP 头发送。MCP 工具按需调用，Agent 输入不会一次包含所有供应商工具定义。
 
