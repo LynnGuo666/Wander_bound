@@ -10,7 +10,7 @@ from pathlib import Path
 from ..trips import now
 from ..accounts import current_user
 from .curate import curate_trip
-from .vlm import VLMError, tag_image
+from .vlm import VLMError, tag_image, tag_history_image
 
 
 class AnalysisJobs:
@@ -44,7 +44,7 @@ class AnalysisJobs:
         finally:
             temporary.unlink(missing_ok=True)
 
-    def submit(self, trip_id: str, photo_ids: list[str], batch_id: str) -> dict:
+    def submit(self, trip_id: str, photo_ids: list[str], batch_id: str, purpose: str = "curation") -> dict:
         if (not isinstance(photo_ids, list) or not photo_ids or len(photo_ids) > 10000
                 or any(not isinstance(pid, str) for pid in photo_ids)
                 or len(photo_ids) != len(set(photo_ids))):
@@ -54,14 +54,16 @@ class AnalysisJobs:
             raise ValueError("照片不存在或不属于该行程")
         if not isinstance(batch_id, str) or not 1 <= len(batch_id) <= 128:
             raise ValueError("batchId 无效")
+        if purpose not in {"curation", "history"}:
+            raise ValueError("purpose 无效")
         for previous in self.list(trip_id):
             if previous["batchId"] == batch_id:
-                if previous["photoIds"] != photo_ids:
+                if previous["photoIds"] != photo_ids or previous.get("purpose", "curation") != purpose:
                     raise ValueError("batchId 已用于另一批照片")
                 return previous
         job = {"id": str(uuid.uuid4()), "tripId": trip_id, "photoIds": photo_ids,
                "ownerId": (current_user.get() or {}).get("id"),
-               "batchId": batch_id, "status": "queued", "stage": "等待分析",
+               "batchId": batch_id, "purpose": purpose, "status": "queued", "stage": "等待分析",
                "completed": 0, "total": len(photo_ids), "results": {}, "recommended": [],
                "warnings": [], "error": None, "createdAt": now(), "updatedAt": now()}
         self.save(job)
@@ -109,6 +111,9 @@ class AnalysisJobs:
 
     async def run_one(self, job: dict) -> None:
         try:
+            if job.get("purpose") == "history":
+                await self.run_history(job)
+                return
             job.update(completed=0, results={}, recommended=[], warnings=[])
             job.update(status="running", stage="画质筛选与去重", updatedAt=now())
             self.save(job)
@@ -136,6 +141,41 @@ class AnalysisJobs:
                         job["warnings"].append({"photoId": pid, "message": "视觉打标未完成，已保留画质分析"})
                 job["results"][pid]["quality"] = (self.media.get(pid) or {}).get("quality") or {}
                 job["completed"] += 1
+                job["updatedAt"] = now()
+                self.save(job)
+            job.update(status="succeeded", stage="分析完成", updatedAt=now())
+        except asyncio.CancelledError:
+            self.save(job)
+            raise
+        except Exception:
+            job.update(status="failed", stage="分析失败", error="分析暂时失败，请重试", updatedAt=now())
+        self.save(job)
+
+    async def run_history(self, job: dict) -> None:
+        """Examine every selected photo, including images curation would discard."""
+        job.update(status="running", stage="逐张识别历史行程线索", completed=0,
+                   results={}, recommended=[], warnings=[], updatedAt=now())
+        self.save(job)
+
+        async def analyze(pid: str) -> tuple[str, dict | None]:
+            tags = (self.media.get(pid) or {}).get("tags")
+            if tags:
+                return pid, tags
+            try:
+                return pid, await asyncio.to_thread(tag_history_image, self.media.bytes(pid))
+            except VLMError:
+                return pid, None
+
+        try:
+            for start in range(0, len(job["photoIds"]), 3):
+                batch = job["photoIds"][start:start + 3]
+                for pid, tags in await asyncio.gather(*(analyze(pid) for pid in batch)):
+                    if tags:
+                        self.media.set_tags(pid, tags)
+                    else:
+                        job["warnings"].append({"photoId": pid, "message": "视觉打标未完成，已保留元数据"})
+                    job["results"][pid] = {"verdict": "evidence", "tags": tags or {}}
+                    job["completed"] += 1
                 job["updatedAt"] = now()
                 self.save(job)
             job.update(status="succeeded", stage="分析完成", updatedAt=now())

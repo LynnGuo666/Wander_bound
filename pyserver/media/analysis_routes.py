@@ -19,7 +19,10 @@ def router_for(trips: TripStore, jobs: AnalysisJobs) -> APIRouter:
         if not isinstance(trip_id, str) or not trips.get(trip_id):
             raise HTTPException(404, "行程不存在")
         try:
-            job = jobs.submit(trip_id, payload.get("photoIds"), payload.get("batchId"))
+            purpose = payload.get("purpose", "curation")
+            if purpose == "history" and trips.get(trip_id).get("kind") != "history":
+                raise ValueError("历史分析只能用于过往旅行")
+            job = jobs.submit(trip_id, payload.get("photoIds"), payload.get("batchId"), purpose)
         except (TypeError, ValueError) as exc:
             raise HTTPException(400, str(exc)) from exc
         return JSONResponse({key: value for key, value in job.items() if key != "ownerId"}, status_code=202)

@@ -3,6 +3,7 @@ import Photos
 import UIKit
 import ImageIO
 import UniformTypeIdentifiers
+import CoreLocation
 
 struct TripPhoto: Identifiable {
     let id: String
@@ -66,7 +67,23 @@ final class TripPhotoLibrary: ObservableObject {
         candidates.replaceSubrange(index...index, with: parts)
     }
 
-    func scanAllAuthorized() async {
+    func scanAllAuthorized(homeCity: String) async {
+        let city = homeCity.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !city.isEmpty else {
+            permissionNote = "请先填写常居住地，再扫描旅行照片。"
+            return
+        }
+        let home: CLLocationCoordinate2D
+        do {
+            guard let coordinate = try await CLGeocoder().geocodeAddressString(city).first?.location?.coordinate else {
+                permissionNote = "无法定位常居住地，请检查城市名称。"
+                return
+            }
+            home = coordinate
+        } catch {
+            permissionNote = "无法定位常居住地：\(error.localizedDescription)"
+            return
+        }
         let authorization = await withCheckedContinuation { continuation in
             PHPhotoLibrary.requestAuthorization(for: .readWrite) { continuation.resume(returning: $0) }
         }
@@ -122,21 +139,17 @@ final class TripPhotoLibrary: ObservableObject {
         try? (cacheURL as NSURL).setResourceValue(URLFileProtection.completeUntilFirstUserAuthentication,
                                                    forKey: .fileProtectionKey)
         scanProgress = 1
-        candidates = Self.discover(entries)
+        candidates = Self.discover(entries, home: home)
         permissionNote = authorization == .limited
             ? "已扫描获准访问的 \(entries.count) 张照片；可在系统设置中扩大范围。"
             : "已扫描 \(entries.count) 张照片，发现 \(candidates.count) 段可能的旅行。"
     }
 
-    private static func discover(_ entries: [PhotoIndexEntry]) -> [TravelCandidate] {
-        let located = entries.filter { $0.lat != nil && $0.lng != nil }
-        let buckets = Dictionary(grouping: located) { "\(Int(($0.lat ?? 0) * 10))|\(Int(($0.lng ?? 0) * 10))" }
-        let home = buckets.max { $0.value.count < $1.value.count }?.value.first
+    private static func discover(_ entries: [PhotoIndexEntry], home: CLLocationCoordinate2D) -> [TravelCandidate] {
         let away = entries.filter { entry in
-            guard let lat = entry.lat, let lng = entry.lng, let home else { return false }
-            let dy = (lat - (home.lat ?? lat)) * 111
-            let dx = (lng - (home.lng ?? lng)) * 90
-            return (dx * dx + dy * dy).squareRoot() >= 30
+            guard let lat = entry.lat, let lng = entry.lng else { return false }
+            return CLLocation(latitude: lat, longitude: lng).distance(from:
+                CLLocation(latitude: home.latitude, longitude: home.longitude)) >= 50_000
         }
         let days = Dictionary(grouping: away, by: \.day)
         var groups: [[PhotoIndexEntry]] = []
@@ -156,11 +169,12 @@ final class TripPhotoLibrary: ObservableObject {
                                    assetIds: ids, locationCount: group.count)
         }
         if !discovered.isEmpty { return discovered }
+        guard !entries.contains(where: { $0.lat != nil && $0.lng != nil }) else { return [] }
         let dated = Dictionary(grouping: entries, by: \.day)
         return dated.keys.sorted().compactMap { day in
             let items = dated[day] ?? []
             return items.count >= 5 ? TravelCandidate(id: "date-\(day)", firstDay: day, lastDay: day,
-                                                       assetIds: items.map(\.id), locationCount: items.filter { $0.lat != nil }.count) : nil
+                                                       assetIds: items.map(\.id), locationCount: 0) : nil
         }
     }
 

@@ -129,8 +129,9 @@ struct MediaClient {
         return try JSONDecoder().decode(ServerPhoto.self, from: data)
     }
 
-    func createAnalysis(tripId: String, photoIds: [String]) async throws -> PhotoAnalysisJob {
-        let payload: [String: Any] = ["tripId": tripId, "photoIds": photoIds, "batchId": UUID().uuidString]
+    func createAnalysis(tripId: String, photoIds: [String], purpose: String = "curation") async throws -> PhotoAnalysisJob {
+        let payload: [String: Any] = ["tripId": tripId, "photoIds": photoIds, "batchId": UUID().uuidString,
+                                      "purpose": purpose]
         let data = try JSONSerialization.data(withJSONObject: payload)
         return try JSONDecoder().decode(PhotoAnalysisJob.self, from: await send("/api/media/analysis-jobs", method: "POST",
             body: data, contentType: "application/json"))
