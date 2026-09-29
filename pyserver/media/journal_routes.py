@@ -24,6 +24,11 @@ def catalog() -> list[dict]:
     return json.loads(TEMPLATES.read_text())
 
 
+def valid_motif(value: object) -> bool:
+    return (isinstance(value, str) and 2 <= len(value.strip()) <= 60
+            and not any(ord(char) < 32 for char in value))
+
+
 def photo_context(media: MediaStore, trip_id: str) -> list[dict]:
     """Only selected photos' text tags go to StepFun; image bytes and private EXIF stay local."""
     result = []
@@ -107,6 +112,10 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
             selected = choice.get("templates")
             motifs = choice.get("stickerMotifs")
             stamp = choice.get("stampMotif")
+            postcard = choice.get("postcardMotif")
+            illustration = choice.get("illustrationMotif")
+            diary = choice.get("diaryText")
+            postcard_text = choice.get("postcardText")
             photo_order = choice.get("photoOrder", [])
             available_photos = {item["photoId"] for item in recognized}
             if not isinstance(photo_order, list) or len(photo_order) != len(set(photo_order)) or any(
@@ -115,22 +124,18 @@ def router_for(config: ConfigStore, trips: TripStore, media: MediaStore,
             if (not isinstance(selected, list) or len(selected) != 2 or selected[0] == selected[1]
                     or any(item not in ids for item in selected)
                     or not isinstance(motifs, list) or not 4 <= len(motifs) <= 8
-                    or any(not isinstance(item, str) or not 2 <= len(item.strip()) <= 60
-                           or any(ord(char) < 32 for char in item) for item in motifs)
+                    or any(not valid_motif(item) for item in motifs)
                     or len({item.strip() for item in motifs}) < 4
-                    or not isinstance(stamp, str) or not 2 <= len(stamp.strip()) <= 60
-                    or any(ord(char) < 32 for char in stamp)):
-                raise ValueError("StepFun 返回了无效的模板或贴纸主题")
-            diary = choice.get("diaryText")
-            postcard_text = choice.get("postcardText")
-            if (diary is not None and (not isinstance(diary, str) or len(diary) > 120)) or (
-                    postcard_text is not None and (not isinstance(postcard_text, str) or len(postcard_text) > 80)):
-                raise ValueError("StepFun 返回的手账文字过长")
+                    or not all(valid_motif(item) for item in (stamp, postcard, illustration))):
+                raise ValueError("StepFun 返回了不完整或无效的模板与素材主题")
+            if (not isinstance(diary, str) or not 1 <= len(diary.strip()) <= 120
+                    or not isinstance(postcard_text, str) or not 1 <= len(postcard_text.strip()) <= 80):
+                raise ValueError("StepFun 未写完手账日记或明信片留言")
             return {"templates": selected, "stickerMotifs": list(dict.fromkeys(item.strip() for item in motifs)),
-                    "stampMotif": stamp.strip(), "postcardMotif": str(choice.get("postcardMotif") or stamp).strip()[:60],
-                    "illustrationMotif": str(choice.get("illustrationMotif") or motifs[0]).strip()[:60],
+                    "stampMotif": stamp.strip(), "postcardMotif": postcard.strip(),
+                    "illustrationMotif": illustration.strip(),
                     "photoOrder": photo_order or [item["photoId"] for item in recognized],
-                    "diaryText": (diary or "")[:45], "postcardText": (postcard_text or "")[:28],
+                    "diaryText": diary.strip()[:45], "postcardText": postcard_text.strip()[:28],
                     "source": step.MODEL}
         except Exception as exc:
             raise HTTPException(502, f"StepFun 手账排版失败：{str(exc)[:100]}") from exc
