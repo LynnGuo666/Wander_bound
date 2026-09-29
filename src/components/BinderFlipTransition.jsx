@@ -5,7 +5,9 @@ import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
 import { mirrorPageUV, posePageCurl } from '../lib/pageCurl.js';
 
 const TURN_MS = 1050;
-const CAPTURE_SCALE = 1.5;
+const CAPTURE_SCALE = 1.25;
+const captureCache = new WeakMap();
+let paperPromise;
 
 function withTimeout(promise, ms) {
   let timer;
@@ -36,12 +38,14 @@ function waitForPreview(preview, onCancel) {
 }
 
 function loadPaper() {
-  return new Promise((resolve, reject) => {
+  if (paperPromise) return paperPromise;
+  paperPromise = new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = reject;
     image.src = '/art/binder-paper.webp';
-  });
+  }).catch(error => { paperPromise = undefined; throw error; });
+  return paperPromise;
 }
 
 function waitForVideoFrame(video) {
@@ -84,6 +88,37 @@ async function capturePage(node, paper, side) {
   return canvas;
 }
 
+function captureKey(node, side) {
+  const images = [...node.querySelectorAll('img')].map(image =>
+    `${image.currentSrc}:${image.complete}:${image.naturalWidth}`).join('|');
+  const videos = [...node.querySelectorAll('video')].map(video =>
+    `${video.readyState}:${video.currentTime.toFixed(1)}`).join('|');
+  return `${side}:${node.clientWidth}:${node.clientHeight}:${node.innerHTML}:${images}:${videos}`;
+}
+
+function cachedCapturePage(node, paper, side) {
+  const key = captureKey(node, side);
+  const cached = captureCache.get(node);
+  if (cached?.key === key) return cached.promise;
+  const promise = capturePage(node, paper, side).catch(error => {
+    if (captureCache.get(node)?.promise === promise) captureCache.delete(node);
+    throw error;
+  });
+  captureCache.set(node, { key, promise });
+  return promise;
+}
+
+export async function prewarmPageFlip(stage, preview) {
+  if (!stage || !preview || preview.dataset.previewReady !== 'true') return;
+  const nodes = [...stage.querySelectorAll(':scope > .studio-page > .studio-canvas'),
+    ...preview.querySelectorAll(':scope > .studio-page > .studio-canvas')];
+  if (nodes.length !== 4) return;
+  const paper = await loadPaper();
+  const images = nodes.flatMap(node => [...node.querySelectorAll('img')]);
+  await withTimeout(Promise.all(images.map(image => image.decode().catch(() => {}))), 600).catch(() => {});
+  await Promise.all(nodes.map((node, index) => cachedCapturePage(node, paper, index % 2 ? 'right' : 'left')));
+}
+
 function textureFrom(canvas) {
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -124,7 +159,7 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
         .catch(() => {});
       if (!active) return;
       const captures = await withTimeout(Promise.all([...source, ...incoming].map((node, index) =>
-        capturePage(node, paper, index % 2 ? 'right' : 'left'))), 3500);
+        cachedCapturePage(node, paper, index % 2 ? 'right' : 'left'))), 3500);
       if (!active) return;
       const textures = captures.map(textureFrom);
       resources.push(...textures);
@@ -147,8 +182,10 @@ function WebGLPageCurl({ direction, stageRef, incomingRef, onComplete, onFail })
       host.appendChild(renderer.domElement);
       const pageHeight = 2 * height / width;
       const scene = new THREE.Scene();
-      const camera = new THREE.OrthographicCamera(-1, 1, pageHeight / 2, -pageHeight / 2, .01, 10);
-      camera.position.set(0, 0, 5);
+      const cameraDistance = 5;
+      const camera = new THREE.PerspectiveCamera(2 * Math.atan(pageHeight / (2 * cameraDistance)) * 180 / Math.PI,
+        width / height, .01, 20);
+      camera.position.set(0, 0, cameraDistance);
       camera.lookAt(0, 0, 0);
       scene.add(new THREE.AmbientLight(0xffffff, 1.15));
       const light = new THREE.DirectionalLight(0xffffff, .55);

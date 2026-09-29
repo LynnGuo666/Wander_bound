@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, ImagePlus, LoaderCircle, Plus, Sparkles, Trash2 } f
 import templates from '../../workflows/journal-templates.json';
 import stickerCategories from '../../workflows/journal-sticker-categories.json';
 import { PrivateMedia } from './PrivateMedia.jsx';
-import BinderFlipTransition from './BinderFlipTransition.jsx';
+import BinderFlipTransition, { prewarmPageFlip } from './BinderFlipTransition.jsx';
 import { cityArtwork, mediaRequest, tripDate, tripTitle } from '../lib/media.js';
 import { addStickerAccents } from '../lib/journalLayout.js';
 import { hasCurrentJournalAsset, itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from '../lib/journalMotifs.js';
@@ -285,6 +285,41 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     try { localStorage.setItem(`${STORE_PREFIX}${trip.id}`, JSON.stringify(pages)); }
     catch { setError('排版未能保存在当前浏览器'); }
   }, [pages, trip.id, ready]);
+  useEffect(() => {
+    if (previewOnly || !ready || !stageRef.current) return;
+    const stage = stageRef.current;
+    const previews = [nextSpreadPreviewRef, previousSpreadPreviewRef, nextPreviewRef, previousPreviewRef];
+    let timer;
+    let idle;
+    let cancelled = false;
+    const schedule = () => {
+      clearTimeout(timer);
+      if (idle !== undefined && 'cancelIdleCallback' in window) window.cancelIdleCallback(idle);
+      timer = setTimeout(() => {
+        const warm = async () => {
+          for (const ref of previews) {
+            if (cancelled || stage.classList.contains('flip-active')) return;
+            await prewarmPageFlip(stage, ref.current).catch(() => {});
+          }
+        };
+        if ('requestIdleCallback' in window) idle = window.requestIdleCallback(warm, { timeout: 1200 });
+        else idle = setTimeout(warm, 0);
+      }, 400);
+    };
+    const observer = new MutationObserver(schedule);
+    [stage, ...previews.map(ref => ref.current)].filter(Boolean).forEach(node =>
+      observer.observe(node, { subtree: true, childList: true, attributes: true, characterData: true }));
+    schedule();
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+      clearTimeout(timer);
+      if (idle !== undefined) {
+        if ('cancelIdleCallback' in window) window.cancelIdleCallback(idle);
+        else clearTimeout(idle);
+      }
+    };
+  }, [ready, previewOnly, spreadIndex, trip.id, nextTrip?.id, previousTrip?.id]);
   useEffect(() => {
     if (previewOnly || !note || !ready || noteApplied.current) return;
     noteApplied.current = true;
