@@ -187,8 +187,8 @@
   },
   "output": {
     "dynamicVersionId": "68680deb-6363-5bfe-bbce-9192380429f3",
-    "videoPath": "/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4",
-    "coverPath": "/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/cover.jpg",
+    "videoPath": "private-artifact:dynamic.mp4",
+    "coverPath": "private-artifact:cover.jpg",
     "media": {
       "width": 512,
       "height": 672,
@@ -234,7 +234,7 @@
         "sameJob": true
       }
     },
-    "denseContactPath": "/home/Developer/dynamic-photo-validation-20260929/private-evidence/dense-contact.jpg",
+    "denseContactPath": "repository:docs/generated-evidence/dynamic-photo-real-dense-contact.jpg",
     "visualAssessment": "Waterfall and basal mist change across 0.5-second samples while cliff and forest contours remain stable; no obvious scene swap or major deformation.",
     "realTimeDecodeSeconds": 5,
     "independentFullDecode": true

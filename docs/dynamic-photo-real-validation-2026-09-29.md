@@ -4,8 +4,8 @@
 
 ## 固定运行边界
 
-- 隔离代码：`feat/dynamic-photo-ai-h3@1b489d0`，由 Git bundle 从本地隔离分支传入 `/home/Developer/dynamic-photo-validation-20260929`。现行 `/home/Developer/travel-agent@8144c0f` 未覆盖，preview 服务未修改。
-- 2026-09-29 14:01 CST，在现行媒体 jobs 无排队/运行、preview jobs 为空、H3 服务 inactive 后，暂停现行 `travel-agent.service`，验证服务在私有 `:4185` 启动，使用同一绝对 `/home/Developer/travel-agent/data/model-controller.lock`。验证服务 PID 1347159 持有该锁。SSH 守护 shell 的 EXIT/HUP/INT/TERM trap 与 40 分钟 systemd timer 都调用恢复脚本；测试结束先停验证服务再恢复现行服务，并复查健康、队列、锁。
+- 隔离代码：`feat/dynamic-photo-ai-h3@1b489d0`，由 Git bundle 从本地隔离分支传入独立验证目录。现行部署代码 `8144c0f` 未覆盖，preview 服务未修改。
+- 2026-09-29 14:01 CST，在现行媒体 jobs 无排队/运行、preview jobs 为空、H3 服务 inactive 后，暂停现行 `travel-agent.service`，验证服务在私有端口启动，使用与现行服务相同的绝对模型控制锁。验证服务 PID 1347159 持有该锁。守护 shell 的 EXIT/HUP/INT/TERM trap 与 40 分钟 systemd timer 都调用恢复脚本；测试结束先停验证服务再恢复现行服务，并复查健康、队列、锁。
 - 验证账户、行程、媒体、任务与证据均在 clone 的 `private-evidence/` 私有目录。令牌文件仅用于隔离 HTTP 请求，不写入本报告、仓库或模型输入。实际运行节点仅有现有 `JobStore` 单 worker 与 `ModelController`。
 
 ## 真实照片和精修
@@ -33,10 +33,6 @@ H3 prompt `252f9f91-2008-410f-9dff-f0de3ebcd75a` 于 14:03:20 CST 提交，并�
 
 ## 视频取得方式与验收边界
 
-私有可播放 MP4 已另存至本机原控制根的 `private-artifacts/dynamic-photo-20260929/yosemite-falls.mp4`，权限为仅所有者读写，SHA-256 与真实输出相同；没有纳入 Git。原文件持久留在 Spark：`/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4`；封面和脱敏收据也在同一隔离目录下。验证服务现已停止，若需再次下载，可经已授权的 SSH 身份认证：
-
-```sh
-scp -P 6082 Developer@106.13.186.155:/home/Developer/dynamic-photo-validation-20260929/private-evidence/data/media/dynamic-photo/jobs/3b0f25ee-6f71-5812-b5e2-8ca1afd8fa72/dynamic.mp4 ./dynamic-photo-validation.mp4
-```
+私有可播放 MP4 已另存至本机原控制根的私有 artifact 目录，权限为仅所有者读写，SHA-256 与真实输出相同；没有纳入 Git。原文件及封面持久留在 Spark 的隔离验证目录。验证服务现已停止，公开仓库仅提供脱敏收据和联系图；拥有环境权限的维护者可用收据中的 job ID 与输出 SHA-256 核对私有文件。
 
 对应正式验收：c04 的真实单图 H3、原比例、静音约 5 秒、完整解码和稳定主体；c07 的公有真实照片→真实精修→真实 AI 决策→真实 H3→鉴权关联/播放式解码、无合适 skipped、重启复用及现行服务回退。`docs/generated-evidence/dynamic-photo-*-tests.txt` 是本地替身/契约回归，不能代替这些真实模型证据。Spark 上的 FFmpeg CPU 对照短片为 125 帧、24 fps、5.208333 秒、无音轨并完整解码，只验证工具链，也不能代替 H3 输出。

@@ -72,8 +72,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/input/Input.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/input/Input.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/input/Input.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/input/Input.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -82,8 +82,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/separator/Separator.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/separator/Separator.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/separator/Separator.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/separator/Separator.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -92,8 +92,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/switch/thumb/SwitchThumb.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/switch/thumb/SwitchThumb.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/switch/thumb/SwitchThumb.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/switch/thumb/SwitchThumb.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -102,8 +102,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/button/Button.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/button/Button.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/button/Button.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/button/Button.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -112,8 +112,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toggle/Toggle.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toggle/Toggle.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toggle/Toggle.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toggle/Toggle.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -122,8 +122,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toggle-group/ToggleGroup.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toggle-group/ToggleGroup.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toggle-group/ToggleGroup.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toggle-group/ToggleGroup.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -132,8 +132,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/switch/root/SwitchRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/switch/root/SwitchRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/switch/root/SwitchRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/switch/root/SwitchRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -142,8 +142,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/provider/ToastProvider.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/provider/ToastProvider.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/provider/ToastProvider.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/provider/ToastProvider.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -152,8 +152,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/title/ToastTitle.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/title/ToastTitle.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/title/ToastTitle.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/title/ToastTitle.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -162,8 +162,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/description/ToastDescription.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/description/ToastDescription.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/description/ToastDescription.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/description/ToastDescription.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -172,8 +172,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/content/ToastContent.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/content/ToastContent.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/content/ToastContent.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/content/ToastContent.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -182,8 +182,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/close/ToastClose.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/close/ToastClose.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/close/ToastClose.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/close/ToastClose.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -192,8 +192,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/portal/ToastPortal.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/portal/ToastPortal.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/portal/ToastPortal.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/portal/ToastPortal.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -202,8 +202,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/useToastManager.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/useToastManager.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/useToastManager.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/useToastManager.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -212,8 +212,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/arrow/ToastArrow.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/arrow/ToastArrow.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/arrow/ToastArrow.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/arrow/ToastArrow.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -222,8 +222,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/item/CompositeItem.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/item/CompositeItem.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/item/CompositeItem.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/item/CompositeItem.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -232,8 +232,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useControlled.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useControlled.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useControlled.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useControlled.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -242,8 +242,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/viewport/ToastViewport.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/viewport/ToastViewport.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/viewport/ToastViewport.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/viewport/ToastViewport.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -252,8 +252,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useBaseUiId.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useBaseUiId.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/useBaseUiId.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/useBaseUiId.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -262,8 +262,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/switch/root/SwitchRoot.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/switch/root/SwitchRoot.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/switch/root/SwitchRoot.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/switch/root/SwitchRoot.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -272,8 +272,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toggle-group/ToggleGroupContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toggle-group/ToggleGroupContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toggle-group/ToggleGroupContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toggle-group/ToggleGroupContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -282,8 +282,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/use-button/useButton.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/use-button/useButton.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/use-button/useButton.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/use-button/useButton.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -292,8 +292,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/root/ToastRoot.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/root/ToastRoot.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/root/ToastRoot.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/root/ToastRoot.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -302,8 +302,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/action/ToastAction.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/action/ToastAction.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/action/ToastAction.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/action/ToastAction.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -312,8 +312,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toolbar/root/ToolbarRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toolbar/root/ToolbarRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toolbar/root/ToolbarRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toolbar/root/ToolbarRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -322,8 +322,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useStableCallback.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useStableCallback.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useStableCallback.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useStableCallback.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -332,8 +332,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toolbar/group/ToolbarGroupContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toolbar/group/ToolbarGroupContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toolbar/group/ToolbarGroupContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toolbar/group/ToolbarGroupContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -342,8 +342,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useRefWithInit.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useRefWithInit.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useRefWithInit.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useRefWithInit.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -352,8 +352,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useIsoLayoutEffect.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useIsoLayoutEffect.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useIsoLayoutEffect.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useIsoLayoutEffect.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -362,8 +362,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/provider/ToastProviderContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/provider/ToastProviderContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/provider/ToastProviderContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/provider/ToastProviderContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -372,8 +372,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/root/ToastRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/root/ToastRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/root/ToastRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/root/ToastRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -382,8 +382,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/utils/useToastLabelPart.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/utils/useToastLabelPart.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/utils/useToastLabelPart.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/utils/useToastLabelPart.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -392,8 +392,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/positioner/ToastPositioner.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/positioner/ToastPositioner.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/positioner/ToastPositioner.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/positioner/ToastPositioner.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -402,8 +402,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/positioner/ToastPositionerContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/toast/positioner/ToastPositionerContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/toast/positioner/ToastPositionerContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/toast/positioner/ToastPositionerContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -412,8 +412,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/FloatingPortalLite.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/FloatingPortalLite.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/FloatingPortalLite.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/FloatingPortalLite.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -422,8 +422,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/item/useCompositeItem.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/item/useCompositeItem.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/item/useCompositeItem.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/item/useCompositeItem.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -432,8 +432,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useOnMount.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useOnMount.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useOnMount.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useOnMount.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -442,8 +442,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/root/CompositeRoot.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/root/CompositeRoot.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/root/CompositeRoot.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/root/CompositeRoot.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -452,8 +452,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useId.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useId.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useId.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useId.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -462,8 +462,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useTimeout.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useTimeout.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useTimeout.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useTimeout.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -472,8 +472,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useValueChanged.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useValueChanged.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/useValueChanged.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/useValueChanged.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -482,8 +482,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/field-register-control/useRegisterFieldControl.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/field-register-control/useRegisterFieldControl.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/field-register-control/useRegisterFieldControl.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/field-register-control/useRegisterFieldControl.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -492,8 +492,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/form-context/FormContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/form-context/FormContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/form-context/FormContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/form-context/FormContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -502,8 +502,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/FocusGuard.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/FocusGuard.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/FocusGuard.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/FocusGuard.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -512,8 +512,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/field-root-context/FieldRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/field-root-context/FieldRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/field-root-context/FieldRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/field-root-context/FieldRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -522,8 +522,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/useFocusableWhenDisabled.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/useFocusableWhenDisabled.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/useFocusableWhenDisabled.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/useFocusableWhenDisabled.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -532,8 +532,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/useAriaLabelledBy.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/useAriaLabelledBy.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/labelable-provider/useAriaLabelledBy.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/labelable-provider/useAriaLabelledBy.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -542,8 +542,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/root/CompositeRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/root/CompositeRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/root/CompositeRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/root/CompositeRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -552,8 +552,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/useLabelableId.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/useLabelableId.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/labelable-provider/useLabelableId.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/labelable-provider/useLabelableId.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -562,8 +562,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/LabelableContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/LabelableContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/labelable-provider/LabelableContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/labelable-provider/LabelableContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -572,8 +572,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useOpenChangeComplete.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useOpenChangeComplete.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/useOpenChangeComplete.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/useOpenChangeComplete.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -582,8 +582,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/usePositioner.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/usePositioner.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/usePositioner.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/usePositioner.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -592,8 +592,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingPortal.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingPortal.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingPortal.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingPortal.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -602,8 +602,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/list/useCompositeListItem.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/list/useCompositeListItem.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/list/useCompositeListItem.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/list/useCompositeListItem.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -612,8 +612,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/direction-context/DirectionContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/direction-context/DirectionContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/direction-context/DirectionContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/direction-context/DirectionContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -622,8 +622,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useAnchorPositioning.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useAnchorPositioning.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/useAnchorPositioning.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/useAnchorPositioning.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -632,8 +632,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/list/CompositeList.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/list/CompositeList.mjs:2:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/list/CompositeList.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/list/CompositeList.mjs:2:1 ]
    │
  2 │ 'use client';
    │ ──────┬──────
@@ -642,8 +642,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/useSwipeDismiss.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/useSwipeDismiss.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/useSwipeDismiss.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/useSwipeDismiss.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -652,8 +652,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/description/FieldDescription.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/description/FieldDescription.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/description/FieldDescription.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/description/FieldDescription.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -662,8 +662,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/error/FieldError.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/error/FieldError.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/error/FieldError.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/error/FieldError.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -672,8 +672,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/root/FieldRoot.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/root/FieldRoot.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/root/FieldRoot.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/root/FieldRoot.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -682,8 +682,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/validity/FieldValidity.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/validity/FieldValidity.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/validity/FieldValidity.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/validity/FieldValidity.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -692,8 +692,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useAnimationsFinished.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useAnimationsFinished.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/useAnimationsFinished.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/useAnimationsFinished.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -702,8 +702,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/control/FieldControl.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/control/FieldControl.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/control/FieldControl.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/control/FieldControl.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -712,8 +712,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/list/CompositeListContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/list/CompositeListContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/list/CompositeListContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/list/CompositeListContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -722,8 +722,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/label/FieldLabel.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/label/FieldLabel.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/label/FieldLabel.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/label/FieldLabel.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -732,8 +732,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useClick.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useClick.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useClick.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useClick.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -742,8 +742,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingDelayGroup.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingDelayGroup.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingDelayGroup.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingDelayGroup.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -752,8 +752,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useClientPoint.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useClientPoint.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useClientPoint.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useClientPoint.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -762,8 +762,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useFloating.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useFloating.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useFloating.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useFloating.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -772,8 +772,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useSyncedFloatingRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useSyncedFloatingRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useSyncedFloatingRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useSyncedFloatingRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -782,8 +782,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useFloatingRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useFloatingRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useFloatingRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useFloatingRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -792,8 +792,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useFocus.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useFocus.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useFocus.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useFocus.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -802,8 +802,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHoverFloatingInteraction.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -812,8 +812,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/root/useCompositeRoot.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/composite/root/useCompositeRoot.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/composite/root/useCompositeRoot.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/composite/root/useCompositeRoot.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -822,8 +822,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHover.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHover.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHover.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHover.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -832,8 +832,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useDismiss.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useDismiss.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useDismiss.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useDismiss.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -842,8 +842,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useListNavigation.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -852,8 +852,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHoverReferenceInteraction.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -862,8 +862,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -872,8 +872,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingTree.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/components/FloatingTree.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingTree.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/components/FloatingTree.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -882,8 +882,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useValueAsRef.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useValueAsRef.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useValueAsRef.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useValueAsRef.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -892,8 +892,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/item/FieldItem.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/item/FieldItem.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/item/FieldItem.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/item/FieldItem.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -902,8 +902,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useTypeahead.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -912,8 +912,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/store/ReactStore.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/store/ReactStore.mjs:3:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/store/ReactStore.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/store/ReactStore.mjs:3:1 ]
    │
  3 │ 'use client';
    │ ──────┬──────
@@ -922,8 +922,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/field-register-control/useFieldControlRegistration.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/field-register-control/useFieldControlRegistration.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/field-register-control/useFieldControlRegistration.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/field-register-control/useFieldControlRegistration.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -932,8 +932,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useTransitionStatus.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/useTransitionStatus.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/useTransitionStatus.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/useTransitionStatus.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -942,8 +942,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/fieldset/root/FieldsetRootContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/fieldset/root/FieldsetRootContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/fieldset/root/FieldsetRootContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/fieldset/root/FieldsetRootContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -952,8 +952,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/store/StoreInspector.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/store/StoreInspector.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/store/StoreInspector.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/store/StoreInspector.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -962,8 +962,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/root/useFieldValidation.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/root/useFieldValidation.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/root/useFieldValidation.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/root/useFieldValidation.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -972,8 +972,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/useLabel.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/useLabel.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/labelable-provider/useLabel.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/labelable-provider/useLabel.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -982,8 +982,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverInteractionSharedState.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/floating-ui-react/hooks/useHoverInteractionSharedState.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHoverInteractionSharedState.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/floating-ui-react/hooks/useHoverInteractionSharedState.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -992,8 +992,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useAnimationFrame.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useAnimationFrame.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useAnimationFrame.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useAnimationFrame.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1002,8 +1002,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/item/FieldItemContext.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/field/item/FieldItemContext.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/field/item/FieldItemContext.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/field/item/FieldItemContext.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1012,8 +1012,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useForcedRerendering.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/utils/useForcedRerendering.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/utils/useForcedRerendering.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/utils/useForcedRerendering.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1022,8 +1022,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/useRegisteredLabelId.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/useRegisteredLabelId.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/useRegisteredLabelId.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/useRegisteredLabelId.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1032,8 +1032,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/LabelableProvider.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/internals/labelable-provider/LabelableProvider.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/internals/labelable-provider/LabelableProvider.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/internals/labelable-provider/LabelableProvider.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1042,8 +1042,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/popups/usePopupHandleStore.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/popups/usePopupHandleStore.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/popups/usePopupHandleStore.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/popups/usePopupHandleStore.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1052,8 +1052,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/popups/popupStoreUtils.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/@base-ui/react/utils/popups/popupStoreUtils.mjs:1:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/@base-ui/react/utils/popups/popupStoreUtils.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/@base-ui/react/utils/popups/popupStoreUtils.mjs:1:1 ]
    │
  1 │ 'use client';
    │ ──────┬──────
@@ -1062,8 +1062,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/lucide-react/dist/esm/context.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/lucide-react/dist/esm/context.mjs:2:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/lucide-react/dist/esm/context.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/lucide-react/dist/esm/context.mjs:2:1 ]
    │
  2 │ "use client";
    │ ──────┬──────
@@ -1072,8 +1072,8 @@ dist/assets/index-DPL1mo3Z.js                              278.24 kB │ gzip: 8
    │ Help: For more information, see https://rolldown.rs/in-depth/directives#other-directives
 ───╯
 
-[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/lucide-react/dist/esm/Icon.mjs" may not be preserved when bundling.
-   ╭─[ ../../../Users/chenm0m/LocalRepo/travel-agent/node_modules/lucide-react/dist/esm/Icon.mjs:2:1 ]
+[MODULE_LEVEL_DIRECTIVE] The semantics of the module level directive "use client" in "<local-node_modules>/lucide-react/dist/esm/Icon.mjs" may not be preserved when bundling.
+   ╭─[ <local-node_modules>/lucide-react/dist/esm/Icon.mjs:2:1 ]
    │
  2 │ "use client";
    │ ──────┬──────
