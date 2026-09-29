@@ -14,6 +14,8 @@ from . import images
 from .develop import suggest as suggest_development, review as review_development
 from .vision import vision_base_url, vision_model
 from .mcp_images import MCPImagesClient
+from .dynamic_sources import DynamicPhotoSources
+from .contracts import ContractError
 
 async def _render_development(media: MediaStore, photo_id: str, settings: dict) -> bytes:
     normalized = images.normalize_develop(settings)
@@ -32,6 +34,7 @@ async def _render_development(media: MediaStore, photo_id: str, settings: dict) 
 def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | None,
                video_client: ComfyClient | None, controller: ModelController) -> APIRouter:
     router = APIRouter()
+    dynamic_sources = DynamicPhotoSources(media)
     def selected_photo(photo_id: str) -> dict:
         photo = media.get(photo_id)
         if not photo or media.bytes(photo_id) is None:
@@ -144,18 +147,27 @@ def router_for(trips: TripStore, media: MediaStore, image_client: ComfyClient | 
     @router.post("/api/media/photos/{photo_id}/develop/save")
     async def develop_save(photo_id: str, request: Request, payload: dict):
         require_media_auth(request)
-        selected_photo(photo_id)
-        source = media.bytes(photo_id)
+        photo = selected_photo(photo_id)
         try:
+            marker_id, batch_id = dynamic_sources.mark_development_started(photo["tripId"], photo_id)
+        except ContractError as exc:
+            raise HTTPException(exc.status_code, exc.body()) from exc
+        try:
+            source = media.bytes(photo_id)
             params = images.normalize_develop(payload.get("params") or {})
             rendered = await _render_development(media, photo_id, params)
-            result = media.save_develop(photo_id, rendered, params, payload.get("note", ""))
+            result = media.save_develop(photo_id, rendered, params, payload.get("note", ""),
+                                        expected_batch_id=batch_id)
         except FileNotFoundError as exc:
             raise HTTPException(404, str(exc)) from exc
         except (ValueError, OSError, RuntimeError) as exc:
             if isinstance(exc, RuntimeError):
                 raise HTTPException(503, str(exc)) from exc
             raise HTTPException(400, str(exc)) from exc
+        finally:
+            dynamic_sources.mark_development_finished(photo["tripId"], marker_id)
+        if result is None:
+            raise HTTPException(409, "照片不再属于当前精选清单")
         return result
 
     @router.post("/api/media/photos/{photo_id}/develop/review")
