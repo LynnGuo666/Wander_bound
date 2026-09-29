@@ -85,7 +85,7 @@ export default function App() {
     </div></header>
     <Navigation className="mobile-nav" view={view} navigate={navigate} />
     <main className="app-main" id="main-content"><Suspense fallback={<div className="loading-page">正在打开旅程…</div>}>
-      {view === 'trips' ? <TripsView trips={trips} refreshTrips={refreshTrips} currentTripId={tripId} currentPlan={plan} form={form} update={update} onGenerate={() => run({ ...form, memory })} events={events} error={error || tripError} running={running} onCancel={cancel} onOpenTrip={openTrip} onRevise={reviseTrip} token={session} /> : null}
+      {view === 'trips' ? <TripsView trips={trips} refreshTrips={refreshTrips} currentTripId={tripId} currentPlan={plan} form={form} memory={memory} update={update} onGenerate={() => run({ ...form, memory })} events={events} error={error || tripError} running={running} onCancel={cancel} onOpenTrip={openTrip} onRevise={reviseTrip} token={session} /> : null}
       {view === 'travel' ? <TravelView trips={trips} token={session} onOpenSettings={() => navigate('settings')} /> : null}
       {view === 'profile' ? <MemoryView memory={memory} trips={trips} destination={form.destination} updateMemory={updateMemory} setOriginCity={value => update('originCity', value)} newCity={newCity} setNewCity={setNewCity} addVisitedCity={addVisitedCity} newPlace={newPlace} setNewPlace={setNewPlace} addVisitedPlace={addVisitedPlace} /> : null}
       {view === 'settings' ? <SettingsView user={user} onLogout={logout} health={health} onOpenDebug={() => navigate('debug')} /> : null}

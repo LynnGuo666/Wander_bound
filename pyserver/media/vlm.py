@@ -80,6 +80,10 @@ TAG_INSTRUCTION = """你是旅行相册的选片与打标助手。这张照片�
 
 _SYSTEM = "你是旅行相册的选片与打标助手，只输出一个 JSON 对象，不要额外解释或 markdown 代码围栏。"
 
+HISTORY_TAG_INSTRUCTION = """你在帮助用户从真实照片还原过去的旅行。只描述画面可见内容，只返回 JSON 对象：
+{"scene":"一句简短中文；截图要明确写截图或屏幕", "activity":"可见活动或 unknown", "location_clue":"可见地标或地点线索；没有则 null", "ocr":["最多五条与地点或行程有关的可读文字，每条不超过二十字"], "objects":["最多三个关键物体或地标"]}。
+照片可能混有别人的照片、转发图片和截图；不要根据一张照片断定用户本人到过画面地点。没有证据时用 unknown、null 或空数组，不编造交通、住宿和精确地点。"""
+
 
 def _data_uri(image_bytes: bytes, mime: str = "image/jpeg") -> str:
     return f"data:{mime};base64,{base64.b64encode(image_bytes).decode('ascii')}"
@@ -98,12 +102,12 @@ def compress_for_vlm(image_bytes: bytes, max_side: int = 768, quality: int = 80)
     return output.getvalue()
 
 
-def build_messages(image_bytes: bytes) -> list[dict]:
+def build_messages(image_bytes: bytes, instruction: str = TAG_INSTRUCTION) -> list[dict]:
     """构造 OpenAI 多模态消息：system 约束纯 JSON，user 携带指令 + 图片。"""
     return [
         {"role": "system", "content": _SYSTEM},
         {"role": "user", "content": [
-            {"type": "text", "text": TAG_INSTRUCTION},
+            {"type": "text", "text": instruction},
             {"type": "image_url", "image_url": {"url": _data_uri(image_bytes)}},
         ]},
     ]
@@ -142,6 +146,7 @@ def tag_image(
     retries: int = 2,
     client: httpx.Client | None = None,
     sleep=time.sleep,
+    instruction: str | None = None,
 ) -> dict:
     """对单张照片打标+打分，返回解析后的 dict。
 
@@ -159,7 +164,7 @@ def tag_image(
         headers["Authorization"] = f"Bearer {api_key}"
     max_tokens = max_tokens or int(os.getenv("PYSERVER_VLM_MAX_TOKENS", "900" if model == "qwen38-27b" else "4096"))
     reasoning_effort = reasoning_effort or os.getenv("PYSERVER_VLM_REASONING_EFFORT")
-    payload = {"model": model, "messages": build_messages(image_bytes),
+    payload = {"model": model, "messages": build_messages(image_bytes, instruction or TAG_INSTRUCTION),
                "temperature": 0, "max_tokens": max_tokens}
     if model == "qwen38-27b":
         payload["chat_template_kwargs"] = {"enable_thinking": False}
@@ -196,3 +201,8 @@ def tag_image(
     finally:
         if owns:
             client.close()
+
+
+def tag_history_image(image_bytes: bytes) -> dict:
+    """Use the same private VLM for every history photo without curation scores."""
+    return tag_image(image_bytes, instruction=HISTORY_TAG_INSTRUCTION, max_tokens=500, retries=3)

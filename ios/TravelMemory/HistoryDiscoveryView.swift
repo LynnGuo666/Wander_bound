@@ -50,9 +50,11 @@ struct HistoryDiscoveryView: View {
                 Text("从照片发现旅行").font(.title2.bold())
                 Text("先在 iPhone 上扫描获准访问的照片时间与位置。选定一段旅行后，才会上传该段照片到私有 Spark。")
                     .font(.caption).foregroundStyle(.secondary)
+                TextField("常居住地，例如长春", text: $store.memory.homeCity)
+                    .textFieldStyle(.roundedBorder)
                 Button(library.scanning ? "暂停扫描" : "扫描全部已授权相册") {
                     if library.scanning { library.cancelScan() }
-                    else { Task { await library.scanAllAuthorized() } }
+                    else { Task { await library.scanAllAuthorized(homeCity: store.memory.homeCity) } }
                 }.buttonStyle(.borderedProminent)
                 if library.scanning { ProgressView(value: library.scanProgress) }
                 Text(library.permissionNote).font(.caption)
@@ -63,6 +65,10 @@ struct HistoryDiscoveryView: View {
                             Text("\(candidate.firstDay) — \(candidate.lastDay)").font(.headline)
                             Text("约 \(candidate.assetIds.count) 张照片，\(candidate.locationCount) 张带位置；需确认是否为同一趟旅行。")
                                 .font(.caption).foregroundStyle(.secondary)
+                            if candidate.id.hasPrefix("date-") {
+                                Text("没有位置证据：仅按拍摄日期分组，不能判断是否真的旅行。")
+                                    .font(.caption).foregroundStyle(.orange)
+                            }
                             Button("以此生成可能行程") { Task { await create(candidate) } }
                                 .disabled(busy || MediaTokenStore.load().isEmpty)
                             HStack {
@@ -87,7 +93,10 @@ struct HistoryDiscoveryView: View {
         let api = AppAPI(baseURL: store.serverURL)
         let client = MediaClient(serverURL: store.serverURL, token: MediaTokenStore.load())
         do {
-            let payload = try JSONSerialization.data(withJSONObject: ["title": title.isEmpty ? "过往旅行" : title])
+            let payload = try JSONSerialization.data(withJSONObject: [
+                "title": title.isEmpty ? "过往旅行" : title,
+                "homeCity": store.memory.homeCity.trimmingCharacters(in: .whitespacesAndNewlines)
+            ])
             let created = try JSONDecoder().decode(CreatedHistory.self,
                 from: await api.data("/api/history/trips", method: "POST", body: payload))
             activeId = created.id
@@ -104,7 +113,7 @@ struct HistoryDiscoveryView: View {
             let photos = try await client.photos(tripId: created.id)
             if !photos.isEmpty {
                 progress = "正在私有模型中分析照片，随后生成草稿…"
-                var job = try await client.createAnalysis(tripId: created.id, photoIds: photos.map(\.id))
+                var job = try await client.createAnalysis(tripId: created.id, photoIds: photos.map(\.id), purpose: "history")
                 while job.status == "queued" || job.status == "running" {
                     try await Task.sleep(for: .seconds(5))
                     job = try await client.analysisStatus(job.id)

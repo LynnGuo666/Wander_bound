@@ -76,13 +76,14 @@ def reconstruct(photos: list[dict], previous: dict | None = None) -> dict:
 def router_for(trips: TripStore, media: MediaStore, controller: ModelController) -> APIRouter:
     router = APIRouter()
 
-    async def infer_journey(photos: list[dict]) -> dict | None:
+    async def infer_journey(photos: list[dict], home_city: str = "") -> dict | None:
         ordered = sorted(photos, key=lambda photo: photo.get("capturedAt") or "")
         selected = ordered if len(ordered) <= 80 else [ordered[index * (len(ordered) - 1) // 79] for index in range(80)]
         evidence = [{"id": photo["id"], "observedAt": photo.get("capturedAt"),
                      "scene": (photo.get("tags") or {}).get("scene"),
                      "locationClue": (photo.get("tags") or {}).get("location_clue"),
-                     "ocr": ((photo.get("tags") or {}).get("ocr") or [])[:3], "gps": photo.get("gps")}
+                     "ocr": ((photo.get("tags") or {}).get("ocr") or [])[:3], "gps": photo.get("gps"),
+                     "camera": (photo.get("exif") or {}).get("cameraModel")}
                     for photo in selected if photo.get("gps") or photo.get("tags")]
         if not evidence:
             return None
@@ -93,8 +94,15 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
                   "\"mode\":\"已见证据支持的交通方式或未知\",\"evidencePhotoIds\":[\"照片ID\"],\"confidence\":\"low/medium/high\"}],"
                   "\"unknowns\":[\"仍不知道的关键环节\"]}。"
                   "照片时间只是观测时间；截图中的目的地不等于实际到达。"
+                  "邮票、明信片、海报、纪念品或截图上的地名只是物品内容，不能据此写成到访景点。"
+                  "只有实地照片和相符 GPS 才能写成游览；summary 必须用'照片可能记录'等谨慎措辞，不断言相册持有人本人到访。"
+                  "列车显示屏的始发站和终点站是车次全程，不一定是乘客上下车站；优先用本人行程票据与实拍时间核对。"
+                  "用户提供的常居住地只是筛选旅行的背景，不代表照片证明从那里出发或返回；"
+                  "若孤立异地照片与连续照片的拍摄设备不同，把它列为待核实，不能据此断定到访；"
+                  "视觉地点与 GPS 或连续照片冲突时标记待核实；交通方式要由票据、站台实拍或其他直接线索支持。"
                   "若出现多个城市，必须保留多个城市，不能强选一个。"
                   "没有照片证据的航班、酒店、景点、精确出发到达时间不能补造。"
+                  f"\n用户确认的常居住地：{home_city or '未提供'}。"
                   f"\n线索：{json.dumps(evidence, ensure_ascii=False)}")
         try:
             async with controller.use("chat") as spec:
@@ -109,10 +117,12 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
             if not isinstance(result, dict):
                 return None
             cities = []
+            roles = {"出发地": "出发地", "始发地": "出发地", "起点": "出发地",
+                     "途经": "途经", "途经地": "途经", "中转地": "途经",
+                     "到达地": "到达地", "目的地": "到达地", "终点": "到达地"}
             for item in (result.get("cities") or [])[:8]:
-                if (isinstance(item, dict) and isinstance(item.get("name"), str) and item["name"].strip()
-                        and item.get("role") in {"出发地", "途经", "到达地"}):
-                    cities.append({"name": item["name"].strip()[:40], "role": item["role"],
+                if isinstance(item, dict) and isinstance(item.get("name"), str) and item["name"].strip():
+                    cities.append({"name": item["name"].strip()[:40], "role": roles.get(item.get("role"), "未知"),
                                    "reason": str(item.get("reason") or "")[:160]})
             valid_ids = {photo["id"] for photo in selected}
             legs = []
@@ -126,6 +136,16 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
                              "to": str(item.get("to") or "未知")[:80], "mode": str(item.get("mode") or "未知")[:30],
                              "evidencePhotoIds": ids[:10],
                              "confidence": item.get("confidence") if item.get("confidence") in {"low", "medium", "high"} else "low"})
+            for city in cities:
+                if city["role"] != "未知":
+                    continue
+                for leg in legs:
+                    if leg["from"].startswith(city["name"]):
+                        city["role"] = "出发地"
+                        break
+                    if leg["to"].startswith(city["name"]):
+                        city["role"] = "到达地"
+                        break
             return {"summary": str(result.get("summary") or "")[:300],
                     "status": result.get("status") if result.get("status") in {"plausible_trip", "insufficient_evidence"} else "insufficient_evidence",
                     "cities": cities, "legs": legs, "unknowns": [str(value)[:120] for value in (result.get("unknowns") or [])[:8]],
@@ -143,8 +163,10 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
     async def create(request: Request, payload: dict):
         require_media_auth(request)
         title = str(payload.get("title") or "过往旅行")[:80]
+        home_city = str(payload.get("homeCity") or "").strip()[:40]
         trip = trips.create({"query": title})
-        trip.update(kind="history", phase="draft", title=title, history={"days": [], "status": "draft"}, historyVersions=[])
+        trip.update(kind="history", phase="draft", title=title, homeCity=home_city,
+                    history={"days": [], "status": "draft"}, historyVersions=[])
         trips.save(trip)
         return {"id": trip["id"], "title": title}
 
@@ -166,7 +188,7 @@ def router_for(trips: TripStore, media: MediaStore, controller: ModelController)
         if old and old.get("days"):
             trip.setdefault("historyVersions", []).append(old)
         trip["history"] = reconstruct(photos, old)
-        hypothesis = await infer_journey(photos)
+        hypothesis = await infer_journey(photos, str(trip.get("homeCity") or ""))
         trip["history"]["journeyHypothesis"] = hypothesis
         if old and (old.get("possibleCity") or {}).get("source") == "user_confirmed":
             trip["history"]["possibleCity"] = old["possibleCity"]
