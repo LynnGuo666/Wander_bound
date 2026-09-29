@@ -39,16 +39,24 @@ export function itineraryMotifs(trip, categories, { includeAllCategories = false
   };
 }
 
-export function selectJournalAsset(page, explicitId, jobs, kind, motif) {
+export function selectJournalAsset(page, explicitId, jobs, kind, motif, pinnedMotif = '') {
   if (explicitId) return jobs.find(job => job.id === explicitId);
+  const matching = job => job.kind === kind && job.motif === (pinnedMotif || motif);
+  if (pinnedMotif) return jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
   if (page?.source !== 'system' || page.protected) return undefined;
-  return jobs.find(job => job.kind === kind && job.motif === motif);
+  return jobs.find(job => matching(job) && job.status !== 'failed') || jobs.find(matching);
 }
 
 export function stickerMotifForItem(page, pageIndex, itemIndex, motifs) {
   if (!motifs.stickers.length) return '';
   const stickerIndex = page.items.slice(0, itemIndex).filter(item => item.kind === 'sticker').length;
   return motifs.stickers[(pageIndex + stickerIndex) % motifs.stickers.length];
+}
+
+export function journalPhotoId(page, item, selectedPhotoIds) {
+  if (item.photoId) return item.photoId;
+  if (page?.source !== 'system' || page.protected || !selectedPhotoIds.length) return undefined;
+  return selectedPhotoIds[(item.photoIndex || 0) % selectedPhotoIds.length];
 }
 
 export function pinAutomaticAssets(page, pageIndex, jobs, motifs, selectedPhotoIds = [], videoIds = []) {
@@ -60,19 +68,23 @@ export function pinAutomaticAssets(page, pageIndex, jobs, motifs, selectedPhotoI
       const motif = stickerMotifForItem(page, pageIndex, itemIndex, motifs);
       const job = selectJournalAsset(page, '', jobs, 'sticker', motif);
       if (job && job.status !== 'failed') references.stickerId = job.id;
+      else if (page.source === 'system' && motif) references.stickerMotif = motif;
     }
     if (['cover', 'illustration'].includes(item.kind) && !item.assetId) {
       const job = selectJournalAsset(page, '', jobs, 'illustration', motifs.illustration);
       if (job && job.status !== 'failed') references.assetId = job.id;
+      else if (page.source === 'system' && motifs.illustration) references.assetMotif = motifs.illustration;
     }
     if (item.kind === 'postcard') {
       if (!item.assetId) {
         const job = selectJournalAsset(page, '', jobs, 'postcard', motifs.postcard);
         if (job && job.status !== 'failed') references.assetId = job.id;
+        else if (page.source === 'system' && motifs.postcard) references.assetMotif = motifs.postcard;
       }
       if (!item.stampId) {
         const job = selectJournalAsset(page, '', jobs, 'stamp', motifs.stamp);
         if (job && job.status !== 'failed') references.stampId = job.id;
+        else if (page.source === 'system' && motifs.stamp) references.stampMotif = motifs.stamp;
       }
     }
     if (item.kind === 'photo' && !item.photoId && selectedPhotoIds.length)

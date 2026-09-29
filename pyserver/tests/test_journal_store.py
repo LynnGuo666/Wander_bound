@@ -49,6 +49,16 @@ def test_invalid_page_payload_is_rejected(tmp_path):
     assert store.get(trip)["version"] == 0
 
 
+def test_pending_art_theme_survives_user_page_save(tmp_path):
+    trip = {"id": "4c1ff312-d83e-42d8-a368-f5cb93dc1009", "title": "上海"}
+    store = JournalStore(tmp_path, catalog())
+    page = store.get(trip)["pages"][0]
+    page["items"][0]["assetMotif"] = "上海外滩夜景"
+    saved = store.edit_page(trip, 0, page, 0)
+    assert saved["pages"][0]["items"][0]["assetMotif"] == "上海外滩夜景"
+    assert JournalStore(tmp_path, catalog()).get(trip)["pages"][0] == saved["pages"][0]
+
+
 def test_default_collage_shows_city_illustration_and_migrates_only_system_pages(tmp_path):
     trip = {"id": "2e088653-e62a-4335-9a0d-83604436e95b", "title": "上海重游",
             "plan": {"destination": "上海"}}
