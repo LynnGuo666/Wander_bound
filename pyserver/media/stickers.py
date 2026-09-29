@@ -79,7 +79,7 @@ def isolate_sticker(image: Image.Image) -> Image.Image:
 
 
 def public(job: dict) -> dict:
-    return {key: job.get(key) for key in ("id", "tripId", "kind", "motif", "status", "createdAt", "error")}
+    return {key: job.get(key) for key in ("id", "tripId", "kind", "motif", "status", "createdAt", "error", "promptVersion")}
 
 
 class StickerStore:
@@ -89,6 +89,10 @@ class StickerStore:
         self.controller = controller
         self.worker: asyncio.Task | None = None
         self.prompt_dir = Path(__file__).resolve().parents[2] / "prompts"
+
+    def prompt_versions(self) -> dict[str, str]:
+        return {kind: json.loads((self.prompt_dir / f"journal-{kind}.qwen-image-2.1.json").read_text())["id"]
+                for kind in ("sticker", "stamp", "postcard", "illustration")}
 
     def get(self, sticker_id: str) -> dict | None:
         try:
@@ -124,15 +128,17 @@ class StickerStore:
         if (not isinstance(motif, str) or not 2 <= len(motif.strip()) <= 80
                 or any(ord(char) < 32 for char in motif)):
             raise ValueError("贴纸主题须为 2–80 个字符")
-        existing = next((item for item in self.list_for_trip(trip_id)
-                         if item["kind"] == kind and item["motif"] == motif.strip()
-                         and item["status"] in {"queued", "running", "succeeded"}), None)
-        if existing:
-            return existing
-        if len(self.list_for_trip(trip_id)) >= 60:
-            raise ValueError("每趟旅程最多保存 60 枚 AI 素材")
         spec_file = self.prompt_dir / f"journal-{kind}.qwen-image-2.1.json"
         spec = json.loads(spec_file.read_text())
+        existing_items = self.list_for_trip(trip_id)
+        for item in existing_items:
+            if (item["kind"] == kind and item["motif"] == motif.strip()
+                    and item["status"] in {"queued", "running", "succeeded"}):
+                stored = self.get(item["id"])
+                if stored and stored.get("promptVersion") == spec["id"]:
+                    return item
+        if len(existing_items) >= 60:
+            raise ValueError("每趟旅程最多保存 60 枚 AI 素材")
         graph = json.loads(self.client.workflow_file.read_text())
         if (graph.get("6", {}).get("class_type") != "EmptyLatentImage"
                 or graph.get("6", {}).get("inputs", {}).get("width") != 1024

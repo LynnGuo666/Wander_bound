@@ -52,9 +52,24 @@ class JournalStore:
 
     def _read(self, trip: dict) -> dict:
         try:
-            return json.loads(self._path(trip["id"]).read_text())
+            document = json.loads(self._path(trip["id"]).read_text())
         except FileNotFoundError:
             return self._initial(trip)
+        collage = self.templates.get("book-and-clip", {}).get("slots", [])
+        if not collage or collage[-1]["kind"] != "illustration":
+            return document
+        upgraded = False
+        for page in document["pages"]:
+            if (page.get("source") != "system" or page.get("protected")
+                    or page.get("templateId") != "book-and-clip"):
+                continue
+            items = page.get("items") or []
+            if len(items) != len(collage) - 1 or any(
+                    item.get("kind") != slot["kind"] for item, slot in zip(items, collage)):
+                continue
+            items.append({**collage[-1], "id": str(uuid.uuid4())})
+            upgraded = True
+        return self._write(document) if upgraded else document
 
     def get(self, trip: dict) -> dict:
         with self.lock:
@@ -100,11 +115,18 @@ class JournalStore:
                 if not isinstance(item["text"], str) or len(item["text"]) > 2000:
                     raise ValueError("手账文字过长")
                 normalized["text"] = item["text"]
+            for name in ("stickerMotif", "assetMotif", "stampMotif"):
+                if item.get(name):
+                    value = item[name]
+                    if (not isinstance(value, str) or len(value) > 80
+                            or any(ord(char) < 32 for char in value)):
+                        raise ValueError("手账素材主题无效")
+                    normalized[name] = value
             if "photoIndex" in item:
                 if not isinstance(item["photoIndex"], int) or not 0 <= item["photoIndex"] < 10000:
                     raise ValueError("照片序号无效")
                 normalized["photoIndex"] = item["photoIndex"]
-            for name in ("stickerId", "stampId", "assetId", "photoId"):
+            for name in ("stickerId", "stampId", "assetId", "photoId", "videoId"):
                 if item.get(name):
                     try:
                         normalized[name] = str(uuid.UUID(item[name]))

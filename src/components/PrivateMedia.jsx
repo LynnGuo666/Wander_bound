@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { apiFetch } from '../lib/api.js';
 
-export function PrivateMedia({ url, token, alt = '', className = '', video = false }) {
+export function PrivateMedia({ url, token, alt = '', className = '', video = false, loading = 'lazy' }) {
   const [source, setSource] = useState('');
   const [error, setError] = useState(false);
   useEffect(() => {
@@ -18,5 +18,5 @@ export function PrivateMedia({ url, token, alt = '', className = '', video = fal
   if (error) return <span className="media-placeholder">暂时无法加载</span>;
   if (!source) return <span className="media-placeholder">{token ? '正在加载…' : '连接私有相册后可查看'}</span>;
   return video ? <video className={className} src={source} controls preload="metadata" playsInline />
-    : <img className={className} src={source} alt={alt} loading="lazy" />;
+    : <img className={className} src={source} alt={alt} loading={loading} />;
 }
