@@ -13,12 +13,12 @@ import httpx
 
 from ..trips import now
 from .contracts import ContractError
-from .dynamic_sources import DynamicPhotoSources
+from .dynamic_sources import DynamicPhotoSources, SELECTOR_PROMPT_VERSION
 from .vision import vision_base_url, vision_model, vision_token
 from .vlm import compress_for_vlm
 
 
-PROMPT_VERSION = "dynamic-photo-selection@1"
+PROMPT_VERSION = SELECTOR_PROMPT_VERSION
 SYSTEM_PROMPT = """You review one real travel photo for subtle single-image video animation. Return only one JSON object with exactly: photoId (the supplied ID), suitable (boolean), score (integer 0..100), reason (short Chinese explanation grounded in the visible image), motionPrompt (short English description or null). Favor naturally moving water, clouds, mist, steam, foliage and similar small scene motion. Keep the main subject, composition and camera almost still. Be conservative with close faces, group portraits, signs and dense text. Do not invent people, places, events or unseen motion. If unsuitable, set motionPrompt to null. A merely ordinary photo is not automatically suitable. No markdown or extra fields."""
 
 
@@ -56,10 +56,10 @@ def validate_assessment(data: object, photo_id: str) -> dict:
 
 
 def analyze_image(image_bytes: bytes, photo_id: str, *, client: httpx.Client | None = None,
-                  timeout: float = 180) -> dict:
+                  timeout: float = 180, base_url: str | None = None) -> dict:
     """Use the existing private Spark-compatible vision endpoint; retain no raw response."""
     model = vision_model()
-    endpoint = vision_base_url() + "/chat/completions"
+    endpoint = (base_url or vision_base_url()).rstrip("/") + "/chat/completions"
     token = vision_token()
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     image = compress_for_vlm(image_bytes)
@@ -129,8 +129,12 @@ class DynamicPhotoSelector:
                     raise ContractError("JOB_NOT_FOUND", "动态照片任务不存在", 404)
                 if job["status"] in {"selected", "skipped", "failed"}:
                     return job
-                if job["status"] not in {"prepared", "analyzing"}:
+                if job["status"] not in {"prepared", "queued", "analyzing"}:
                     raise ContractError("JOB_STATE_INVALID", "动态照片任务状态不允许选图", 409)
+                execution = job.get("executionContract") or {}
+                if (execution.get("visionModel") != vision_model()
+                        or execution.get("selectionPromptVersion") != PROMPT_VERSION):
+                    raise SelectionError("ANALYSIS_VERSION_CHANGED", "分析模型或提示词版本已改变")
                 inputs = job["sourceSnapshot"]["inputs"]
                 ids = [item["photoId"] for item in inputs]
                 if not ids or len(ids) != len(set(ids)):
@@ -201,17 +205,20 @@ class DynamicPhotoSelector:
             finally:
                 fcntl.flock(lock, fcntl.LOCK_UN)
 
-    async def run_managed(self, job_id: str, analyzer=analyze_image) -> dict:
+    async def run_managed(self, job_id: str, analyzer=None) -> dict:
+        analyzer = analyze_image if analyzer is None else analyzer
         existing = self.sources.get(job_id)
         if not existing:
             raise ContractError("JOB_NOT_FOUND", "动态照片任务不存在", 404)
         if existing["status"] in {"selected", "skipped", "failed"}:
             return existing
-        if self.controller is None:
+        if self.controller is None or not getattr(self.controller, "enabled", True):
             return await asyncio.to_thread(self.run, job_id, analyzer)
         try:
-            async with self.controller.use("chat"):
-                return await asyncio.to_thread(self.run, job_id, analyzer)
+            async with self.controller.use("chat") as spec:
+                managed_analyzer = (lambda image, photo_id: analyze_image(
+                    image, photo_id, base_url=spec.url.rstrip("/") + "/v1")) if analyzer is analyze_image else analyzer
+                return await asyncio.to_thread(self.run, job_id, managed_analyzer)
         except Exception as exc:
             return await asyncio.to_thread(self._fail_unavailable, job_id, type(exc).__name__)
 
