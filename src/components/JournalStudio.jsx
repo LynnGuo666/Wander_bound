@@ -464,6 +464,11 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   function turnSpread(offset) {
     const target = spreadIndex + offset;
     if (spreadTurn || turnDirection || target < 0 || target >= pages.length / 2) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setSpreadIndex(target);
+      setSelected(null);
+      return;
+    }
     setSpreadTurn({ target, direction: offset > 0 ? 'next' : 'previous' });
   }
   function finishSpreadTurn() {
