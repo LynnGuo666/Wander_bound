@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { itineraryMotifs, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from './journalMotifs.js';
+import { itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from './journalMotifs.js';
 
 const categories = JSON.parse(readFileSync(new URL('../../workflows/journal-sticker-categories.json', import.meta.url), 'utf8'));
 
@@ -94,4 +94,22 @@ test('automatic stickers land on different pages and user edits pin all visible 
   assert.equal(system.items[0].stickerId, undefined);
   const userPage = { ...pinned, source: 'user', protected: true };
   assert.equal(pinAutomaticAssets(userPage, 0, [{ id: 'other', kind: 'sticker', motif: '食物' }], motifs), userPage);
+});
+
+test('an early edit keeps its pending Qwen themes and does not switch private photos later', () => {
+  const motifs = { stickers: ['外滩建筑'], illustration: '外滩夜色', postcard: '黄浦江', stamp: '上海邮票' };
+  const system = { source: 'system', protected: false, items: [
+    { kind: 'sticker' }, { kind: 'illustration' }, { kind: 'postcard' }, { kind: 'photo', photoIndex: 0 },
+  ] };
+  const pinned = pinAutomaticAssets(system, 0, [], motifs);
+  assert.equal(pinned.items[0].stickerMotif, '外滩建筑');
+  assert.equal(pinned.items[1].assetMotif, '外滩夜色');
+  assert.equal(pinned.items[2].assetMotif, '黄浦江');
+  assert.equal(pinned.items[2].stampMotif, '上海邮票');
+  const userPage = { ...pinned, source: 'user', protected: true };
+  const jobs = [{ id: 'new-art', kind: 'sticker', motif: '外滩建筑', status: 'succeeded' }];
+  assert.equal(selectJournalAsset(userPage, '', jobs, 'sticker', 'different', pinned.items[0].stickerMotif)?.id, 'new-art');
+  assert.equal(selectJournalAsset(userPage, '', jobs, 'sticker', '外滩建筑'), undefined);
+  assert.equal(journalPhotoId(userPage, pinned.items[3], ['later-photo']), undefined);
+  assert.equal(journalPhotoId(system, system.items[3], ['later-photo']), 'later-photo');
 });
