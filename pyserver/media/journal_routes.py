@@ -31,16 +31,24 @@ def valid_motif(value: object) -> bool:
 
 def photo_context(media: MediaStore, trip_id: str) -> list[dict]:
     """Only selected photos' text tags go to StepFun; image bytes and private EXIF stay local."""
+    def text_tag(value: object, limit: int) -> str:
+        return value[:limit] if isinstance(value, str) else ""
+
     result = []
     for photo in media.selected(trip_id)["photos"][:12]:
-        tags = photo.get("tags") or {}
+        tags = photo.get("tags")
+        tags = tags if isinstance(tags, dict) else {}
+        objects = tags.get("objects")
+        objects = objects if isinstance(objects, list) else []
+        quality = tags.get("quality")
+        quality = quality if isinstance(quality, dict) else {}
         result.append({"photoId": photo["id"], "capturedDay": photo.get("capturedDay"),
-                       "scene": str(tags.get("scene") or "")[:100],
-                       "activity": str(tags.get("activity") or "")[:40],
-                       "objects": [str(item)[:40] for item in (tags.get("objects") or [])[:5] if isinstance(item, str)],
-                       "locationClue": str(tags.get("location_clue") or "")[:80],
-                       "mood": str(tags.get("mood") or "")[:40],
-                       "highlight": (tags.get("quality") or {}).get("highlight") is True})
+                       "scene": text_tag(tags.get("scene"), 100),
+                       "activity": text_tag(tags.get("activity"), 40),
+                       "objects": [item[:40] for item in objects[:5] if isinstance(item, str)],
+                       "locationClue": text_tag(tags.get("location_clue"), 80),
+                       "mood": text_tag(tags.get("mood"), 40),
+                       "highlight": quality.get("highlight") is True})
     return result
 
 
