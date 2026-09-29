@@ -54,7 +54,7 @@ class MainActivity : Activity() {
         fun field(hint: String, value: String = "") = EditText(this).apply {
             this.hint = hint
             setText(value)
-            singleLine = true
+            setSingleLine(true)
             setPadding(16, 10, 16, 10)
         }
 
