@@ -99,6 +99,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const saveChain = useRef(Promise.resolve());
   const [ready, setReady] = useState(!token);
   const [spreadIndex, setSpreadIndex] = useState(0);
+  const [spreadTurn, setSpreadTurn] = useState(null);
   const [selected, setSelected] = useState(null);
   const [stickerJobs, setStickerJobs] = useState(cachedVisuals.current.stickers || []);
   const stickerJobsRef = useRef(stickerJobs);
@@ -113,6 +114,8 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   const stageRef = useRef(null);
   const nextPreviewRef = useRef(null);
   const previousPreviewRef = useRef(null);
+  const nextSpreadPreviewRef = useRef(null);
+  const previousSpreadPreviewRef = useRef(null);
   const noteApplied = useRef(false);
   const videos = (previewOnly || !privateReady ? previewWorks : works)
     .filter(work => work.kind === 'memory' && work.status === 'succeeded');
@@ -458,6 +461,17 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     } catch (reason) { setError(reason.message); }
     finally { setBusy(false); }
   }
+  function turnSpread(offset) {
+    const target = spreadIndex + offset;
+    if (spreadTurn || turnDirection || target < 0 || target >= pages.length / 2) return;
+    setSpreadTurn({ target, direction: offset > 0 ? 'next' : 'previous' });
+  }
+  function finishSpreadTurn() {
+    if (!spreadTurn) return;
+    setSpreadIndex(spreadTurn.target);
+    setSelected(null);
+    setSpreadTurn(null);
+  }
   function addGenerated(job) {
     const pageIndex = selected?.pageIndex ?? spreadIndex * 2;
     const kind = ['sticker', 'stamp'].includes(job.kind) ? 'sticker' : job.kind;
@@ -515,6 +529,14 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
     if (item.kind === 'ticket' || item.kind === 'boarding') return <div className="studio-prop-wrap"><img className="studio-prop" src={`/art/${item.kind === 'ticket' ? 'rail-ticket-blank' : 'boarding-pass-blank'}.png`} alt={`千问生成的${labelFor(item.kind)}模板`} /><span className="studio-ticket-text">{trip.plan?.originCity || '旅途起点'} → {trip.plan?.destination || tripTitle(trip)}<br />{trip.plan?.startDate || '启程日期'}</span></div>;
     return <div className="studio-text">{item.text}</div>;
   }
+  function renderSpreadPreview(index, ref) {
+    if (index < 0 || index >= pages.length / 2) return null;
+    return <div ref={ref} className="studio-preview-source" data-preview-ready="true" aria-hidden="true">
+      {pages.slice(index * 2, index * 2 + 2).map((page, localIndex) => { const pageIndex = index * 2 + localIndex; return <div className="studio-page" key={pageIndex}><div className="studio-canvas">{page.items.map((item, itemIndex) =>
+        <div className={`studio-item studio-${item.kind}`} key={item.id}
+          style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z, transform: `rotate(${item.r}deg)` }}>{renderItem(item, page, pageIndex, itemIndex)}</div>)}</div></div>; })}
+    </div>;
+  }
   if (previewOnly) return <div ref={sourceRef} className="studio-preview-source" data-preview-ready={ready && previewDataReady && previewAssetsReady} aria-hidden="true">{pages.slice(0, 2).map((page, pageIndex) =>
     <div className="studio-page" key={pageIndex}><div className="studio-canvas">{page.items.map((item, itemIndex) =>
       <div className={`studio-item studio-${item.kind}`} key={item.id}
@@ -522,7 +544,7 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
           transform: `rotate(${item.r}deg)` }}>{renderItem(item, page, pageIndex, itemIndex)}</div>)}</div></div>)}</div>;
   if (!ready) return <section className="studio-shell" aria-label="可编辑的旅途手账"><p role="status" className="studio-message">正在打开手账…</p></section>;
   return <section className="studio-shell" aria-label="可编辑的旅途手账">
-    <div className="studio-toolbar"><strong>{tripTitle(trip)} <small>{tripDate(trip)}</small></strong><div className="studio-spread-nav"><button type="button" disabled={spreadIndex === 0} onClick={() => { setSpreadIndex(index => index - 1); setSelected(null); }}>‹</button><small>{spreadIndex + 1} / {Math.ceil(pages.length / 2)}</small><button type="button" disabled={spreadIndex >= pages.length / 2 - 1} onClick={() => { setSpreadIndex(index => index + 1); setSelected(null); }}>›</button><button type="button" disabled={!token || busy || pages.length >= 12} onClick={addSpread}>＋两页</button></div><div><button className="solid-button" disabled={!token || busy || !ready} onClick={aiCompose}>{busy ? <LoaderCircle className="spin" size={15} /> : <Sparkles size={15} />}AI 排版</button>{!token ? <button className="text-button" onClick={onOpenSettings}>连接相册</button> : null}</div></div>
+    <div className="studio-toolbar"><strong>{tripTitle(trip)} <small>{tripDate(trip)}</small></strong><div className="studio-spread-nav"><button type="button" disabled={spreadIndex === 0 || !!spreadTurn || !!turnDirection} onClick={() => turnSpread(-1)}>‹</button><small>{spreadIndex + 1} / {Math.ceil(pages.length / 2)}</small><button type="button" disabled={spreadIndex >= pages.length / 2 - 1 || !!spreadTurn || !!turnDirection} onClick={() => turnSpread(1)}>›</button><button type="button" disabled={!token || busy || !!spreadTurn || pages.length >= 12} onClick={addSpread}>＋两页</button></div><div><button className="solid-button" disabled={!token || busy || !ready || !!spreadTurn} onClick={aiCompose}>{busy ? <LoaderCircle className="spin" size={15} /> : <Sparkles size={15} />}AI 排版</button>{!token ? <button className="text-button" onClick={onOpenSettings}>连接相册</button> : null}</div></div>
     <div className="studio-workspace">
       <div className="studio-book-stage"><div ref={stageRef} className={`studio-book-spread ${turnDirection ? `turn-${turnDirection}` : ''}`}>{pages.slice(spreadIndex * 2, spreadIndex * 2 + 2).map((page, localIndex) => { const pageIndex = spreadIndex * 2 + localIndex; return <div className="studio-page" key={pageIndex}><div className="studio-canvas" aria-label={`${localIndex === 0 ? '左' : '右'}页画布`}>
         {page.items.map((item, itemIndex) => <div key={item.id} className={`studio-item studio-${item.kind}${selected?.id === item.id ? ' selected' : ''}`}
@@ -531,8 +553,12 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected({ pageIndex, id: item.id }); setToolTab('edit'); } }}
           onPointerDown={event => onPointerDown(event, pageIndex, item)} onPointerMove={onPointerMove} onPointerUp={() => { if (drag.current?.moved) persistPage(drag.current.pageIndex); drag.current = null; }} onPointerCancel={() => { if (drag.current?.moved) persistPage(drag.current.pageIndex); drag.current = null; }}
           style={{ left: `${item.x}%`, top: `${item.y}%`, width: `${item.w}%`, height: `${item.h}%`, zIndex: item.z, transform: `rotate(${item.r}deg)` }}>{renderItem(item, page, pageIndex, itemIndex)}</div>)}
-      </div></div>; })}{turnDirection ? <BinderFlipTransition direction={turnDirection} stageRef={stageRef}
-        incomingRef={turnDirection === 'next' ? nextPreviewRef : previousPreviewRef} onComplete={onTurnComplete} /> : null}</div>
+      </div></div>; })}{turnDirection || spreadTurn ? <BinderFlipTransition direction={turnDirection || spreadTurn.direction} stageRef={stageRef}
+        incomingRef={turnDirection ? (turnDirection === 'next' ? nextPreviewRef : previousPreviewRef)
+          : (spreadTurn.direction === 'next' ? nextSpreadPreviewRef : previousSpreadPreviewRef)}
+        onComplete={turnDirection ? onTurnComplete : finishSpreadTurn} /> : null}</div>
+      {renderSpreadPreview(spreadIndex + 1, nextSpreadPreviewRef)}
+      {renderSpreadPreview(spreadIndex - 1, previousSpreadPreviewRef)}
       {nextTrip ? <JournalStudio key={nextTrip.id} trip={nextTrip} token={token} previewOnly sourceRef={nextPreviewRef} /> : null}
       {previousTrip ? <JournalStudio key={previousTrip.id} trip={previousTrip} token={token} previewOnly sourceRef={previousPreviewRef} /> : null}</div>
       <aside className="studio-tools" aria-label="手账工具"><nav className="studio-tool-tabs" aria-label="手账工具分类">{[['layout','版式'],['add','添加'],['stickers','贴纸'],['edit','编辑'],['works','作品']].map(([id,name]) => <button key={id} type="button" className={toolTab === id ? 'active' : ''} onClick={() => setToolTab(id)}>{name}</button>)}</nav>
