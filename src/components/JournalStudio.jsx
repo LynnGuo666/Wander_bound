@@ -288,13 +288,10 @@ export default function JournalStudio({ trip, photos: providedPhotos = [], selec
   useEffect(() => {
     if (previewOnly || !note || !ready || noteApplied.current) return;
     noteApplied.current = true;
-    const next = pagesRef.current.map((page, pageIndex) => ({ ...page,
-      items: page.items.map(item => pageIndex === 0 && page.source === 'system' && !page.protected && item.kind === 'text'
-        ? { ...item, text: note } : item),
-    }));
-    pagesRef.current = next;
-    rememberJournalPages(token, trip.id, next);
-    setPages(next);
+    const firstPage = pagesRef.current[0];
+    if (!firstPage || firstPage.protected || !firstPage.items.some(item => item.kind === 'text')) return;
+    editPage(0, page => ({ ...page, items: page.items.map(item => item.kind === 'text'
+      ? { ...item, text: note.slice(0, 2000) } : item) }));
   }, [note, ready, trip.id]);
   useEffect(() => {
     if (!token) { updateStickerJobs([]); return; }
