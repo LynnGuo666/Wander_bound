@@ -102,7 +102,7 @@ function TripDetail({ trip, index, onBack, onRevise, onRecalculated, running, to
   </div>;
 }
 
-export default function TripsView({ trips, refreshTrips, currentTripId, currentPlan, form, update, onGenerate, events, error, running, onCancel, onOpenTrip, onRevise, token }) {
+export default function TripsView({ trips, refreshTrips, currentTripId, currentPlan, form, memory, update, onGenerate, events, error, running, onCancel, onOpenTrip, onRevise, token }) {
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
@@ -125,7 +125,7 @@ export default function TripsView({ trips, refreshTrips, currentTripId, currentP
   return <div className="journeys-page page-enter">
     <section className="journeys-hero"><div><span className="section-kicker">THE JOURNEY BEGINS HERE</span><h1>去看看世界，<br /><em>也留下自己的故事。</em></h1><p>从一个念头出发，把每一次计划都变成值得回看的旅程。</p><button className="light-button" onClick={() => { setComposing(true); document.getElementById('plan-composer')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }}><Plus size={18} /> 规划新行程</button></div><div className="hero-art"><img src="/art/travel-cover.webp" alt="山海与小镇的风格化旅行插画" /></div></section>
     <div id="plan-composer" className={composing || !trips.length || running || error ? '' : 'composer-collapsed'}><PlanComposer form={form} update={update} onGenerate={() => { setComposing(true); onGenerate(); }} running={running} error={error} events={events} onCancel={onCancel} /></div>
-    <HistoryImporter onCreated={refreshTrips} />
+    <HistoryImporter onCreated={refreshTrips} homeCity={memory?.homeCity} />
     <section className="journey-list"><div className="section-heading"><div><span className="section-kicker">YOUR COLLECTION</span><h2>我的行程 <span>{trips.length ? String(trips.length).padStart(2, '0') : ''}</span></h2><p>继续筹备，或重新走进一段已经完成的旅程。</p></div><button className="icon-text-button" onClick={refreshTrips} aria-label="刷新行程"><RefreshCw size={17} /> 刷新</button></div>
       {detailError ? <p className="form-error" role="alert">{detailError}</p> : null}{loading ? <p className="quiet-copy">正在打开行程…</p> : null}
       {trips.length ? <div className="trip-card-grid">{trips.map((trip, index) => <button className="trip-card" key={trip.id} onClick={() => open(trip.id)}><TripCover trip={trip} index={index} /><div className="trip-card-body"><span className="trip-card-status">{STATUS[trip.status] || '规划中'}</span><h3>{tripTitle(trip)}</h3><p><CalendarDays size={14} />{tripDate(trip)}</p><span className="trip-card-link">查看行程 <ChevronRight size={16} /></span></div></button>)}</div> : <div className="empty-panel"><Compass /><h3>你的旅程，从这里开始</h3><p>写下想去的地方，第一张行程卡片就会出现。</p></div>}
