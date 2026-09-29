@@ -7,7 +7,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.provider.OpenableColumns
+import android.provider.DocumentsContract
 import android.view.Gravity
 import android.view.View
 import android.widget.Button
@@ -196,7 +196,7 @@ class MainActivity : Activity() {
     }
 
     private fun capturedDay(uri: Uri): String? {
-        val date = contentResolver.query(uri, arrayOf(OpenableColumns.LAST_MODIFIED), null, null, null)?.use { cursor ->
+        val date = contentResolver.query(uri, arrayOf(DocumentsContract.Document.COLUMN_LAST_MODIFIED), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getLong(0) else 0L
         } ?: 0L
         return if (date > 0) SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date(date)) else null
