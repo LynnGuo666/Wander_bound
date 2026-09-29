@@ -248,6 +248,13 @@ function StPageFlipTransition({ direction, stageRef, incomingRef, onComplete }) 
     let frame;
     let cancelWait = () => {};
     let imageTimer;
+    let completionTimer;
+    let completed = false;
+    const complete = () => {
+      if (!active || completed) return;
+      completed = true;
+      completeRef.current?.();
+    };
     const preview = incomingRef.current;
     const previewPainted = () => preview?.dataset.previewReady === 'true'
       && ![...preview.querySelectorAll('.media-placeholder')].some(node => node.textContent?.includes('正在加载'));
@@ -268,10 +275,10 @@ function StPageFlipTransition({ direction, stageRef, incomingRef, onComplete }) 
       observer.observe(preview, { subtree: true, childList: true, attributes: true });
     });
     async function start() {
-      if (!await waitForPreview() || !active) { if (active) completeRef.current?.(); return; }
+      if (!await waitForPreview() || !active) { complete(); return; }
       const source = stage.querySelectorAll(':scope > .studio-page > .studio-canvas');
       const incoming = preview.querySelectorAll(':scope > .studio-page > .studio-canvas');
-      if (source.length !== 2 || incoming.length !== 2) { completeRef.current?.(); return; }
+      if (source.length !== 2 || incoming.length !== 2) { complete(); return; }
       const images = [...source, ...incoming].flatMap(canvas => [...canvas.querySelectorAll('img')]);
       await Promise.race([
         Promise.all(images.map(img => img.decode().catch(() => {}))),
@@ -299,21 +306,22 @@ function StPageFlipTransition({ direction, stageRef, incomingRef, onComplete }) 
       let started = false;
       flip.on('changeState', event => {
         if (event.data === 'flipping') started = true;
-        if (event.data === 'read' && started) completeRef.current?.();
+        if (event.data === 'read' && started) complete();
       });
       flip.loadFromHTML(pages);
       frame = requestAnimationFrame(() => {
         if (!active) return;
         stage.classList.add('flip-active');
         direction === 'next' ? flip.flipNext() : flip.flipPrev();
-        if (flip.getState() !== 'flipping') completeRef.current?.();
+        completionTimer = setTimeout(complete, 1500);
       });
     }
-    start().catch(() => { if (active) completeRef.current?.(); });
+    start().catch(complete);
     return () => {
       active = false;
       cancelWait();
       clearTimeout(imageTimer);
+      clearTimeout(completionTimer);
       cancelAnimationFrame(frame);
       stage.classList.remove('flip-active');
       flip?.destroy();
