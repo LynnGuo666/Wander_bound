@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from './journalMotifs.js';
+import { hasCurrentJournalAsset, itineraryMotifs, journalPhotoId, pinAutomaticAssets, selectJournalAsset, stickerMotifForItem } from './journalMotifs.js';
 
 const categories = JSON.parse(readFileSync(new URL('../../workflows/journal-sticker-categories.json', import.meta.url), 'utf8'));
 
@@ -73,6 +73,20 @@ test('automatic Qwen art fills system pages without changing user-owned pages', 
   assert.equal(selectJournalAsset({ source: 'user', protected: true }, '', jobs, 'postcard', motif), undefined);
   assert.equal(selectJournalAsset({ source: 'user', protected: true }, 'chosen', jobs, 'postcard', motif)?.id, 'chosen');
   assert.equal(selectJournalAsset({ source: 'system', protected: false }, 'missing', jobs, 'postcard', motif), undefined);
+});
+
+test('outdated Qwen assets are regenerated without blanking an existing system page', () => {
+  const versions = { postcard: 'journal-postcard-scene-qwen21-t2i-v4' };
+  const old = { id: 'old', kind: 'postcard', motif: '外滩建筑立面', status: 'succeeded',
+    promptVersion: 'journal-postcard-scene-qwen21-t2i-v2' };
+  const queued = { id: 'queued', kind: 'postcard', motif: old.motif, status: 'queued',
+    promptVersion: versions.postcard };
+  assert.equal(hasCurrentJournalAsset([old], 'postcard', old.motif, versions), false);
+  assert.equal(hasCurrentJournalAsset([queued, old], 'postcard', old.motif, versions), true);
+  assert.equal(selectJournalAsset({ source: 'system', protected: false }, '', [queued, old], 'postcard', old.motif)?.id, 'old');
+  assert.equal(selectJournalAsset({ source: 'user', protected: true }, 'old', [queued, old], 'postcard', old.motif)?.id, 'old');
+  const done = { ...queued, status: 'succeeded' };
+  assert.equal(selectJournalAsset({ source: 'system', protected: false }, '', [done, old], 'postcard', old.motif)?.id, 'queued');
 });
 
 test('automatic stickers land on different pages and user edits pin all visible media', () => {

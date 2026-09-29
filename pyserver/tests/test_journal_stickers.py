@@ -153,7 +153,9 @@ def test_step_composition_and_qwen_sticker_are_authenticated_and_private(tmp_pat
             assert saved["promptVersion"] == "journal-sticker-qwen21-t2i-v1"
             assert saved["workflow"]["6"]["class_type"] == "EmptyLatentImage"
             assert all(node["class_type"] != "LoadImage" for node in saved["workflow"].values())
-            assert (await http.get(base + "/stickers")).json()["stickers"][0]["id"] == body["id"]
+            inventory = (await http.get(base + "/stickers")).json()
+            assert inventory["stickers"][0]["id"] == body["id"]
+            assert inventory["stickers"][0]["promptVersion"] == inventory["promptVersions"]["sticker"]
             assert (await http.get(f"/api/media/stickers/{body['id']}/image")).status_code == 409
             http.headers["Authorization"] = "Bearer other-test-token"
             assert (await http.get(f"/api/media/stickers/{body['id']}/image")).status_code == 404
