@@ -70,7 +70,7 @@ test('automatic stickers land on different pages and user edits pin all visible 
   const motifs = { stickers: ['食物', '建筑'], illustration: '城市插画', postcard: '明信片', stamp: '邮票' };
   const system = { source: 'system', protected: false, items: [
     { kind: 'sticker' }, { kind: 'sticker' }, { kind: 'illustration' },
-    { kind: 'postcard' }, { kind: 'photo', photoIndex: 1 },
+    { kind: 'postcard' }, { kind: 'photo', photoIndex: 1 }, { kind: 'video' },
   ] };
   const jobs = [
     { id: 'food', kind: 'sticker', motif: '食物', status: 'succeeded' },
@@ -82,13 +82,14 @@ test('automatic stickers land on different pages and user edits pin all visible 
   assert.equal(stickerMotifForItem(system, 0, 0, motifs), '食物');
   assert.equal(stickerMotifForItem(system, 0, 1, motifs), '建筑');
   assert.equal(stickerMotifForItem(system, 1, 0, motifs), '建筑');
-  const pinned = pinAutomaticAssets(system, 0, jobs, motifs, ['photo-a', 'photo-b']);
-  assert.deepEqual(pinned.items.map(item => [item.stickerId, item.assetId, item.stampId, item.photoId]), [
-    ['food', undefined, undefined, undefined],
-    ['building', undefined, undefined, undefined],
-    [undefined, 'scene', undefined, undefined],
-    [undefined, 'card', 'stamp', undefined],
-    [undefined, undefined, undefined, 'photo-b'],
+  const pinned = pinAutomaticAssets(system, 0, jobs, motifs, ['photo-a', 'photo-b'], ['video-a']);
+  assert.deepEqual(pinned.items.map(item => [item.stickerId, item.assetId, item.stampId, item.photoId, item.videoId]), [
+    ['food', undefined, undefined, undefined, undefined],
+    ['building', undefined, undefined, undefined, undefined],
+    [undefined, 'scene', undefined, undefined, undefined],
+    [undefined, 'card', 'stamp', undefined, undefined],
+    [undefined, undefined, undefined, 'photo-b', undefined],
+    [undefined, undefined, undefined, undefined, 'video-a'],
   ]);
   assert.equal(system.items[0].stickerId, undefined);
   const userPage = { ...pinned, source: 'user', protected: true };
