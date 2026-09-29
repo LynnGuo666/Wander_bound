@@ -69,10 +69,16 @@ class ComfyClient:
                     if workflow_snapshot is not None else self.freeze_workflow())
         settings, seed = workflow_versions.validate_parameters(snapshot, parameters, seed)
         workflow = snapshot["api_graph"]
-        if self.kind == "video":
+        if self.kind in {"video", "dynamic_video"}:
             node = workflow.get("6", {})
             if node.get("class_type") != "MiniMaxH3ImageToVideo" or node.get("inputs", {}).get("width") != 1024 or node["inputs"].get("height") != 576:
                 raise ValueError("视频工作流 API 图不满足目标 16:9 画布")
+            if self.kind == "dynamic_video":
+                width, height = settings["width"], settings["height"]
+                if width * height > 768 * 1344:
+                    raise ValueError("动态照片画布超过 H3 像素上限")
+                node["inputs"]["width"], node["inputs"]["height"] = width, height
+                workflow["15"]["inputs"]["filename_prefix"] = "travel-dynamic-photo/MiniMax-H3"
             node["inputs"]["length"] = settings["frames"]
             workflow["14"]["inputs"]["fps"] = settings["fps"]
             if workflow.get("7", {}).get("inputs", {}).get("noise_seed") != "__TRAVEL_SEED__":
@@ -81,8 +87,10 @@ class ComfyClient:
             node = workflow.get("5", {})
             if node.get("class_type") != "TextEncodeQwenImage21" or node.get("inputs", {}).get("resolution") != 1024:
                 raise ValueError("图片工作流 API 图分辨率不符合当前策略")
-        image = workflow_versions.prepare_image(image, settings["aspect_ratio"],
-                                                snapshot["input_policy"], settings.get("fit_mode"))
+        image = (workflow_versions.prepare_dynamic_image(image, settings["width"], settings["height"])
+                 if self.kind == "dynamic_video" else
+                 workflow_versions.prepare_image(image, settings["aspect_ratio"],
+                                                 snapshot["input_policy"], settings.get("fit_mode")))
         async with httpx.AsyncClient(timeout=35) as client:
             upload = await client.post(f"{self.base_url}/upload/image", files={"image": (f"travel-{uuid.uuid4()}.jpg", image, "image/jpeg")},
                                        data={"overwrite": "false"})
@@ -148,7 +156,7 @@ class ComfyClient:
             if record.get("status", {}).get("status_str") == "error":
                 return "failed", None
             files = [file for output in record.get("outputs", {}).values() for group in ("images", "videos", "gifs") for file in output.get(group, [])]
-            extension = ".mp4" if self.kind == "video" else (".png", ".jpg", ".jpeg", ".webp")
+            extension = ".mp4" if self.kind in {"video", "dynamic_video"} else (".png", ".jpg", ".jpeg", ".webp")
             file = next((file for file in files if str(file.get("filename", "")).lower().endswith(extension)), None)
             return ("completed", file) if file else ("failed" if record.get("status", {}).get("completed") else "running", None)
 
