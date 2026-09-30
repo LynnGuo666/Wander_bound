@@ -24,6 +24,7 @@ from .dynamic_h3 import DynamicPhotoH3
 from .contracts import (ContractError, original_from_snapshot, product_contract,
                         selected_original_snapshot, validate_snapshot)
 from ..inference import ModelController
+from ..inference.night_window import NightLoadGate, NightWindow
 from ..trips import now
 from ..accounts import current_user
 
@@ -53,6 +54,9 @@ class JobStore:
         self.dynamic_h3 = (DynamicPhotoH3(self.dynamic_sources, ComfyClient(
             video.base_url, video.workflow_file, "dynamic_video"), controller)
             if isinstance(video, ComfyClient) else None)
+        self.night = NightWindow(getattr(controller, "enabled", False))
+        self.night_load = NightLoadGate(controller)
+        self.wake = asyncio.Event()
 
     def get(self, job_id: str) -> dict | None:
         try:
@@ -123,6 +127,8 @@ class JobStore:
             job["clips"] = clips
         if kind == "scrapbook":
             job.update(productKind="scrapbook", resultKind="image", executionReady=True, result=None)
+        if kind in {"scrapbook", "memory"} and self.night.seconds_until_open() > 0:
+            job.update(progressLabel="等待夜间自动生成", scheduledAt=self.night.next_open_iso())
         self.save(job)
         self._schedule()
         return job
@@ -155,6 +161,7 @@ class JobStore:
         return job
 
     def _schedule(self):
+        self.wake.set()
         if self.worker is None or self.worker.done():
             reset = current_user.set(None)
             try:
@@ -333,8 +340,24 @@ class JobStore:
                    for index in range(len(clips)))
 
     async def _drain(self):
-        while pending := self.pending():
-            job = pending[0]
+        while True:
+            self.wake.clear()
+            pending = self.pending()
+            if not pending:
+                break
+            wait_seconds = self.night.seconds_until_open()
+            job = next((item for item in pending if item["kind"] in {"edit", "dynamic-photo"}), None)
+            if job is None and not wait_seconds:
+                wait_seconds = await self.night_load.seconds_until_idle()
+                if not wait_seconds:
+                    job = pending[0]
+            if job is None:
+                try:
+                    await asyncio.wait_for(self.wake.wait(), timeout=wait_seconds)
+                except asyncio.TimeoutError:
+                    pass
+                continue
+            self.night_load.quiet_since = None
             if job["kind"] == "dynamic-photo":
                 try:
                     if job["status"] in {"queued", "analyzing"}:
@@ -636,6 +659,8 @@ class JobStore:
         job.pop("errorCode", None)
         job["progressLabel"] = "等待调度"
         job["progressPercent"] = 0
+        if job["kind"] in {"scrapbook", "memory"} and self.night.seconds_until_open() > 0:
+            job.update(progressLabel="等待夜间自动生成", scheduledAt=self.night.next_open_iso())
         job["attempt"] += 1
         job["resourceRetries"] = 0
         if job.get("submissionState") != "completed":

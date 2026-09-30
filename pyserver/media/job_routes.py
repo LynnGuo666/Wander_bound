@@ -175,7 +175,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         return {key: job.get(key) for key in
                 ("id", "productKind", "resultKind", "status", "executionReady", "backend",
                  "createdAt", "startedAt", "completedAt", "selectionSnapshot", "result", "error", "errorCode",
-                 "styleId", "seed", "parameters", "title", "attempt", "progressLabel", "progressPercent")} | {
+                 "styleId", "seed", "parameters", "title", "attempt", "progressLabel", "progressPercent", "scheduledAt")} | {
                     "styleVersion": (job.get("styleSnapshot") or {}).get("version"),
                     "presetSha256": (job.get("styleSnapshot") or {}).get("sha256"),
                     "workflowVersion": (job.get("workflowSnapshot") or {}).get("workflow_version"),
@@ -220,7 +220,7 @@ def router_for(trips: TripStore, media: MediaStore, jobs: JobStore) -> APIRouter
         job = jobs.get(job_id)
         if not job or job["kind"] != "memory":
             raise HTTPException(404, "任务不存在")
-        return {key: job.get(key) for key in ("id", "status", "backend", "error", "errorCode", "createdAt", "startedAt", "completedAt", "attempt", "completedClips", "progressLabel", "progressPercent")}
+        return {key: job.get(key) for key in ("id", "status", "backend", "error", "errorCode", "createdAt", "startedAt", "completedAt", "attempt", "completedClips", "progressLabel", "progressPercent", "scheduledAt")}
 
     @router.post("/api/media/memories/{job_id}/retry")
     async def retry_memory(job_id: str, request: Request):

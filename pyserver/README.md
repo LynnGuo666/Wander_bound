@@ -19,3 +19,5 @@
 本地运行 `./spark-tunnel.sh` 和 `./start.sh`。测试：`.venv/bin/python -m pytest pyserver/tests -q`。
 
 Spark 部署设置 `SPARK_MODEL_CONTROL=1` 后，`/api/inference/status` 提供模型和资源状态；媒体任务经单一工作队列串行执行。`SPARK_QWEN38_STICKY=1` 让 Qwen 优先常驻：图片可在内存足够时与它并存，视频任务会临时释放它，任务结束后自动恢复。图片与视频空闲 600 秒后停止。Web 的“模型调度”页可观察队列、内存、GPU 利用率、Qwen 权重加载阶段和媒体任务阶段；生成中的百分比不可可靠获取时显示活动进度。手动预热、释放及 Qwen3.8 测试接口要求 `MEDIA_API_TOKEN`。本地开发默认观察模式，不执行 `systemctl`。Qwen3.8 使用独立的 `deploy/spark/qwen38.service`；未安装该单元时 Web 显示“尚未部署”，现有 Step Plan 不变。
+
+Spark 上的手帐图片、旅行短片与手帐素材白天提交后写入持久化队列，默认在 `Asia/Shanghai` 的 23:00–07:00 自动开工。夜间还要连续 30 秒满足空闲条件：无正在运行或加载的模型任务、`MemAvailable` 不低于 16 GiB、内存 PSI some/full 分别不高于 5%/1%、每核一分钟 CPU load 不高于 0.75、GPU 利用率不高于 20%（GB10 未提供此读数时使用其余信号）。忙碌时每 30 秒重新采样；运行中的任务会完成当前件再判断下一件。服务重启后从落盘队列继续。交互式照片重绘仍即时领取。夜间时区与窗口可由 `SPARK_NIGHT_TIMEZONE`、`SPARK_NIGHT_START`、`SPARK_NIGHT_END` 调整。

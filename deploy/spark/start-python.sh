@@ -17,5 +17,8 @@ export SPARK_MODEL_CONTROL=1
 export SPARK_QWEN38_URL=http://127.0.0.1:8192
 export SPARK_QWEN38_MODEL=qwen38-27b
 export SPARK_QWEN38_STICKY=1
+export SPARK_NIGHT_TIMEZONE=Asia/Shanghai
+export SPARK_NIGHT_START=23:00
+export SPARK_NIGHT_END=07:00
 
 exec .venv/bin/uvicorn pyserver.app:app --host 127.0.0.1 --port 4174

@@ -14,6 +14,7 @@ from PIL import Image, ImageChops, ImageFilter
 
 from ..trips import now
 from ..inference import ModelController
+from ..inference.night_window import NightLoadGate, NightWindow
 from .comfy import ComfyClient
 
 
@@ -79,7 +80,7 @@ def isolate_sticker(image: Image.Image) -> Image.Image:
 
 
 def public(job: dict) -> dict:
-    return {key: job.get(key) for key in ("id", "tripId", "kind", "motif", "status", "createdAt", "error", "promptVersion")}
+    return {key: job.get(key) for key in ("id", "tripId", "kind", "motif", "status", "createdAt", "scheduledAt", "error", "promptVersion")}
 
 
 class StickerStore:
@@ -88,6 +89,8 @@ class StickerStore:
         self.client = client
         self.controller = controller
         self.worker: asyncio.Task | None = None
+        self.night = NightWindow(getattr(controller, "enabled", False))
+        self.night_load = NightLoadGate(controller)
         self.prompt_dir = Path(__file__).resolve().parents[2] / "prompts"
 
     def prompt_versions(self) -> dict[str, str]:
@@ -149,6 +152,8 @@ class StickerStore:
                "status": "queued", "createdAt": now(), "seed": secrets.randbits(64),
                "prompt": prompt, "promptVersion": spec["id"], "workflow": graph,
                "promptId": str(uuid.uuid4()), "error": None}
+        if self.night.seconds_until_open() > 0:
+            job["scheduledAt"] = self.night.next_open_iso()
         self.save(job)
         self.schedule()
         return public(job)
@@ -177,6 +182,13 @@ class StickerStore:
                              key=lambda item: (item["createdAt"], item["id"]))
             if not pending:
                 return
+            wait_seconds = self.night.seconds_until_open()
+            if not wait_seconds:
+                wait_seconds = await self.night_load.seconds_until_idle()
+            if wait_seconds:
+                await asyncio.sleep(wait_seconds)
+                continue
+            self.night_load.quiet_since = None
             job = pending[0]
             try:
                 await self._run(job)
