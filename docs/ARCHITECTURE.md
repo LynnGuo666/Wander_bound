@@ -1,4 +1,6 @@
-# 当前架构
+# 行驿 · Wander Bound 技术架构
+
+对外口径以已发布的 [Notion 技术架构解密](https://lynn-study.notion.site/3ea7a97119148023a470f3bb16ebe152)为准；本文件说明仓库当前实现。产品故事见[Notion 介绍页](https://lynn-study.notion.site/3ea7a971191480c7843cf03d4b8c256e)。
 
 ```mermaid
 flowchart LR
@@ -13,6 +15,8 @@ flowchart LR
 ```
 
 `pyserver/` 是唯一应用主服务。`agent/` 管理持续会话、问题回答后的立即记忆更新、按阶段加载工具、流式事件和规划；`settings/` 管理本机 `config.yml`；`trips/` 保存行程与会话；`media/` 管理私有相册和 Spark 工作流；`api/` 装配 HTTP 接口。外部 Step Plan 用于非敏感旅行规划，照片和媒体任务由私有服务处理。
+
+手帐素材与短片使用持久化队列。默认 23:00–07:00 才考虑领取重型任务，并要求 CPU、内存压力、可用内存、模型任务状态及可取得的 GPU 活动信号连续 30 秒满足空闲条件；忙碌时每 30 秒复查。服务重启后恢复队列。交互式照片重绘即时处理。调度阈值与部署变量见 [pyserver/README.md](../pyserver/README.md)。
 
 规划结果在供应商查询后由 `agent/timeline.py` 生成逐日 `timeline` 与 `feasibility`。`groundJourneys` 保存高德的预计分钟数、分段几何和 GCJ-02 原始坐标；`mapGeometry`、`mapCoordinate` 是转换给 Web/MapKit 的 WGS-84 坐标。缺失高德路段时保持未知。`POST /api/trips/{id}/recalculate` 接收已核实班次、酒店、地点顺序和游玩时长的修改，并重新查询路线及计算时间线。
 

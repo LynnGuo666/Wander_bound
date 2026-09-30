@@ -1,4 +1,4 @@
-# 私有相册与 DGX Spark 媒体工作流
+# Wander Bound｜私有相册与 DGX Spark 媒体工作流
 
 iOS 通过 PhotoKit 或系统照片选择器读取用户选中的照片。上传确认页说明原始 EXIF（可能包括精确位置）会私存服务器；对外图像去除 EXIF。Python FastAPI 的 `pyserver/media/` 保存照片与行程关联，重新编码 JPEG、去除 EXIF；自然与电影感预设使用 Pillow 做本地图像处理。创意重绘通过私网 ComfyUI 调用 DGX Spark 上的 Qwen-Image 2.1；回忆短片使用 Spark 上的本地 MiniMax H3 I2V 工作流逐镜头生成，再由本地 ffmpeg 拼接。这里的 MiniMax 是节点本地模型，不是云 API。
 
