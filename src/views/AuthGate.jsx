@@ -25,7 +25,7 @@ export default function AuthGate({ onAuthenticated }) {
 
   return <main className="auth-screen"><div className="auth-card">
     <span className="auth-mark"><Compass size={27} /></span>
-    <p className="section-kicker">TRAVEL STORIES</p><h1>欢迎来到行驿</h1>
+    <p className="section-kicker">WANDER BOUND</p><h1>欢迎来到行驿</h1>
     <p>登录后，行程、照片与日记只对你的账号可见。</p>
     <form onSubmit={submit} className="auth-form">
       <label>用户名<input autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} required /></label>

@@ -79,7 +79,7 @@ export default function App() {
 
   if (!session) return <AuthGate onAuthenticated={authenticate} />;
   return <div className="travel-app">
-    <header className="site-header"><div className="header-inner"><button className="brand" onClick={() => navigate('trips')} aria-label="行驿，返回行程"><span className="brand-mark"><Compass size={23} strokeWidth={1.8} /></span><span><strong>行驿</strong><small>TRAVEL STORIES</small></span></button>
+    <header className="site-header"><div className="header-inner"><button className="brand" onClick={() => navigate('trips')} aria-label="行驿，返回行程"><span className="brand-mark"><Compass size={23} strokeWidth={1.8} /></span><span><strong>行驿</strong><small>WANDER BOUND</small></span></button>
       <Navigation className="primary-nav" view={view} navigate={navigate} />
       <span className={`connection-indicator ${health?.ok ? 'online' : ''}`} title={health?.ok ? '规划服务已连接' : '规划服务未连接'}><i />{health?.ok ? '旅程已就绪' : '连接中'}</span>
     </div></header>

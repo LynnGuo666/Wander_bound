@@ -56,7 +56,7 @@ def create_app(*, config: ConfigStore | None = None, trips: TripStore | None = N
         await analysis.close()
         await controller.close()
 
-    app = FastAPI(title="行驿 Travel Agent", version="2.0.0", lifespan=lifespan)
+    app = FastAPI(title="行驿 · Wander Bound", version="2.0.0", lifespan=lifespan)
     @app.middleware("http")
     async def account_session(request, call_next):
         bearer = request.headers.get("Authorization", "")
